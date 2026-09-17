@@ -42,10 +42,19 @@ public sealed class TransactionService(AlocaDbContext dbContext)
             query = query.Where(transaction => transaction.Date <= queryParameters.EndDate.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(queryParameters.Search))
+        {
+            var search = queryParameters.Search.Trim().ToLower();
+            query = query.Where(transaction => transaction.Description.ToLower().Contains(search));
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
+        query = queryParameters.Sort.ToLowerInvariant() switch
+        {
+            "amount" => queryParameters.Descending ? query.OrderByDescending(x => x.Amount) : query.OrderBy(x => x.Amount),
+            _ => queryParameters.Descending ? query.OrderByDescending(x => x.Date).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Date).ThenBy(x => x.Id)
+        };
         var items = await query
-            .OrderByDescending(transaction => transaction.Date)
-            .ThenByDescending(transaction => transaction.Id)
             .Skip((queryParameters.Page - 1) * queryParameters.PageSize)
             .Take(queryParameters.PageSize)
             .Select(transaction => new TransactionResponse(
@@ -55,7 +64,8 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Type,
                 transaction.Date,
                 transaction.CategoryId,
-                transaction.Category.Name))
+                transaction.Category.Name,
+                transaction.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return new PagedResponse<TransactionResponse>(items, queryParameters.Page, queryParameters.PageSize, totalCount);
@@ -72,7 +82,8 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Type,
                 transaction.Date,
                 transaction.CategoryId,
-                transaction.Category.Name))
+                transaction.Category.Name,
+                transaction.CreatedAt))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<TransactionWriteResult> CreateAsync(TransactionRequest request, CancellationToken cancellationToken)
@@ -87,29 +98,6 @@ public sealed class TransactionService(AlocaDbContext dbContext)
 
         var transaction = new Transaction(request.Description, request.Amount, request.Type, request.Date, request.CategoryId);
         dbContext.Transactions.Add(transaction);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return new TransactionWriteResult(TransactionWriteStatus.Success, transaction);
-    }
-
-    public async Task<TransactionWriteResult> UpdateAsync(Guid id, TransactionRequest request, CancellationToken cancellationToken)
-    {
-        var transaction = await dbContext.Transactions
-            .SingleOrDefaultAsync(transaction => transaction.Id == id, cancellationToken);
-
-        if (transaction is null)
-        {
-            return new TransactionWriteResult(TransactionWriteStatus.NotFound, null);
-        }
-
-        var categoryExists = await dbContext.Categories
-            .AnyAsync(category => category.Id == request.CategoryId, cancellationToken);
-
-        if (!categoryExists)
-        {
-            return new TransactionWriteResult(TransactionWriteStatus.CategoryNotFound, null);
-        }
-
-        transaction.Update(request.Description, request.Amount, request.Type, request.Date, request.CategoryId);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new TransactionWriteResult(TransactionWriteStatus.Success, transaction);
     }

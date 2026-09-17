@@ -38,6 +38,7 @@ public sealed class Transaction
         Amount = amount;
         Type = type;
         Date = date;
+        CreatedAt = DateTime.UtcNow;
         CategoryId = categoryId;
     }
 
@@ -51,41 +52,10 @@ public sealed class Transaction
 
     public DateOnly Date { get; private set; }
 
+    public DateTime CreatedAt { get; private set; }
+
     public Guid CategoryId { get; private set; }
 
     public Category Category { get; private set; } = null!;
 
-    public void Update(
-        string description,
-        decimal amount,
-        TransactionType type,
-        DateOnly date,
-        Guid categoryId)
-    {
-        if (string.IsNullOrWhiteSpace(description))
-        {
-            throw new ArgumentException("Transaction description is required.", nameof(description));
-        }
-
-        if (amount <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(amount), "Transaction amount must be greater than zero.");
-        }
-
-        if (!Enum.IsDefined(type))
-        {
-            throw new ArgumentOutOfRangeException(nameof(type), "Transaction type is invalid.");
-        }
-
-        if (categoryId == Guid.Empty)
-        {
-            throw new ArgumentException("Category is required.", nameof(categoryId));
-        }
-
-        Description = description.Trim();
-        Amount = amount;
-        Type = type;
-        Date = date;
-        CategoryId = categoryId;
-    }
 }

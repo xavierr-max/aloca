@@ -26,7 +26,8 @@ public sealed record TransactionResponse(
     TransactionType Type,
     DateOnly Date,
     Guid CategoryId,
-    string CategoryName);
+    string CategoryName,
+    DateTime CreatedAt);
 
 public sealed class TransactionQueryParameters
 {
@@ -37,6 +38,12 @@ public sealed class TransactionQueryParameters
     public DateOnly? StartDate { get; init; }
 
     public DateOnly? EndDate { get; init; }
+
+    public string? Search { get; init; }
+
+    public string Sort { get; init; } = "date";
+
+    public bool Descending { get; init; } = true;
 
     [Range(1, int.MaxValue)]
     public int Page { get; init; } = 1;

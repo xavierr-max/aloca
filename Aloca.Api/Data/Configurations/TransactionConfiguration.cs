@@ -33,6 +33,9 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .HasColumnType("date")
             .IsRequired();
 
+        builder.Property(transaction => transaction.CreatedAt)
+            .IsRequired();
+
         builder.HasIndex(transaction => new { transaction.CategoryId, transaction.Date });
         builder.HasIndex(transaction => transaction.Date);
 

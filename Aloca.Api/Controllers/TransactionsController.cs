@@ -47,26 +47,6 @@ public sealed class TransactionsController(TransactionService transactionService
         return CreatedAtAction(nameof(GetById), new { id = result.Transaction.Id }, response);
     }
 
-    [HttpPut("{id:guid}")]
-    [ProducesResponseType<TransactionResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TransactionResponse>> Update(Guid id, TransactionRequest request, CancellationToken cancellationToken)
-    {
-        var result = await transactionService.UpdateAsync(id, request, cancellationToken);
-        if (result.Status == TransactionWriteStatus.NotFound)
-        {
-            return NotFound();
-        }
-
-        if (result.Status == TransactionWriteStatus.CategoryNotFound)
-        {
-            return NotFound(new { message = "Category was not found." });
-        }
-
-        return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
-    }
-
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
