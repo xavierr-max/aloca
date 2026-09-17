@@ -3,12 +3,21 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Aloca.Api.DTOs;
 
-public sealed record TransactionRequest(
-    [param: Required, StringLength(250, MinimumLength = 1)] string Description,
-    [param: Range(typeof(decimal), "0.01", "9999999999999999.99")] decimal Amount,
-    [param: EnumDataType(typeof(TransactionType))] TransactionType Type,
-    DateOnly Date,
-    Guid CategoryId);
+public sealed class TransactionRequest
+{
+    [Required, StringLength(250, MinimumLength = 1)]
+    public string Description { get; init; } = string.Empty;
+
+    [Range(typeof(decimal), "0.01", "9999999999999999.99")]
+    public decimal Amount { get; init; }
+
+    [EnumDataType(typeof(TransactionType))]
+    public TransactionType Type { get; init; }
+
+    public DateOnly Date { get; init; }
+
+    public Guid CategoryId { get; init; }
+}
 
 public sealed record TransactionResponse(
     Guid Id,
