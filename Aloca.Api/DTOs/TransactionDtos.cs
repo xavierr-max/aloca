@@ -4,9 +4,9 @@ using System.ComponentModel.DataAnnotations;
 namespace Aloca.Api.DTOs;
 
 public sealed record TransactionRequest(
-    [property: Required, StringLength(250, MinimumLength = 1)] string Description,
-    [property: Range(typeof(decimal), "0.01", "9999999999999999.99")] decimal Amount,
-    [property: EnumDataType(typeof(TransactionType))] TransactionType Type,
+    [param: Required, StringLength(250, MinimumLength = 1)] string Description,
+    [param: Range(typeof(decimal), "0.01", "9999999999999999.99")] decimal Amount,
+    [param: EnumDataType(typeof(TransactionType))] TransactionType Type,
     DateOnly Date,
     Guid CategoryId);
 

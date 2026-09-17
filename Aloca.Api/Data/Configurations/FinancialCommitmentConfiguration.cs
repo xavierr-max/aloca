@@ -44,5 +44,7 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Ignore(commitment => commitment.CoveredInstallments);
         builder.Ignore(commitment => commitment.AmountNeededForNextInstallment);
         builder.Ignore(commitment => commitment.AmountNeededForFullCoverage);
+        builder.Ignore(commitment => commitment.ExcessAllocatedAmount);
+        builder.Ignore(commitment => commitment.IsCompleted);
     }
 }

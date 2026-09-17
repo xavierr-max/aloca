@@ -91,4 +91,90 @@ public sealed class FinancialCommitment
         : decimal.Max(InstallmentAmount - AllocatedAmount, 0m);
 
     public decimal AmountNeededForFullCoverage => decimal.Max(RemainingAmount - AllocatedAmount, 0m);
+
+    public decimal ExcessAllocatedAmount => decimal.Max(AllocatedAmount - RemainingAmount, 0m);
+
+    public bool IsCompleted => PaidInstallments == TotalInstallments;
+
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted)
+    {
+        ValidateName(name);
+        ValidateInstallmentAmount(installmentAmount);
+        ValidateTotalInstallments(totalInstallments);
+        ValidatePriority(priority);
+
+        if (totalInstallments < PaidInstallments)
+        {
+            throw new ArgumentException("Total installments cannot be less than paid installments.", nameof(totalInstallments));
+        }
+
+        Name = name.Trim();
+        InstallmentAmount = installmentAmount;
+        TotalInstallments = totalInstallments;
+        Priority = priority;
+        IsFullyCommitted = isFullyCommitted;
+    }
+
+    public void Allocate(decimal amount)
+    {
+        ValidatePositiveAmount(amount, nameof(amount));
+        AllocatedAmount += amount;
+    }
+
+    public void Deallocate(decimal amount)
+    {
+        ValidatePositiveAmount(amount, nameof(amount));
+        if (amount > AllocatedAmount)
+        {
+            throw new InvalidOperationException("Deallocation amount cannot exceed the allocated amount.");
+        }
+
+        AllocatedAmount -= amount;
+    }
+
+    public void RegisterPayment()
+    {
+        if (IsCompleted)
+        {
+            throw new InvalidOperationException("All installments have already been paid.");
+        }
+
+        PaidInstallments++;
+        AllocatedAmount = decimal.Max(0m, AllocatedAmount - InstallmentAmount);
+    }
+
+    public void ReverseLatestPayment()
+    {
+        if (PaidInstallments == 0)
+        {
+            throw new InvalidOperationException("There are no payments to reverse.");
+        }
+
+        PaidInstallments--;
+    }
+
+    private static void ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Commitment name is required.", nameof(name));
+    }
+
+    private static void ValidateInstallmentAmount(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Installment amount must be greater than zero.");
+    }
+
+    private static void ValidateTotalInstallments(int total)
+    {
+        if (total <= 0) throw new ArgumentOutOfRangeException(nameof(total), "Total installments must be greater than zero.");
+    }
+
+    private static void ValidatePriority(int priority)
+    {
+        if (priority <= 0) throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
+    }
+
+    private static void ValidatePositiveAmount(decimal amount, string parameterName)
+    {
+        if (amount <= 0) throw new ArgumentOutOfRangeException(parameterName, "Amount must be greater than zero.");
+    }
 }

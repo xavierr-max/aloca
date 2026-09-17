@@ -17,6 +17,10 @@ builder.Services.AddDbContext<AlocaDbContext>(options =>
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<FinancialSummaryService>();
+builder.Services.AddScoped<FinancialBalanceService>();
+builder.Services.AddScoped<FinancialCommitmentService>();
+builder.Services.AddScoped<FinancialAllocationService>();
+builder.Services.AddScoped<FinancialSettingsService>();
 
 var app = builder.Build();
 

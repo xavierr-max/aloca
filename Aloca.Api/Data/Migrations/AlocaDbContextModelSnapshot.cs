@@ -90,6 +90,26 @@ namespace Aloca.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Aloca.Api.Models.FinancialSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("InitialBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("financial_settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_financial_settings_initial_balance_non_negative", "\"InitialBalance\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Aloca.Api.Models.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
