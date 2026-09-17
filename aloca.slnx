@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="Aloca.Api/Aloca.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Aloca.Api.Tests/Aloca.Api.Tests.csproj" />
+  </Folder>
+</Solution>

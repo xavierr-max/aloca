@@ -1,0 +1,24 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# IDEs and editors
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# User-specific configuration and secrets
+.env
+appsettings.Local.json
+appsettings.*.local.json
+secrets.json
+
+# Test output
+TestResults/
+
+# OS files
+.DS_Store
+Thumbs.db
