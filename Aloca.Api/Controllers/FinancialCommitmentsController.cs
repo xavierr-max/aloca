@@ -22,6 +22,7 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
             return CreatedAtAction(nameof(GetById), new { id = item.Id }, await service.GetByIdAsync(item.Id, ct));
         }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpPut("{id:guid}")]
@@ -29,6 +30,7 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
     {
         try { var item = await service.UpdateAsync(id, request, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
     [HttpDelete("{id:guid}")]
@@ -46,7 +48,11 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
     public Task<ActionResult<FinancialCommitmentResponse>> Deallocate(Guid id, AmountRequest request, CancellationToken ct) => Mutate(id, x => x.Deallocate(request.Amount), ct);
 
     [HttpPost("{id:guid}/payments")]
-    public Task<ActionResult<FinancialCommitmentResponse>> Payment(Guid id, CancellationToken ct) => Mutate(id, x => x.RegisterPayment(), ct);
+    public async Task<ActionResult<FinancialCommitmentResponse>> Payment(Guid id, CancellationToken ct)
+    {
+        try { var item = await service.RegisterPaymentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
 
     [HttpDelete("{id:guid}/payments/latest")]
     public Task<ActionResult<FinancialCommitmentResponse>> ReversePayment(Guid id, CancellationToken ct) => Mutate(id, x => x.ReverseLatestPayment(), ct);

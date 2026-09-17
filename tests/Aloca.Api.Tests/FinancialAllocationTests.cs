@@ -1,4 +1,4 @@
-using Aloca.Api.Data;
+﻿using Aloca.Api.Data;
 using Aloca.Api.DTOs;
 using Aloca.Api.Models;
 using Aloca.Api.Services;
@@ -72,7 +72,38 @@ public sealed class FinancialAllocationTests
         Assert.Equal(800m, summary.Balance);
         Assert.Equal(1000m, summary.AllocatedAmount);
         Assert.Equal(0m, summary.FreeBalance);
-        Assert.Equal(200m, summary.AllocationDeficit);
+        Assert.Equal(0m, summary.AllocationDeficit);
+    }
+
+    [Fact]
+    public async Task PaymentConsumesReservePersistsHistoryAndReducesRealBalance()
+    {
+        await using var db = CreateDb();
+        await new FinancialSettingsService(db).UpdateAsync(490m, default);
+        var commitment = new FinancialCommitment("Subscription", 63.66m, 3, 0, 190.98m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.RegisterPaymentAsync(commitment.Id, default);
+
+        var summary = await new FinancialSummaryService(new FinancialBalanceService(db)).GetAsync(default);
+        Assert.Equal(426.34m, summary.Balance);
+        Assert.Equal(127.32m, (await service.GetByIdAsync(commitment.Id, default))!.AllocatedAmount);
+        Assert.Equal(1, (await service.GetByIdAsync(commitment.Id, default))!.PaidInstallments);
+        Assert.Equal(1, await db.CommitmentPayments.CountAsync());
+    }
+
+    [Fact]
+    public async Task CoverageDeficitIsRemainingUncoveredAmount()
+    {
+        await using var db = CreateDb();
+        db.FinancialCommitments.Add(new FinancialCommitment("Course", 200m, 3, 0, 490m, 1, true));
+        await db.SaveChangesAsync();
+
+        var summary = await new FinancialSummaryService(new FinancialBalanceService(db)).GetAsync(default);
+
+        Assert.Equal(110m, summary.AllocationDeficit);
     }
 
     [Fact]

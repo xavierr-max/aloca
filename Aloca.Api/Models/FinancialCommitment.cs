@@ -71,6 +71,9 @@ public sealed class FinancialCommitment
 
     public bool IsFullyCommitted { get; private set; }
 
+    public Guid? CategoryId { get; private set; }
+    public Category? Category { get; private set; }
+
     public decimal TotalAmount => InstallmentAmount * TotalInstallments;
 
     public int RemainingInstallments => TotalInstallments - PaidInstallments;
@@ -96,7 +99,7 @@ public sealed class FinancialCommitment
 
     public bool IsCompleted => PaidInstallments == TotalInstallments;
 
-    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted)
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId)
     {
         ValidateName(name);
         ValidateInstallmentAmount(installmentAmount);
@@ -113,7 +116,10 @@ public sealed class FinancialCommitment
         TotalInstallments = totalInstallments;
         Priority = priority;
         IsFullyCommitted = isFullyCommitted;
+        CategoryId = categoryId;
     }
+
+    public void SetCategory(Guid? categoryId) => CategoryId = categoryId;
 
     public void Allocate(decimal amount)
     {
@@ -132,15 +138,17 @@ public sealed class FinancialCommitment
         AllocatedAmount -= amount;
     }
 
-    public void RegisterPayment()
+    public decimal RegisterPayment()
     {
         if (IsCompleted)
         {
             throw new InvalidOperationException("All installments have already been paid.");
         }
 
+        var paymentAmount = decimal.Min(InstallmentAmount, RemainingAmount);
         PaidInstallments++;
-        AllocatedAmount = decimal.Max(0m, AllocatedAmount - InstallmentAmount);
+        AllocatedAmount = decimal.Max(0m, AllocatedAmount - paymentAmount);
+        return paymentAmount;
     }
 
     public void ReverseLatestPayment()

@@ -14,6 +14,8 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
 
     public DbSet<FinancialSettings> FinancialSettings => Set<FinancialSettings>();
 
+    public DbSet<CommitmentPayment> CommitmentPayments => Set<CommitmentPayment>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AlocaDbContext).Assembly);

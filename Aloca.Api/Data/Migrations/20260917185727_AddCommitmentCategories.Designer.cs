@@ -3,6 +3,7 @@ using System;
 using Aloca.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aloca.Api.Data.Migrations
 {
     [DbContext(typeof(AlocaDbContext))]
-    partial class AlocaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917185727_AddCommitmentCategories")]
+    partial class AddCommitmentCategories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -83,9 +86,6 @@ namespace Aloca.Api.Data.Migrations
 
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("InstallmentAmount")
                         .HasPrecision(18, 2)
@@ -158,7 +158,7 @@ namespace Aloca.Api.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid?>("CategoryId")
+                    b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<DateOnly>("Date")
@@ -214,7 +214,8 @@ namespace Aloca.Api.Data.Migrations
                     b.HasOne("Aloca.Api.Models.Category", "Category")
                         .WithMany("Transactions")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Category");
                 });

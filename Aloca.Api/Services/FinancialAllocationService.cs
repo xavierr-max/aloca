@@ -1,4 +1,4 @@
-using Aloca.Api.Data;
+﻿using Aloca.Api.Data;
 using Aloca.Api.DTOs;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +30,7 @@ public sealed class FinancialAllocationService(AlocaDbContext dbContext, Financi
             await dbContext.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
             var after = await balanceService.GetAsync(ct);
-            return new(before.Balance, before.AllocatedAmount, plan.Total, after.AllocatedAmount, after.FreeBalance, plan.Changes);
+            return new(before.Balance, before.AllocatedAmount, plan.Total, after.AllocatedAmount, after.FreeBalance, after.AllocationDeficit, plan.Changes);
         }
         finally { DistributionGate.Release(); }
     }

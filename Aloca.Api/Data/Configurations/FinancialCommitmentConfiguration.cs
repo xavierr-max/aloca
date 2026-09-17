@@ -36,6 +36,11 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Property(commitment => commitment.Priority).IsRequired();
         builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
 
+        builder.HasOne(commitment => commitment.Category)
+            .WithMany()
+            .HasForeignKey(commitment => commitment.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(commitment => new { commitment.IsFullyCommitted, commitment.Priority });
 
         builder.Ignore(commitment => commitment.TotalAmount);
