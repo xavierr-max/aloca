@@ -65,6 +65,44 @@ Depois cadastre no User Secrets a mesma senha usada no `.env`:
 dotnet user-secrets set --project .\Aloca.Api "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=aloca;Username=postgres;Password=SUA_SENHA"
 ```
 
+Nesta máquina clonada, execute esse comando novamente com a senha real do PostgreSQL. O projeto possui `UserSecretsId` configurado e o ASP.NET Core carrega User Secrets automaticamente no ambiente `Development`, sobrescrevendo a connection string sem gravá-la no Git. Confirme o cadastro com:
+
+```powershell
+dotnet user-secrets list --project .\Aloca.Api
+```
+
+Se preferir usar o PostgreSQL do Compose, copie `.env.example` para `.env`, substitua `replace_with_a_local_development_password` por uma senha local e inicie o serviço:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d postgres
+```
+
+Depois cadastre no User Secrets a mesma senha usada no `.env`:
+
+```powershell
+dotnet user-secrets set --project .\Aloca.Api "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=aloca;Username=postgres;Password=SUA_SENHA"
+```
+
+Nesta máquina clonada, execute esse comando novamente com a senha real do PostgreSQL. O projeto possui `UserSecretsId` configurado e o ASP.NET Core carrega User Secrets automaticamente no ambiente `Development`, sobrescrevendo a connection string sem gravá-la no Git. Confirme o cadastro com:
+
+```powershell
+dotnet user-secrets list --project .\Aloca.Api
+```
+
+Se preferir usar o PostgreSQL do Compose, copie `.env.example` para `.env`, substitua `replace_with_a_local_development_password` por uma senha local e inicie o serviço:
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d postgres
+```
+
+Depois cadastre no User Secrets a mesma senha usada no `.env`:
+
+```powershell
+dotnet user-secrets set --project .\Aloca.Api "ConnectionStrings:DefaultConnection" "Host=localhost;Port=5432;Database=aloca;Username=postgres;Password=SUA_SENHA"
+```
+
 Em servidores ou containers, use a variável de ambiente equivalente:
 
 ```text
