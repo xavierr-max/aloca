@@ -13,7 +13,8 @@ public sealed class FinancialCommitment
         int paidInstallments,
         decimal allocatedAmount,
         int priority,
-        bool isFullyCommitted)
+        bool isFullyCommitted,
+        DateOnly? dueDate = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -53,6 +54,7 @@ public sealed class FinancialCommitment
         AllocatedAmount = allocatedAmount;
         Priority = priority;
         IsFullyCommitted = isFullyCommitted;
+        DueDate = dueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
     }
 
     public Guid Id { get; private set; }
@@ -73,6 +75,8 @@ public sealed class FinancialCommitment
 
     public Guid? CategoryId { get; private set; }
     public Category? Category { get; private set; }
+
+    public DateOnly DueDate { get; private set; }
 
     public decimal TotalAmount => InstallmentAmount * TotalInstallments;
 
@@ -99,7 +103,7 @@ public sealed class FinancialCommitment
 
     public bool IsCompleted => PaidInstallments == TotalInstallments;
 
-    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId)
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null)
     {
         ValidateName(name);
         ValidateInstallmentAmount(installmentAmount);
@@ -111,12 +115,18 @@ public sealed class FinancialCommitment
             throw new ArgumentException("Total installments cannot be less than paid installments.", nameof(totalInstallments));
         }
 
+        if (dueDate.HasValue && PaidInstallments > 0 && dueDate.Value != DueDate)
+        {
+            throw new InvalidOperationException("The first due date cannot be changed after a payment has been registered.");
+        }
+
         Name = name.Trim();
         InstallmentAmount = installmentAmount;
         TotalInstallments = totalInstallments;
         Priority = priority;
         IsFullyCommitted = isFullyCommitted;
         CategoryId = categoryId;
+        DueDate = dueDate ?? DueDate;
     }
 
     public void SetCategory(Guid? categoryId) => CategoryId = categoryId;

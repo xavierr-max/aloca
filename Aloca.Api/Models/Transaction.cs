@@ -11,7 +11,8 @@ public sealed class Transaction
         decimal amount,
         TransactionType type,
         DateOnly date,
-        Guid categoryId)
+        Guid categoryId,
+        Guid? recurringIncomeOccurrenceId = null)
     {
         if (string.IsNullOrWhiteSpace(description))
         {
@@ -40,6 +41,7 @@ public sealed class Transaction
         Date = date;
         CreatedAt = DateTime.UtcNow;
         CategoryId = categoryId;
+        RecurringIncomeOccurrenceId = recurringIncomeOccurrenceId;
     }
 
     public Guid Id { get; private set; }
@@ -57,5 +59,9 @@ public sealed class Transaction
     public Guid CategoryId { get; private set; }
 
     public Category Category { get; private set; } = null!;
+
+    public Guid? RecurringIncomeOccurrenceId { get; private set; }
+
+    public void DetachRecurringIncomeOccurrence() => RecurringIncomeOccurrenceId = null;
 
 }

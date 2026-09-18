@@ -38,6 +38,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
 
         builder.HasIndex(transaction => new { transaction.CategoryId, transaction.Date });
         builder.HasIndex(transaction => transaction.Date);
+        builder.HasIndex(transaction => transaction.RecurringIncomeOccurrenceId).IsUnique();
 
         builder.HasOne(transaction => transaction.Category)
             .WithMany(category => category.Transactions)

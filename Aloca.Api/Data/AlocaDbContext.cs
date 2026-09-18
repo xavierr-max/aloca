@@ -16,6 +16,10 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
 
     public DbSet<CommitmentPayment> CommitmentPayments => Set<CommitmentPayment>();
 
+    public DbSet<RecurringIncome> RecurringIncomes => Set<RecurringIncome>();
+
+    public DbSet<RecurringIncomeOccurrence> RecurringIncomeOccurrences => Set<RecurringIncomeOccurrence>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AlocaDbContext).Assembly);

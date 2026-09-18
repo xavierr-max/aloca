@@ -22,7 +22,10 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     public async Task<FinancialCommitment> CreateAsync(FinancialCommitmentCreateRequest request, CancellationToken ct)
     {
         await ValidateCategoryAsync(request.CategoryId, ct);
-        var item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments, 0, 0m, request.Priority, request.IsFullyCommitted);
+        var dueDate = request.DueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        if (dueDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            throw new InvalidOperationException("The first due date cannot be earlier than today for a new commitment.");
+        var item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments, 0, 0m, request.Priority, request.IsFullyCommitted, dueDate);
         item.SetCategory(request.CategoryId);
         dbContext.FinancialCommitments.Add(item); await dbContext.SaveChangesAsync(ct); return item;
     }
@@ -31,7 +34,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     {
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null;
         await ValidateCategoryAsync(request.CategoryId, ct);
-        item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments, request.Priority, request.IsFullyCommitted, request.CategoryId);
+        item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments, request.Priority, request.IsFullyCommitted, request.CategoryId, request.DueDate);
         await dbContext.SaveChangesAsync(ct); return item;
     }
 
@@ -72,5 +75,9 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
             throw new InvalidOperationException("Category was not found.");
     }
 
-    private static FinancialCommitmentResponse ToResponse(FinancialCommitment x) => new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name);
+    private static FinancialCommitmentResponse ToResponse(FinancialCommitment x)
+    {
+        var nextDueDate = FinancialCommitmentSchedule.GetPendingInstallments(x, DateOnly.FromDateTime(DateTime.UtcNow)).FirstOrDefault()?.DueDate;
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate);
+    }
 }

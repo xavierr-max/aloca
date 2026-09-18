@@ -27,7 +27,8 @@ public sealed record TransactionResponse(
     DateOnly Date,
     Guid CategoryId,
     string CategoryName,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool IsRecurring = false);
 
 public sealed class TransactionQueryParameters
 {

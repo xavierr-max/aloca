@@ -65,7 +65,8 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Date,
                 transaction.CategoryId,
                 transaction.Category.Name,
-                transaction.CreatedAt))
+                transaction.CreatedAt,
+                transaction.RecurringIncomeOccurrenceId != null))
             .ToListAsync(cancellationToken);
 
         return new PagedResponse<TransactionResponse>(items, queryParameters.Page, queryParameters.PageSize, totalCount);
@@ -83,7 +84,8 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Date,
                 transaction.CategoryId,
                 transaction.Category.Name,
-                transaction.CreatedAt))
+                transaction.CreatedAt,
+                transaction.RecurringIncomeOccurrenceId != null))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<TransactionWriteResult> CreateAsync(TransactionRequest request, CancellationToken cancellationToken)

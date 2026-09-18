@@ -90,6 +90,18 @@ public sealed class FinancialCommitmentTests
     }
 
     [Fact]
+    public void DoesNotAllowChangingTheFirstDueDateAfterPayment()
+    {
+        var commitment = CreateCommitment();
+        commitment.RegisterPayment();
+
+        Assert.Throws<InvalidOperationException>(() => commitment.UpdateDetails(
+            commitment.Name, commitment.InstallmentAmount, commitment.TotalInstallments,
+            commitment.Priority, commitment.IsFullyCommitted, commitment.CategoryId,
+            new DateOnly(2026, 10, 18)));
+    }
+
+    [Fact]
     public void RegisterPaymentConsumesAllocatedInstallmentAmount()
     {
         var commitment = CreateCommitment(allocatedAmount: 400m);

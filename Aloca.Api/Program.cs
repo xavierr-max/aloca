@@ -16,12 +16,14 @@ builder.Services.AddDbContext<AlocaDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<TransactionService>();
+builder.Services.AddScoped<RecurringIncomeService>();
 builder.Services.AddScoped<FinancialSummaryService>(serviceProvider =>
     new FinancialSummaryService(serviceProvider.GetRequiredService<FinancialBalanceService>()));
 builder.Services.AddScoped<FinancialBalanceService>();
 builder.Services.AddScoped<FinancialCommitmentService>();
 builder.Services.AddScoped<FinancialAllocationService>();
 builder.Services.AddScoped<FinancialSettingsService>();
+builder.Services.AddScoped<FinancialProjectionService>();
 
 var app = builder.Build();
 
