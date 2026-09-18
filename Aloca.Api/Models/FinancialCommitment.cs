@@ -14,7 +14,7 @@ public sealed class FinancialCommitment
         decimal allocatedAmount,
         int priority,
         bool isFullyCommitted,
-        DateOnly? dueDate = null)
+        DateOnly? dueDate = null, string? objective = null, bool urgent = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -55,6 +55,8 @@ public sealed class FinancialCommitment
         Priority = priority;
         IsFullyCommitted = isFullyCommitted;
         DueDate = dueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        Objective = objective?.Trim();
+        Urgent = urgent;
     }
 
     public Guid Id { get; private set; }
@@ -77,6 +79,9 @@ public sealed class FinancialCommitment
     public Category? Category { get; private set; }
 
     public DateOnly DueDate { get; private set; }
+    public string? Objective { get; private set; }
+
+    public bool Urgent { get; private set; }
 
     public decimal TotalAmount => InstallmentAmount * TotalInstallments;
 
@@ -103,7 +108,7 @@ public sealed class FinancialCommitment
 
     public bool IsCompleted => PaidInstallments == TotalInstallments;
 
-    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null)
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null, string? objective = null, bool urgent = false)
     {
         ValidateName(name);
         ValidateInstallmentAmount(installmentAmount);
@@ -127,6 +132,8 @@ public sealed class FinancialCommitment
         IsFullyCommitted = isFullyCommitted;
         CategoryId = categoryId;
         DueDate = dueDate ?? DueDate;
+        Objective = objective?.Trim();
+        Urgent = urgent;
     }
 
     public void SetCategory(Guid? categoryId) => CategoryId = categoryId;
@@ -161,7 +168,7 @@ public sealed class FinancialCommitment
         return paymentAmount;
     }
 
-    public void ReverseLatestPayment()
+    public void ReverseLatestPayment(decimal paymentAmount)
     {
         if (PaidInstallments == 0)
         {
@@ -169,6 +176,7 @@ public sealed class FinancialCommitment
         }
 
         PaidInstallments--;
+        AllocatedAmount += paymentAmount;
     }
 
     private static void ValidateName(string name)

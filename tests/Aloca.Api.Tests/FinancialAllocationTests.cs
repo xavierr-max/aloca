@@ -9,6 +9,16 @@ namespace Aloca.Api.Tests;
 public sealed class FinancialAllocationTests
 {
     [Fact]
+    public void FinancialCalculationsMatchTheCanonicalScenario()
+    {
+        Assert.Equal(490.28m, FinancialCalculations.SaldoReal(490.28m, 0m));
+        Assert.Equal(198.90m, FinancialCalculations.TotalReservado(new[] { 198.90m }));
+        Assert.Equal(291.38m, FinancialCalculations.SaldoNaoAlocado(490.28m, 198.90m));
+        Assert.Equal(0m, FinancialCalculations.DeficitCobertura(198.90m, 198.90m));
+        Assert.Equal(291.38m, FinancialCalculations.SaldoLivre(291.38m, 0m));
+    }
+
+    [Fact]
     public async Task DistributesByPriorityAndDoesNotExceedBalance()
     {
         await using var db = CreateDb();
@@ -76,6 +86,23 @@ public sealed class FinancialAllocationTests
     }
 
     [Fact]
+    public async Task SummaryUsesExistingReservationsForDashboardIndicators()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 490.28m, TransactionType.Income);
+        db.FinancialCommitments.Add(Commitment("Reserva manual", 198.90m, 1, false, 198.90m));
+        await db.SaveChangesAsync();
+
+        var summary = await new FinancialSummaryService(new FinancialBalanceService(db)).GetAsync(default);
+
+        Assert.Equal(490.28m, summary.SaldoReal);
+        Assert.Equal(198.90m, summary.TotalReservado);
+        Assert.Equal(291.38m, summary.SaldoNaoAlocado);
+        Assert.Equal(0m, summary.DeficitCobertura);
+        Assert.Equal(291.38m, summary.SaldoLivre);
+    }
+
+    [Fact]
     public async Task PaymentConsumesReservePersistsHistoryAndReducesRealBalance()
     {
         await using var db = CreateDb();
@@ -92,6 +119,53 @@ public sealed class FinancialAllocationTests
         Assert.Equal(127.32m, (await service.GetByIdAsync(commitment.Id, default))!.AllocatedAmount);
         Assert.Equal(1, (await service.GetByIdAsync(commitment.Id, default))!.PaidInstallments);
         Assert.Equal(1, await db.CommitmentPayments.CountAsync());
+    }
+
+    [Fact]
+    public async Task PayingFromReservationKeepsUnallocatedBalanceUnchanged()
+    {
+        await using var db = CreateDb();
+        await new FinancialSettingsService(db).UpdateAsync(490.28m, default);
+        var commitment = new FinancialCommitment("Compra", 66.30m, 3, 0, 198.90m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var before = await new FinancialSummaryService(db).GetAsync(default);
+        await service.RegisterPaymentAsync(commitment.Id, default);
+        var after = await new FinancialSummaryService(db).GetAsync(default);
+
+        Assert.Equal(490.28m, before.SaldoReal);
+        Assert.Equal(198.90m, before.TotalReservado);
+        Assert.Equal(291.38m, before.SaldoNaoAlocado);
+        Assert.Equal(423.98m, after.SaldoReal);
+        Assert.Equal(132.60m, after.TotalReservado);
+        Assert.Equal(291.38m, after.SaldoNaoAlocado);
+        Assert.Equal(132.60m, (await service.GetByIdAsync(commitment.Id, default))!.RemainingAmount);
+        Assert.Equal(1, (await service.GetByIdAsync(commitment.Id, default))!.PaidInstallments);
+    }
+
+    [Fact]
+    public async Task ReversingPaymentRestoresBalanceReservationAndInstallment()
+    {
+        await using var db = CreateDb();
+        await new FinancialSettingsService(db).UpdateAsync(490.28m, default);
+        var commitment = new FinancialCommitment("Compra", 66.30m, 3, 0, 198.90m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.RegisterPaymentAsync(commitment.Id, default);
+        await service.ReverseLatestPaymentAsync(commitment.Id, default);
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var restored = await service.GetByIdAsync(commitment.Id, default);
+
+        Assert.Equal(490.28m, summary.SaldoReal);
+        Assert.Equal(198.90m, summary.TotalReservado);
+        Assert.Equal(291.38m, summary.SaldoNaoAlocado);
+        Assert.Equal(0, restored!.PaidInstallments);
+        Assert.Equal(198.90m, restored.AllocatedAmount);
+        Assert.Equal(0, await db.CommitmentPayments.CountAsync());
     }
 
     [Fact]

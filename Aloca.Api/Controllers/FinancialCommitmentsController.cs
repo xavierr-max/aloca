@@ -47,6 +47,13 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
     [HttpPost("{id:guid}/deallocations")]
     public Task<ActionResult<FinancialCommitmentResponse>> Deallocate(Guid id, AmountRequest request, CancellationToken ct) => Mutate(id, x => x.Deallocate(request.Amount), ct);
 
+    [HttpPost("{id:guid}/allocations/next-installment")]
+    public async Task<ActionResult<FinancialCommitmentResponse>> AllocateNextInstallment(Guid id, CancellationToken ct)
+    {
+        try { var item = await service.AllocateNextInstallmentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpPost("{id:guid}/payments")]
     public async Task<ActionResult<FinancialCommitmentResponse>> Payment(Guid id, CancellationToken ct)
     {
@@ -55,7 +62,11 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
     }
 
     [HttpDelete("{id:guid}/payments/latest")]
-    public Task<ActionResult<FinancialCommitmentResponse>> ReversePayment(Guid id, CancellationToken ct) => Mutate(id, x => x.ReverseLatestPayment(), ct);
+    public async Task<ActionResult<FinancialCommitmentResponse>> ReversePayment(Guid id, CancellationToken ct)
+    {
+        try { var item = await service.ReverseLatestPaymentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
 
     private async Task<ActionResult<FinancialCommitmentResponse>> Mutate(Guid id, Action<Aloca.Api.Models.FinancialCommitment> mutation, CancellationToken ct)
     {

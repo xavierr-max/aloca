@@ -16,7 +16,7 @@ public sealed class TransactionRequest
 
     public DateOnly Date { get; init; }
 
-    public Guid CategoryId { get; init; }
+    public Guid? CategoryId { get; init; }
 }
 
 public sealed record TransactionResponse(
@@ -25,8 +25,8 @@ public sealed record TransactionResponse(
     decimal Amount,
     TransactionType Type,
     DateOnly Date,
-    Guid CategoryId,
-    string CategoryName,
+    Guid? CategoryId,
+    string? CategoryName,
     DateTime CreatedAt,
     bool IsRecurring = false);
 

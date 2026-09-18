@@ -9,7 +9,9 @@ public sealed record FinancialCommitmentCreateRequest(
     [param: Range(1, int.MaxValue)] int Priority,
     bool IsFullyCommitted,
     Guid? CategoryId = null,
-    DateOnly? DueDate = null);
+    DateOnly? DueDate = null,
+    [param: StringLength(500)] string? Objective = null,
+    bool Urgent = false);
 
 public sealed record FinancialCommitmentUpdateRequest(
     [param: Required, StringLength(150, MinimumLength = 1)] string Name,
@@ -18,7 +20,9 @@ public sealed record FinancialCommitmentUpdateRequest(
     [param: Range(1, int.MaxValue)] int Priority,
     bool IsFullyCommitted,
     Guid? CategoryId = null,
-    DateOnly? DueDate = null);
+    DateOnly? DueDate = null,
+    [param: StringLength(500)] string? Objective = null,
+    bool Urgent = false);
 
 public sealed record AmountRequest(
     [param: Range(typeof(decimal), "0.01", "9999999999999999.99")] decimal Amount);
@@ -28,4 +32,4 @@ public sealed record FinancialCommitmentResponse(
     int RemainingInstallments, decimal TotalAmount, decimal RemainingAmount, decimal AllocatedAmount,
     int CoveredInstallments, decimal MissingForNextInstallment, decimal MissingForFullCoverage,
     decimal ExcessAllocatedAmount, int Priority, string PriorityLabel, bool IsFullyCommitted, bool IsCompleted,
-    Guid? CategoryId, string? CategoryName, DateOnly DueDate, DateOnly? NextDueDate);
+    Guid? CategoryId, string? CategoryName, DateOnly DueDate, DateOnly? NextDueDate, string? Objective, bool Urgent);

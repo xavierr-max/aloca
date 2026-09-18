@@ -6,5 +6,13 @@ public sealed record FinancialSummaryResponse(
     decimal TotalExpense,
     decimal Balance,
     decimal AllocatedAmount,
+    decimal UnallocatedBalance,
     decimal FreeBalance,
-    decimal AllocationDeficit);
+    decimal AllocationDeficit)
+{
+    public decimal SaldoReal => Balance;
+    public decimal TotalReservado => AllocatedAmount;
+    public decimal SaldoNaoAlocado => UnallocatedBalance;
+    public decimal SaldoLivre => FreeBalance;
+    public decimal DeficitCobertura => AllocationDeficit;
+}

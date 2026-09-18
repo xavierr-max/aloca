@@ -36,6 +36,8 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Property(commitment => commitment.Priority).IsRequired();
         builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
         builder.Property(commitment => commitment.DueDate).IsRequired();
+        builder.Property(commitment => commitment.Objective).HasMaxLength(500);
+        builder.Property(commitment => commitment.Urgent).IsRequired();
 
         builder.HasIndex(commitment => new { commitment.IsFullyCommitted, commitment.Priority });
 

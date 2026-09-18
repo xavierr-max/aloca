@@ -20,7 +20,13 @@ public sealed record FinancialProjectionMonthResponse(
     decimal Result,
     decimal ProjectedBalance,
     IReadOnlyCollection<ProjectionMovementResponse> Incomes,
-    IReadOnlyCollection<ProjectionMovementResponse> Expenses);
+    IReadOnlyCollection<ProjectionMovementResponse> Expenses)
+{
+    public decimal Entries => TotalIncome;
+    public decimal ExpensesTotal => TotalExpense;
+    public decimal NetResult => Result;
+    public decimal ClosingBalance => ProjectedBalance;
+}
 
 public sealed record FinancialProjectionResponse(
     decimal CurrentBalance,

@@ -16,6 +16,25 @@ public sealed class RecurringIncomeOccurrence
     public Guid? TransactionId { get; private set; }
     public Transaction? Transaction { get; private set; }
     public DateTime CreatedAt { get; private set; }
-    public void Receive(Guid transactionId) { if (Status == RecurringIncomeOccurrenceStatus.Received) return; Status = RecurringIncomeOccurrenceStatus.Received; TransactionId = transactionId; }
+    public void Receive(Guid transactionId)
+    {
+        if (Status == RecurringIncomeOccurrenceStatus.Cancelled || TransactionId.HasValue) return;
+        Status = RecurringIncomeOccurrenceStatus.Received;
+        TransactionId = transactionId;
+    }
+
+    public void LinkExistingTransaction(Guid transactionId)
+    {
+        TransactionId = transactionId;
+        Status = RecurringIncomeOccurrenceStatus.Received;
+    }
+    public void RestoreAfterTransactionDeletion()
+    {
+        if (Status == RecurringIncomeOccurrenceStatus.Received && TransactionId.HasValue)
+        {
+            TransactionId = null;
+            Status = RecurringIncomeOccurrenceStatus.Planned;
+        }
+    }
     public void Cancel() { if (Status == RecurringIncomeOccurrenceStatus.Planned) Status = RecurringIncomeOccurrenceStatus.Cancelled; }
 }

@@ -1,4 +1,5 @@
 using Aloca.Api.Data;
+using Aloca.Api.DTOs;
 using Aloca.Api.Models;
 using Aloca.Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,45 @@ namespace Aloca.Api.Tests;
 
 public sealed class FinancialProjectionTests
 {
+    [Fact]
+    public void ProjectMonthMaintainsTheBalanceChainForTheRequestedMonths()
+    {
+        var months = new[]
+        {
+            (new DateOnly(2026, 9, 1), 120m, 80m),
+            (new DateOnly(2026, 10, 1), 0m, 25m),
+            (new DateOnly(2026, 11, 1), 150m, 0m),
+            (new DateOnly(2026, 12, 1), 97m, 167.04m),
+            (new DateOnly(2027, 1, 1), 300m, 0m),
+            (new DateOnly(2027, 2, 1), 0m, 40m)
+        };
+
+        var opening = 386.20m;
+        FinancialProjectionMonthResponse? previous = null;
+        foreach (var (month, entries, expenses) in months)
+        {
+            var projection = FinancialProjectionService.ProjectMonth(
+                month, opening,
+                Enumerable.Repeat(new ProjectionMovementResponse($"in-{month}", "entrada", entries, month, null, false, null, null), entries == 0 ? 0 : 1).ToArray(),
+                Enumerable.Repeat(new ProjectionMovementResponse($"out-{month}", "saída", expenses, month, null, false, null, null), expenses == 0 ? 0 : 1).ToArray());
+
+            Assert.Equal(projection.OpeningBalance + projection.Entries - projection.ExpensesTotal, projection.ClosingBalance);
+            if (previous is not null) Assert.Equal(previous.ClosingBalance, projection.OpeningBalance);
+            if (expenses > entries) Assert.True(projection.ClosingBalance < projection.OpeningBalance);
+            if (entries > expenses) Assert.True(projection.ClosingBalance > projection.OpeningBalance);
+            if (entries == expenses) Assert.Equal(projection.OpeningBalance, projection.ClosingBalance);
+            previous = projection;
+            opening = projection.ClosingBalance;
+        }
+
+        var december = FinancialProjectionService.ProjectMonth(
+            new DateOnly(2026, 12, 1), 386.20m,
+            new[] { new ProjectionMovementResponse("dec-in", "entrada", 97m, new DateOnly(2026, 12, 10), null, false, null, null) },
+            new[] { new ProjectionMovementResponse("dec-out", "saída", 167.04m, new DateOnly(2026, 12, 15), null, false, null, null) });
+        Assert.Equal(-70.04m, december.NetResult);
+        Assert.Equal(316.16m, december.ClosingBalance);
+    }
+
     [Fact]
     public async Task ProjectsMonthlyGrowthFromFutureIncomeAndCommitmentInstallments()
     {
@@ -183,6 +223,24 @@ public sealed class FinancialProjectionTests
     }
 
     [Fact]
+    public async Task KeepsMovementsOnTheFirstDayOfTheNextMonthOutOfTheSelectedMonth()
+    {
+        await using var db = CreateDb();
+        var category = await AddCategory(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var nextMonth = new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+        db.Transactions.Add(new Transaction("Limite", 100m, TransactionType.Expense, nextMonth, category.Id));
+        db.Transactions.Add(new Transaction("Dentro", 75m, TransactionType.Expense, nextMonth.AddDays(-1), category.Id));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(3, default);
+
+        Assert.Equal(75m, projection.Months.First().TotalExpense);
+        Assert.DoesNotContain(projection.Months.First().Expenses, x => x.Description == "Limite");
+        Assert.Contains(projection.Months.Skip(1).SelectMany(x => x.Expenses), x => x.Description == "Limite");
+    }
+
+    [Fact]
     public async Task FinalBalanceAndExpenseTotalsAreDerivedFromMonthlyRows()
     {
         await using var db = CreateDb();
@@ -206,6 +264,84 @@ public sealed class FinancialProjectionTests
             Assert.Equal(months[i].OpeningBalance + months[i].TotalIncome - months[i].TotalExpense, months[i].ProjectedBalance);
             if (i > 0) Assert.Equal(months[i - 1].ProjectedBalance, months[i].OpeningBalance);
         }
+    }
+
+    [Fact]
+    public async Task StartsAtRealBalanceAndDoesNotCountReservationsAsFutureExpenses()
+    {
+        await using var db = CreateDb();
+        var category = await AddCategory(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var firstFutureMonth = new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+
+        db.FinancialSettings.Add(new FinancialSettings(490.28m));
+        db.Transactions.Add(new Transaction("Entrada 1", 80m, TransactionType.Income, firstFutureMonth.AddDays(1), category.Id));
+        db.Transactions.Add(new Transaction("Entrada 2", 80m, TransactionType.Income, firstFutureMonth.AddMonths(1).AddDays(1), category.Id));
+        db.FinancialCommitments.Add(new FinancialCommitment("Compra", 66.30m, 2, 0, 132.60m, 1, true, firstFutureMonth));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(3, default);
+        var months = projection.Months.ToList();
+
+        Assert.Equal(490.28m, projection.CurrentBalance);
+        Assert.Equal(160m, projection.TotalProjectedIncome);
+        Assert.Equal(132.60m, projection.TotalProjectedExpense);
+        Assert.Equal(517.68m, projection.FinalProjectedBalance);
+        Assert.Equal(490.28m, months[0].ProjectedBalance);
+        Assert.Equal(503.98m, months[1].ProjectedBalance);
+        Assert.Equal(517.68m, months[2].ProjectedBalance);
+        Assert.Equal(new[] { "Entrada 1" }, months[1].Incomes.Select(x => x.Description));
+        Assert.Equal(new[] { "Entrada 2" }, months[2].Incomes.Select(x => x.Description));
+        Assert.Equal(new[] { 1 }, months[1].Expenses.Select(x => x.Installment!.Value));
+        Assert.Equal(new[] { 2 }, months[2].Expenses.Select(x => x.Installment!.Value));
+    }
+
+    [Fact]
+    public async Task FutureMonthProjectionUsesAccumulatedOpeningBalance()
+    {
+        await using var db = CreateDb();
+        var category = await AddCategory(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var currentMonth = new DateOnly(today.Year, today.Month, 1);
+        var selectedMonth = currentMonth.AddMonths(2);
+
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        db.Transactions.Add(new Transaction("Entrada anterior", 200m, TransactionType.Income, currentMonth.AddMonths(1).AddDays(1), category.Id));
+        db.Transactions.Add(new Transaction("Saída selecionada", 50m, TransactionType.Expense, selectedMonth.AddDays(1), category.Id));
+        await db.SaveChangesAsync();
+
+        var service = new FinancialProjectionService(db, new RecurringIncomeService(db));
+        var full = await service.GetAsync(4, default);
+        var selected = await service.GetAsync(1, selectedMonth, default);
+        var expected = full.Months.Single(x => x.Month == selectedMonth);
+        var actual = selected.Months.Single(x => x.Month == selectedMonth);
+
+        Assert.Equal(expected.OpeningBalance, actual.OpeningBalance);
+        Assert.Equal(expected.ProjectedBalance, actual.ProjectedBalance);
+        Assert.Equal(1200m, actual.OpeningBalance);
+        Assert.Equal(1150m, actual.ProjectedBalance);
+        Assert.Equal(expected.TotalIncome, actual.TotalIncome);
+        Assert.Equal(expected.TotalExpense, actual.TotalExpense);
+    }
+
+    [Fact]
+    public async Task ProjectionCanReachAMonthBeyondTheChartWindow()
+    {
+        await using var db = CreateDb();
+        var category = await AddCategory(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var selectedMonth = new DateOnly(today.Year, today.Month, 1).AddMonths(5);
+        db.FinancialSettings.Add(new FinancialSettings(500m));
+        db.Transactions.Add(new Transaction("Entrada selecionada", 100m, TransactionType.Income, selectedMonth.AddDays(1), category.Id));
+        db.Transactions.Add(new Transaction("Saída selecionada", 25m, TransactionType.Expense, selectedMonth.AddDays(2), category.Id));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(6, default);
+        var month = projection.Months.Single(x => x.Month == selectedMonth);
+
+        Assert.Equal(100m, month.TotalIncome);
+        Assert.Equal(25m, month.TotalExpense);
+        Assert.Equal(month.OpeningBalance + month.TotalIncome - month.TotalExpense, month.ProjectedBalance);
     }
 
     private static async Task<Category> AddCategory(AlocaDbContext db)

@@ -51,9 +51,38 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
 
     public async Task<RecurringIncomeOccurrenceResponse?> ReceiveAsync(Guid occurrenceId, CancellationToken ct)
     {
-        var occurrence = await db.RecurringIncomeOccurrences.Include(x => x.RecurringIncome).SingleOrDefaultAsync(x => x.Id == occurrenceId, ct); if (occurrence is null || occurrence.Status == RecurringIncomeOccurrenceStatus.Cancelled) return null;
-        if (occurrence.Status != RecurringIncomeOccurrenceStatus.Received)
-        { var transaction = new Transaction(occurrence.RecurringIncome.Description, occurrence.Amount, TransactionType.Income, occurrence.ScheduledDate, occurrence.RecurringIncome.CategoryId, occurrence.Id); db.Transactions.Add(transaction); occurrence.Receive(transaction.Id); await db.SaveChangesAsync(ct); }
+        var occurrence = await db.RecurringIncomeOccurrences.Include(x => x.RecurringIncome).SingleOrDefaultAsync(x => x.Id == occurrenceId, ct);
+        if (occurrence is null || occurrence.Status == RecurringIncomeOccurrenceStatus.Cancelled) return null;
+        if (occurrence.TransactionId is null)
+        {
+            var existing = await db.Transactions.SingleOrDefaultAsync(x => x.RecurringIncomeOccurrenceId == occurrenceId, ct);
+            if (existing is not null)
+            {
+                occurrence.LinkExistingTransaction(existing.Id);
+                await db.SaveChangesAsync(ct);
+            }
+            else
+            {
+                // Um recebimento antecipado entra no saldo real no dia em que foi confirmado.
+                // A data agendada continua pertencendo à ocorrência, que fica marcada como recebida
+                // e deixa de ser considerada pela projeção.
+                var transactionDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                if (occurrence.ScheduledDate < transactionDate) transactionDate = occurrence.ScheduledDate;
+                var transaction = new Transaction(occurrence.RecurringIncome.Description, occurrence.Amount, TransactionType.Income, transactionDate, occurrence.RecurringIncome.CategoryId, occurrence.Id);
+                db.Transactions.Add(transaction);
+                occurrence.Receive(transaction.Id);
+                try
+                {
+                    await db.SaveChangesAsync(ct);
+                }
+                catch (DbUpdateException)
+                {
+                    db.Entry(transaction).State = EntityState.Detached;
+                    db.Entry(occurrence).State = EntityState.Detached;
+                    occurrence = await db.RecurringIncomeOccurrences.Include(x => x.RecurringIncome).SingleAsync(x => x.Id == occurrenceId, ct);
+                }
+            }
+        }
         return new(occurrence.Id, occurrence.ScheduledDate, occurrence.Amount, occurrence.Status, occurrence.TransactionId);
     }
 

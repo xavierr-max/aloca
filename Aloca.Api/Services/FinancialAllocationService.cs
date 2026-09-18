@@ -30,7 +30,7 @@ public sealed class FinancialAllocationService(AlocaDbContext dbContext, Financi
             await dbContext.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
             var after = await balanceService.GetAsync(ct);
-            return new(before.Balance, before.AllocatedAmount, plan.Total, after.AllocatedAmount, after.FreeBalance, after.AllocationDeficit, plan.Changes);
+            return new(before.Balance, before.AllocatedAmount, plan.Total, after.AllocatedAmount, after.UnallocatedBalance, after.AllocationDeficit, plan.Changes);
         }
         finally { DistributionGate.Release(); }
     }
@@ -38,7 +38,7 @@ public sealed class FinancialAllocationService(AlocaDbContext dbContext, Financi
     private async Task<AllocationPlan> BuildPlanAsync(CancellationToken ct)
     {
         var balance = await balanceService.GetAsync(ct);
-        var available = balance.FreeBalance;
+        var available = balance.UnallocatedBalance;
         var commitments = await dbContext.FinancialCommitments
             .Where(x => x.IsFullyCommitted && x.PaidInstallments < x.TotalInstallments)
             .OrderBy(x => x.Priority).ThenBy(x => x.Name).ThenBy(x => x.Id)
@@ -53,7 +53,7 @@ public sealed class FinancialAllocationService(AlocaDbContext dbContext, Financi
             changes.Add(new(commitment.Id, commitment.Name, amount));
             available -= amount;
         }
-        return new(balance.FreeBalance, changes.Sum(x => x.Amount), changes);
+        return new(balance.UnallocatedBalance, changes.Sum(x => x.Amount), changes);
     }
 
     private sealed record AllocationPlan(decimal AvailableBalance, decimal Total, IReadOnlyCollection<AllocationChangeResponse> Changes);

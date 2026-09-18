@@ -64,7 +64,7 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Type,
                 transaction.Date,
                 transaction.CategoryId,
-                transaction.Category.Name,
+                transaction.Category == null ? null : transaction.Category.Name,
                 transaction.CreatedAt,
                 transaction.RecurringIncomeOccurrenceId != null))
             .ToListAsync(cancellationToken);
@@ -83,15 +83,18 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.Type,
                 transaction.Date,
                 transaction.CategoryId,
-                transaction.Category.Name,
+                transaction.Category == null ? null : transaction.Category.Name,
                 transaction.CreatedAt,
                 transaction.RecurringIncomeOccurrenceId != null))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<TransactionWriteResult> CreateAsync(TransactionRequest request, CancellationToken cancellationToken)
     {
-        var categoryExists = await dbContext.Categories
-            .AnyAsync(category => category.Id == request.CategoryId, cancellationToken);
+        var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories
+            .AnyAsync(category => category.Id == request.CategoryId.Value, cancellationToken);
+
+        if (request.Type == TransactionType.Income && !request.CategoryId.HasValue)
+            return new TransactionWriteResult(TransactionWriteStatus.CategoryNotFound, null);
 
         if (!categoryExists)
         {
@@ -114,8 +117,27 @@ public sealed class TransactionService(AlocaDbContext dbContext)
             return false;
         }
 
+        if (transaction.RecurringIncomeOccurrenceId is { } occurrenceId)
+        {
+            var occurrence = await dbContext.RecurringIncomeOccurrences
+                .SingleOrDefaultAsync(x => x.Id == occurrenceId, cancellationToken);
+            occurrence?.RestoreAfterTransactionDeletion();
+        }
+
         dbContext.Transactions.Remove(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<TransactionWriteResult> UpdateAsync(Guid id, TransactionRequest request, CancellationToken cancellationToken)
+    {
+        var transaction = await dbContext.Transactions.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (transaction is null) return new(TransactionWriteStatus.NotFound, null);
+        if (request.Type != transaction.Type) return new(TransactionWriteStatus.CategoryNotFound, null);
+        var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, cancellationToken);
+        if (!categoryExists || (request.Type == TransactionType.Income && !request.CategoryId.HasValue)) return new(TransactionWriteStatus.CategoryNotFound, null);
+        transaction.UpdateDetails(request.Description, request.Amount, request.Date, request.CategoryId);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new(TransactionWriteStatus.Success, transaction);
     }
 }

@@ -25,7 +25,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var dueDate = request.DueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         if (dueDate < DateOnly.FromDateTime(DateTime.UtcNow))
             throw new InvalidOperationException("The first due date cannot be earlier than today for a new commitment.");
-        var item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments, 0, 0m, request.Priority, request.IsFullyCommitted, dueDate);
+        var item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments, 0, 0m, request.Priority, request.IsFullyCommitted, dueDate, request.Objective, request.Urgent);
         item.SetCategory(request.CategoryId);
         dbContext.FinancialCommitments.Add(item); await dbContext.SaveChangesAsync(ct); return item;
     }
@@ -34,7 +34,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     {
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null;
         await ValidateCategoryAsync(request.CategoryId, ct);
-        item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments, request.Priority, request.IsFullyCommitted, request.CategoryId, request.DueDate);
+        item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments, request.Priority, request.IsFullyCommitted, request.CategoryId, request.DueDate, request.Objective, request.Urgent);
         await dbContext.SaveChangesAsync(ct); return item;
     }
 
@@ -56,6 +56,21 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         return item;
     }
 
+    public async Task<FinancialCommitment?> ReverseLatestPaymentAsync(Guid id, CancellationToken ct)
+    {
+        await using var transaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(ct) : null;
+        var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (item is null) return null;
+        var payment = await dbContext.CommitmentPayments.Where(x => x.FinancialCommitmentId == id)
+            .OrderByDescending(x => x.InstallmentNumber).ThenByDescending(x => x.PaidAt).FirstOrDefaultAsync(ct);
+        if (payment is null) throw new InvalidOperationException("There are no payments to reverse.");
+        item.ReverseLatestPayment(payment.Amount);
+        dbContext.CommitmentPayments.Remove(payment);
+        await dbContext.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return item;
+    }
+
     public async Task<FinancialCommitment?> AllocateAsync(Guid id, decimal amount, CancellationToken ct)
     {
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
@@ -64,6 +79,20 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be greater than zero.");
         if (amount > balance.FreeBalance) throw new InvalidOperationException("Insufficient free balance for this allocation.");
         if (amount > item.AmountNeededForFullCoverage) throw new InvalidOperationException("Allocation cannot exceed the amount needed for full coverage.");
+        item.Allocate(amount);
+        await dbContext.SaveChangesAsync(ct);
+        return item;
+    }
+
+    public async Task<FinancialCommitment?> AllocateNextInstallmentAsync(Guid id, CancellationToken ct)
+    {
+        var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (item is null) return null;
+
+        var balance = await balanceService.GetAsync(ct);
+        var amount = Math.Min(item.AmountNeededForNextInstallment, balance.UnallocatedBalance);
+        if (amount <= 0m) return item;
+
         item.Allocate(amount);
         await dbContext.SaveChangesAsync(ct);
         return item;
@@ -78,6 +107,6 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     private static FinancialCommitmentResponse ToResponse(FinancialCommitment x)
     {
         var nextDueDate = FinancialCommitmentSchedule.GetPendingInstallments(x, DateOnly.FromDateTime(DateTime.UtcNow)).FirstOrDefault()?.DueDate;
-        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate);
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent);
     }
 }

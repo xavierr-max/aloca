@@ -16,6 +16,6 @@ public sealed class FinancialSummaryService
     public async Task<FinancialSummaryResponse> GetAsync(CancellationToken cancellationToken)
     {
         var x = await balanceService.GetAsync(cancellationToken);
-        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.Balance, x.AllocatedAmount, x.FreeBalance, x.AllocationDeficit);
+        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.Balance, x.AllocatedAmount, x.UnallocatedBalance, x.FreeBalance, x.AllocationDeficit);
     }
 }
