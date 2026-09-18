@@ -41,6 +41,36 @@ namespace Aloca.Api.Data.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
+            modelBuilder.Entity("Aloca.Api.Models.CommitmentPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("FinancialCommitmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("InstallmentNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialCommitmentId", "InstallmentNumber")
+                        .IsUnique();
+
+                    b.ToTable("commitment_payments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_commitment_payments_amount_positive", "\"Amount\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("Aloca.Api.Models.FinancialCommitment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -50,6 +80,12 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<decimal>("AllocatedAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
 
                     b.Property<decimal>("InstallmentAmount")
                         .HasPrecision(18, 2)
@@ -63,6 +99,10 @@ namespace Aloca.Api.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("Objective")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<int>("PaidInstallments")
                         .HasColumnType("integer");
 
@@ -72,7 +112,12 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<int>("TotalInstallments")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("Urgent")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("IsFullyCommitted", "Priority");
 
@@ -90,6 +135,116 @@ namespace Aloca.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Aloca.Api.Models.FinancialSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("InitialBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("financial_settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_financial_settings_initial_balance_non_negative", "\"InitialBalance\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DayOfMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("IsActive", "StartDate");
+
+                    b.ToTable("recurring_incomes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_recurring_incomes_amount_positive", "\"Amount\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.RecurringIncomeOccurrence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecurringIncomeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ScheduledDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("TransactionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("RecurringIncomeId", "ScheduledDate")
+                        .IsUnique();
+
+                    b.ToTable("recurring_income_occurrences", (string)null);
+                });
+
             modelBuilder.Entity("Aloca.Api.Models.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -103,13 +258,18 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
+
+                    b.Property<Guid?>("RecurringIncomeOccurrenceId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -120,6 +280,10 @@ namespace Aloca.Api.Data.Migrations
 
                     b.HasIndex("Date");
 
+                    b.HasIndex("RecurringIncomeOccurrenceId")
+                        .IsUnique()
+                        .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");
+
                     b.HasIndex("CategoryId", "Date");
 
                     b.ToTable("transactions", null, t =>
@@ -128,6 +292,56 @@ namespace Aloca.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_transactions_type", "\"Type\" IN ('Income', 'Expense')");
                         });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.CommitmentPayment", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.FinancialCommitment", "FinancialCommitment")
+                        .WithMany()
+                        .HasForeignKey("FinancialCommitmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FinancialCommitment");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitment", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.RecurringIncomeOccurrence", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.RecurringIncome", "RecurringIncome")
+                        .WithMany("Occurrences")
+                        .HasForeignKey("RecurringIncomeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Aloca.Api.Models.Transaction", "Transaction")
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("RecurringIncome");
+
+                    b.Navigation("Transaction");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.Transaction", b =>
@@ -144,6 +358,11 @@ namespace Aloca.Api.Data.Migrations
             modelBuilder.Entity("Aloca.Api.Models.Category", b =>
                 {
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>
+                {
+                    b.Navigation("Occurrences");
                 });
 #pragma warning restore 612, 618
         }

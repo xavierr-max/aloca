@@ -40,31 +40,11 @@ public sealed class TransactionsController(TransactionService transactionService
         var result = await transactionService.CreateAsync(request, cancellationToken);
         if (result.Status == TransactionWriteStatus.CategoryNotFound)
         {
-            return NotFound(new { message = "Category was not found." });
+            return BadRequest(new { message = request.Type == Aloca.Api.Models.TransactionType.Income ? "Entradas precisam de uma categoria." : "Category was not found." });
         }
 
         var response = await transactionService.GetByIdAsync(result.Transaction!.Id, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Transaction.Id }, response);
-    }
-
-    [HttpPut("{id:guid}")]
-    [ProducesResponseType<TransactionResponse>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TransactionResponse>> Update(Guid id, TransactionRequest request, CancellationToken cancellationToken)
-    {
-        var result = await transactionService.UpdateAsync(id, request, cancellationToken);
-        if (result.Status == TransactionWriteStatus.NotFound)
-        {
-            return NotFound();
-        }
-
-        if (result.Status == TransactionWriteStatus.CategoryNotFound)
-        {
-            return NotFound(new { message = "Category was not found." });
-        }
-
-        return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
     }
 
     [HttpDelete("{id:guid}")]
@@ -72,4 +52,13 @@ public sealed class TransactionsController(TransactionService transactionService
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken) =>
         await transactionService.DeleteAsync(id, cancellationToken) ? NoContent() : NotFound();
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<TransactionResponse>> Update(Guid id, TransactionRequest request, CancellationToken cancellationToken)
+    {
+        var result = await transactionService.UpdateAsync(id, request, cancellationToken);
+        if (result.Status == TransactionWriteStatus.NotFound) return NotFound();
+        if (result.Status == TransactionWriteStatus.CategoryNotFound) return BadRequest(new { message = "Categoria inválida para esta movimentação." });
+        return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
+    }
 }

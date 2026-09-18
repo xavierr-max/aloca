@@ -18,7 +18,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
 
         builder.Property(transaction => transaction.Description)
             .HasMaxLength(250)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(transaction => transaction.Amount)
             .HasPrecision(18, 2)
@@ -33,8 +33,14 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .HasColumnType("date")
             .IsRequired();
 
+        builder.Property(transaction => transaction.CreatedAt)
+            .IsRequired();
+
         builder.HasIndex(transaction => new { transaction.CategoryId, transaction.Date });
         builder.HasIndex(transaction => transaction.Date);
+        builder.HasIndex(transaction => transaction.RecurringIncomeOccurrenceId)
+            .IsUnique()
+            .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");
 
         builder.HasOne(transaction => transaction.Category)
             .WithMany(category => category.Transactions)

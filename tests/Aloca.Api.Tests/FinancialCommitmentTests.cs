@@ -89,6 +89,63 @@ public sealed class FinancialCommitmentTests
         Assert.Throws<ArgumentOutOfRangeException>(() => CreateCommitment(priority: 0));
     }
 
+    [Fact]
+    public void DoesNotAllowChangingTheFirstDueDateAfterPayment()
+    {
+        var commitment = CreateCommitment();
+        commitment.RegisterPayment();
+
+        Assert.Throws<InvalidOperationException>(() => commitment.UpdateDetails(
+            commitment.Name, commitment.InstallmentAmount, commitment.TotalInstallments,
+            commitment.Priority, commitment.IsFullyCommitted, commitment.CategoryId,
+            new DateOnly(2026, 10, 18)));
+    }
+
+    [Fact]
+    public void RegisterPaymentConsumesAllocatedInstallmentAmount()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 400m);
+
+        commitment.RegisterPayment();
+
+        Assert.Equal(1, commitment.PaidInstallments);
+        Assert.Equal(210.10m, commitment.AllocatedAmount);
+        Assert.Equal(2, commitment.RemainingInstallments);
+        Assert.Equal(379.80m, commitment.RemainingAmount);
+    }
+
+    [Fact]
+    public void RegisterPaymentNeverMakesAllocationNegative()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 10m);
+
+        commitment.RegisterPayment();
+
+        Assert.Equal(0m, commitment.AllocatedAmount);
+    }
+
+    [Fact]
+    public void RejectsPaymentBeyondTotalInstallments()
+    {
+        var commitment = CreateCommitment(totalInstallments: 1);
+        commitment.RegisterPayment();
+
+        Assert.Throws<InvalidOperationException>(() => commitment.RegisterPayment());
+    }
+
+    [Fact]
+    public void AllocationAndDeallocationAreValidated()
+    {
+        var commitment = CreateCommitment();
+        commitment.Allocate(100m);
+        commitment.Allocate(50m);
+        commitment.Deallocate(50m);
+
+        Assert.Equal(100m, commitment.AllocatedAmount);
+        Assert.Throws<ArgumentOutOfRangeException>(() => commitment.Allocate(0m));
+        Assert.Throws<InvalidOperationException>(() => commitment.Deallocate(101m));
+    }
+
     private static FinancialCommitment CreateCommitment(
         decimal installmentAmount = 189.90m,
         int totalInstallments = 3,

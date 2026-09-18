@@ -1,0 +1,4 @@
+.expense-row .income-icon { background: #fff0ee; color: #ac413a; }
+.expense-row .income-amount { color: #ac413a; }
+.metric.green strong { color: #34734a; }
+.metric.red strong { color: #ac413a; }

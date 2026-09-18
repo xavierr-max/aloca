@@ -1,0 +1,25 @@
+const API_URL = import.meta.env.VITE_API_URL || ''
+const amountValue = value => Number(String(value).trim().replace(',', '.'))
+async function request(path, options = {}) { const response = await fetch(`${API_URL}${path}`, { headers: { 'Content-Type': 'application/json', ...options.headers }, ...options }); if (!response.ok) { let body = {}; try { body = await response.json() } catch {} const validation = body.errors ? Object.values(body.errors).flat().join(' ') : ''; const error = new Error(body.message || validation || `Erro ${response.status} ao acessar a API.`); error.status = response.status; error.validation = body.errors || {}; throw error } return response.status === 204 ? null : response.json() }
+export const api = {
+  summary: () => request('/api/financial-summary'), updateSettings: initialBalance => request('/api/financial-settings', { method: 'PUT', body: JSON.stringify({ initialBalance: Number(initialBalance) }) }), commitments: () => request('/api/financial-commitments'), categories: () => request('/api/categories'), createCategory: name => request('/api/categories', { method: 'POST', body: JSON.stringify({ name }) }), updateCategory: (id, name) => request(`/api/categories/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }), deleteCategory: id => request(`/api/categories/${id}`, { method: 'DELETE' }), preview: () => request('/api/allocations/preview'), distribute: () => request('/api/allocations/distribute'),
+  projection: (months = 12, startMonth = '') => request('/api/dashboard/projecao?meses=' + months + (startMonth ? '&mesInicial=' + startMonth + '-01' : '')),
+  incomes: (params = {}) => request(`/api/transactions?Type=Income&PageSize=100&${new URLSearchParams(params)}`),
+  expenses: (params = {}) => request(`/api/transactions?Type=Expense&PageSize=100&${new URLSearchParams(params)}`),
+  recurringIncomes: () => request('/api/recurring-incomes'), recurringProjection: () => request('/api/recurring-incomes/projection'),
+  createRecurringIncome: body => request('/api/recurring-incomes', { method: 'POST', body: JSON.stringify(body) }), updateRecurringIncome: (id, body) => request(`/api/recurring-incomes/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  pauseRecurringIncome: id => request(`/api/recurring-incomes/${id}/pause`, { method: 'POST' }), activateRecurringIncome: id => request(`/api/recurring-incomes/${id}/activate`, { method: 'POST' }), deleteRecurringIncome: id => request(`/api/recurring-incomes/${id}`, { method: 'DELETE' }), receiveRecurringOccurrence: id => request(`/api/recurring-incomes/occurrences/${id}/receive`, { method: 'POST' }),
+  createIncome: body => request('/api/transactions', { method: 'POST', body: JSON.stringify({ ...body, type: 'Income' }) }),
+  createExpense: body => request('/api/transactions', { method: 'POST', body: JSON.stringify({ ...body, type: 'Expense' }) }),
+  deleteIncome: id => request(`/api/transactions/${id}`, { method: 'DELETE' }),
+  updateTransaction: (id, body) => request(`/api/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteExpense: id => request(`/api/transactions/${id}`, { method: 'DELETE' }),
+  allocate: (id, amount) => request(`/api/financial-commitments/${id}/allocations`, { method: 'POST', body: JSON.stringify({ amount: amountValue(amount) }) }),
+  allocateNextInstallment: id => request(`/api/financial-commitments/${id}/allocations/next-installment`, { method: 'POST' }),
+  deallocate: (id, amount) => request(`/api/financial-commitments/${id}/deallocations`, { method: 'POST', body: JSON.stringify({ amount: amountValue(amount) }) }),
+  payInstallment: id => request(`/api/financial-commitments/${id}/payments`, { method: 'POST' }),
+  reversePayment: id => request(`/api/financial-commitments/${id}/payments/latest`, { method: 'DELETE' }),
+  createCommitment: body => request('/api/financial-commitments', { method: 'POST', body: JSON.stringify(body) }),
+  updateCommitment: (id, body) => request(`/api/financial-commitments/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCommitment: id => request(`/api/financial-commitments/${id}`, { method: 'DELETE' })
+}

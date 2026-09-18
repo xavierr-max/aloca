@@ -35,8 +35,16 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Property(commitment => commitment.PaidInstallments).IsRequired();
         builder.Property(commitment => commitment.Priority).IsRequired();
         builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
+        builder.Property(commitment => commitment.DueDate).IsRequired();
+        builder.Property(commitment => commitment.Objective).HasMaxLength(500);
+        builder.Property(commitment => commitment.Urgent).IsRequired();
 
         builder.HasIndex(commitment => new { commitment.IsFullyCommitted, commitment.Priority });
+
+        builder.HasOne(commitment => commitment.Category)
+            .WithMany()
+            .HasForeignKey(commitment => commitment.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Ignore(commitment => commitment.TotalAmount);
         builder.Ignore(commitment => commitment.RemainingInstallments);
@@ -44,5 +52,7 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Ignore(commitment => commitment.CoveredInstallments);
         builder.Ignore(commitment => commitment.AmountNeededForNextInstallment);
         builder.Ignore(commitment => commitment.AmountNeededForFullCoverage);
+        builder.Ignore(commitment => commitment.ExcessAllocatedAmount);
+        builder.Ignore(commitment => commitment.IsCompleted);
     }
 }
