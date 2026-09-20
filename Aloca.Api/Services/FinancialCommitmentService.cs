@@ -12,7 +12,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var query = dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).AsQueryable();
         if (isCompleted.HasValue) query = isCompleted.Value ? query.Where(x => x.PaidInstallments == x.TotalInstallments) : query.Where(x => x.PaidInstallments < x.TotalInstallments);
         if (isFullyCommitted.HasValue) query = query.Where(x => x.IsFullyCommitted == isFullyCommitted.Value);
-        var items = await query.OrderBy(x => x.Priority).ThenBy(x => x.Name).ThenBy(x => x.Id).ToListAsync(ct);
+        var items = await query.OrderBy(x => x.Priority == null).ThenBy(x => x.Priority).ThenBy(x => x.Name).ThenBy(x => x.Id).ToListAsync(ct);
         return items.Select(ToResponse).ToList();
     }
 
@@ -77,7 +77,8 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         if (item is null) return null;
         var balance = await balanceService.GetAsync(ct);
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be greater than zero.");
-        if (amount > balance.FreeBalance) throw new InvalidOperationException("Insufficient free balance for this allocation.");
+        if (amount > balance.AvailableForAllocation)
+            throw new InvalidOperationException("Saldo não alocado insuficiente para esta reserva.");
         if (amount > item.AmountNeededForFullCoverage) throw new InvalidOperationException("Allocation cannot exceed the amount needed for full coverage.");
         item.Allocate(amount);
         await dbContext.SaveChangesAsync(ct);
@@ -90,7 +91,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         if (item is null) return null;
 
         var balance = await balanceService.GetAsync(ct);
-        var amount = Math.Min(item.AmountNeededForNextInstallment, balance.UnallocatedBalance);
+        var amount = Math.Min(item.AmountNeededForNextInstallment, balance.AvailableForAllocation);
         if (amount <= 0m) return item;
 
         item.Allocate(amount);
@@ -101,12 +102,12 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     private async Task ValidateCategoryAsync(Guid? categoryId, CancellationToken ct)
     {
         if (categoryId.HasValue && !await dbContext.Categories.AnyAsync(x => x.Id == categoryId.Value, ct))
-            throw new InvalidOperationException("Category was not found.");
+            throw new InvalidOperationException("Group was not found.");
     }
 
     private static FinancialCommitmentResponse ToResponse(FinancialCommitment x)
     {
         var nextDueDate = FinancialCommitmentSchedule.GetPendingInstallments(x, DateOnly.FromDateTime(DateTime.UtcNow)).FirstOrDefault()?.DueDate;
-        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent);
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention);
     }
 }

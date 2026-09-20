@@ -12,7 +12,7 @@ public sealed class FinancialCommitment
         int totalInstallments,
         int paidInstallments,
         decimal allocatedAmount,
-        int priority,
+        int? priority,
         bool isFullyCommitted,
         DateOnly? dueDate = null, string? objective = null, bool urgent = false)
     {
@@ -41,7 +41,7 @@ public sealed class FinancialCommitment
             throw new ArgumentOutOfRangeException(nameof(allocatedAmount), "Allocated amount cannot be negative.");
         }
 
-        if (priority <= 0)
+        if (priority is <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
         }
@@ -71,7 +71,7 @@ public sealed class FinancialCommitment
 
     public decimal AllocatedAmount { get; private set; }
 
-    public int Priority { get; private set; }
+    public int? Priority { get; private set; }
 
     public bool IsFullyCommitted { get; private set; }
 
@@ -84,6 +84,17 @@ public sealed class FinancialCommitment
     public bool Urgent { get; private set; }
 
     public decimal TotalAmount => InstallmentAmount * TotalInstallments;
+
+    // AllocatedAmount tracks the reserve still attached to unpaid installments.
+    // Include paid installments here so overall coverage remains meaningful
+    // throughout the full commitment lifecycle.
+    public decimal TotalAllocatedAmount => PaidInstallments * InstallmentAmount + AllocatedAmount;
+
+    public decimal OverallRemainingAmount => decimal.Max(TotalAmount - TotalAllocatedAmount, 0m);
+
+    public decimal OverallCoveragePercentage => TotalAmount <= 0m
+        ? 100m
+        : decimal.Min(TotalAllocatedAmount / TotalAmount * 100m, 100m);
 
     public int RemainingInstallments => TotalInstallments - PaidInstallments;
 
@@ -108,7 +119,9 @@ public sealed class FinancialCommitment
 
     public bool IsCompleted => PaidInstallments == TotalInstallments;
 
-    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null, string? objective = null, bool urgent = false)
+    public bool RequiresAttention => Urgent && !IsCompleted && OverallRemainingAmount > 0m;
+
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int? priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null, string? objective = null, bool urgent = false)
     {
         ValidateName(name);
         ValidateInstallmentAmount(installmentAmount);
@@ -194,9 +207,9 @@ public sealed class FinancialCommitment
         if (total <= 0) throw new ArgumentOutOfRangeException(nameof(total), "Total installments must be greater than zero.");
     }
 
-    private static void ValidatePriority(int priority)
+    private static void ValidatePriority(int? priority)
     {
-        if (priority <= 0) throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
+        if (priority is <= 0) throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
     }
 
     private static void ValidatePositiveAmount(decimal amount, string parameterName)

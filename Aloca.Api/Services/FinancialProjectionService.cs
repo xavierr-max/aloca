@@ -57,11 +57,20 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
         var currentBalance = (await balanceService.GetAsync(ct)).SaldoReal;
 
         var futureIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date >= calculationStart && x.Date < endExclusive && x.Date > today)
-            .Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.Description, x.Amount, x.Date, x.Category?.Name, x.RecurringIncomeOccurrenceId.HasValue, null, null)).ToList();
-        futureIncome.AddRange(recurring.Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.RecurringIncome.Description, x.Amount, x.ScheduledDate, x.RecurringIncome.Category?.Name, true, null, null)));
+            .Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.Description, x.Amount, x.Date, x.Category?.Name, x.RecurringIncomeOccurrenceId.HasValue, null, null)
+            {
+                Source = x.RecurringIncomeOccurrenceId.HasValue ? ProjectionMovementSources.RecurringIncome : ProjectionMovementSources.Transaction
+            }).ToList();
+        futureIncome.AddRange(recurring.Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.RecurringIncome.Description, x.Amount, x.ScheduledDate, x.RecurringIncome.Category?.Name, true, null, null)
+        {
+            Source = ProjectionMovementSources.RecurringIncome
+        }));
 
         var futureExpenses = transactions.Where(x => x.Type == TransactionType.Expense && x.Date >= calculationStart && x.Date < endExclusive && x.Date > today)
-            .Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.Description, x.Amount, x.Date, x.Category?.Name, false, null, null)).ToList();
+            .Select(x => new ProjectionMovementResponse(x.Id.ToString(), x.Description, x.Amount, x.Date, x.Category?.Name, false, null, null)
+            {
+                Source = ProjectionMovementSources.Transaction
+            }).ToList();
         foreach (var commitment in commitments)
         {
             foreach (var installment in FinancialCommitmentSchedule.GetPendingInstallments(commitment, today))
@@ -69,7 +78,11 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
                 if (installment.DueDate < firstMonth || installment.DueDate >= endExclusive) continue;
                 futureExpenses.Add(new ProjectionMovementResponse(
                     $"{commitment.Id}:{installment.Number}", commitment.Name, installment.Amount, installment.DueDate,
-                    commitment.Category?.Name, false, installment.Number, installment.Total));
+                    commitment.Category?.Name, false, installment.Number, installment.Total)
+                {
+                    Source = ProjectionMovementSources.Commitment,
+                    ReservedAmount = ReservedAmountForInstallment(commitment, installment.Number)
+                });
             }
         }
 
@@ -86,6 +99,25 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
                 result.Add(monthProjection);
         }
 
-        return new(currentBalance, result.Sum(x => x.TotalIncome), result.Sum(x => x.TotalExpense), balance, result);
+        var urgentCommitments = commitments
+            .Where(x => x.RequiresAttention)
+            .Select(x => new UrgentCommitmentAttentionResponse(
+                x.Id, x.Name, x.TotalAmount, x.TotalAllocatedAmount,
+                x.OverallRemainingAmount, x.OverallCoveragePercentage,
+                x.Urgent, x.RequiresAttention))
+            .OrderBy(x => x.Name)
+            .ToList();
+
+        return new(currentBalance, result.Sum(x => x.TotalIncome), result.Sum(x => x.TotalExpense), balance, result)
+        {
+            UrgentCommitments = urgentCommitments
+        };
+    }
+
+    private static decimal ReservedAmountForInstallment(FinancialCommitment commitment, int installmentNumber)
+    {
+        var pendingOffset = installmentNumber - commitment.PaidInstallments - 1;
+        var reservedForThisInstallment = commitment.AllocatedAmount - pendingOffset * commitment.InstallmentAmount;
+        return Math.Clamp(reservedForThisInstallment, 0m, commitment.InstallmentAmount);
     }
 }

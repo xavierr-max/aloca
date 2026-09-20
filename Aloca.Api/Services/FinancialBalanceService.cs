@@ -18,6 +18,7 @@ public sealed record FinancialBalanceSnapshot(
     public decimal Balance => SaldoReal;
     public decimal AllocatedAmount => TotalReservado;
     public decimal UnallocatedBalance => SaldoNaoAlocado;
+    public decimal AvailableForAllocation => SaldoNaoAlocado;
     public decimal FreeBalance => SaldoLivre;
     public decimal AllocationDeficit => DeficitCobertura;
 }

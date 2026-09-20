@@ -4,5 +4,14 @@ public enum RecurringIncomeOccurrenceStatus
 {
     Planned,
     Received,
-    Cancelled
+    Cancelled,
+    Paused
+}
+
+public enum RecurringIncomeOccurrenceCancellationSource
+{
+    User,
+    SystemExpiry,
+    LegacyReschedule,
+    LegacyPause
 }

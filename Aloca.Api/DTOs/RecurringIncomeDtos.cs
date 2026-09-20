@@ -14,6 +14,6 @@ public sealed class RecurringIncomeRequest
     [Range(1, 31)] public int? DayOfMonth { get; init; }
 }
 
-public sealed record RecurringIncomeOccurrenceResponse(Guid Id, DateOnly ScheduledDate, decimal Amount, RecurringIncomeOccurrenceStatus Status, Guid? TransactionId);
+public sealed record RecurringIncomeOccurrenceResponse(Guid Id, DateOnly ScheduledDate, decimal Amount, RecurringIncomeOccurrenceStatus Status, Guid? TransactionId, RecurringIncomeOccurrenceCancellationSource? CancellationSource);
 public sealed record RecurringIncomeResponse(Guid Id, string Description, decimal Amount, Guid CategoryId, string CategoryName, RecurringIncomeFrequency Frequency, DateOnly StartDate, DateOnly? EndDate, int? DayOfMonth, bool IsActive, DateOnly? NextOccurrence, IReadOnlyCollection<RecurringIncomeOccurrenceResponse> Occurrences);
 public sealed record ProjectionMonthResponse(DateOnly Month, decimal RealizedIncome, decimal PlannedIncome, decimal Expenses, decimal ProjectedBalance);

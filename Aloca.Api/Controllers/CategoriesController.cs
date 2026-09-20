@@ -35,7 +35,7 @@ public sealed class CategoriesController(CategoryService categoryService) : Cont
         var category = await categoryService.CreateAsync(request.Name, cancellationToken);
         if (category is null)
         {
-            return Conflict(new { message = "A category with this name already exists." });
+            return Conflict(new { message = "Já existe um grupo com este nome." });
         }
 
         var response = ToResponse(category);
@@ -53,7 +53,7 @@ public sealed class CategoriesController(CategoryService categoryService) : Cont
         return result.Status switch
         {
             CategoryUpdateStatus.NotFound => NotFound(),
-            CategoryUpdateStatus.Duplicate => Conflict(new { message = "A category with this name already exists." }),
+            CategoryUpdateStatus.Duplicate => Conflict(new { message = "Já existe um grupo com este nome." }),
             _ => Ok(ToResponse(result.Category!))
         };
     }
@@ -69,7 +69,7 @@ public sealed class CategoriesController(CategoryService categoryService) : Cont
         return result switch
         {
             CategoryDeleteStatus.NotFound => NotFound(),
-            CategoryDeleteStatus.InUse => Conflict(new { message = "A category in use by transactions cannot be deleted." }),
+            CategoryDeleteStatus.InUse => Conflict(new { message = "Este grupo é usado por uma recorrência. Altere ou exclua a recorrência antes de removê-lo." }),
             _ => NoContent()
         };
     }

@@ -3,6 +3,7 @@ using System;
 using Aloca.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aloca.Api.Data.Migrations
 {
     [DbContext(typeof(AlocaDbContext))]
-    partial class AlocaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919191929_MakeTransactionCategoryOptionalInModel")]
+    partial class MakeTransactionCategoryOptionalInModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,7 +109,7 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<int>("PaidInstallments")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("Priority")
+                    b.Property<int>("Priority")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalInstallments")
@@ -217,10 +220,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("CancellationSource")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

@@ -46,6 +46,6 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .WithMany(category => category.Transactions)
             .HasForeignKey(transaction => transaction.CategoryId)
             .OnDelete(DeleteBehavior.Restrict)
-            .IsRequired();
+            .IsRequired(false);
     }
 }

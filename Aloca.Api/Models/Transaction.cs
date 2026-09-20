@@ -62,6 +62,8 @@ public sealed class Transaction
 
     public void DetachRecurringIncomeOccurrence() => RecurringIncomeOccurrenceId = null;
 
+    public void DetachCategory() => CategoryId = null;
+
     public void UpdateDetails(string description, decimal amount, DateOnly date, Guid? categoryId)
     {
         if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("Transaction description is required.", nameof(description));

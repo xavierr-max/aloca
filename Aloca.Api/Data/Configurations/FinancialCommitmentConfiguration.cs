@@ -33,7 +33,7 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
 
         builder.Property(commitment => commitment.TotalInstallments).IsRequired();
         builder.Property(commitment => commitment.PaidInstallments).IsRequired();
-        builder.Property(commitment => commitment.Priority).IsRequired();
+        builder.Property(commitment => commitment.Priority).IsRequired(false);
         builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
         builder.Property(commitment => commitment.DueDate).IsRequired();
         builder.Property(commitment => commitment.Objective).HasMaxLength(500);

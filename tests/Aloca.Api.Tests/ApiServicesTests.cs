@@ -32,18 +32,25 @@ public sealed class ApiServicesTests
     }
 
     [Fact]
-    public async Task CategoryService_PreventsDeletingCategoryInUse()
+    public async Task CategoryService_DeletesCategoryAndDetachesFinancialRecords()
     {
         await using var db = CreateDbContext();
         var category = new Category("Moradia");
         db.Categories.Add(category);
         db.Transactions.Add(new Transaction("Aluguel", 750m, TransactionType.Expense, new DateOnly(2026, 9, 1), category.Id));
+        var commitment = new FinancialCommitment("Reserva de aluguel", 750m, 1, 0, 0m, 1, true, new DateOnly(2026, 9, 1));
+        commitment.SetCategory(category.Id);
+        db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
         var service = new CategoryService(db);
 
         var result = await service.DeleteAsync(category.Id, CancellationToken.None);
 
-        Assert.Equal(CategoryDeleteStatus.InUse, result);
+        Assert.Equal(CategoryDeleteStatus.Deleted, result);
+        Assert.Null(await db.Categories.SingleOrDefaultAsync(x => x.Id == category.Id));
+        Assert.Null((await db.Transactions.SingleAsync()).CategoryId);
+        Assert.Null((await db.FinancialCommitments.SingleAsync()).CategoryId);
+        Assert.NotNull(await db.Transactions.SingleOrDefaultAsync(x => x.Description == "Aluguel"));
     }
 
     [Fact]
@@ -68,6 +75,46 @@ public sealed class ApiServicesTests
         Assert.Equal(TransactionWriteStatus.Success, income.Status);
         Assert.Equal(TransactionWriteStatus.Success, expense.Status);
         Assert.Equal(TransactionWriteStatus.CategoryNotFound, missingCategory.Status);
+    }
+
+    [Fact]
+    public async Task TransactionService_DeletePhysicallyRemovesExpenseFromFinancialTotals()
+    {
+        await using var db = CreateDbContext();
+        var category = new Category("Geral");
+        db.Categories.Add(category);
+        await db.SaveChangesAsync();
+        var service = new TransactionService(db);
+        var created = await service.CreateAsync(
+            new TransactionRequest { Description = "Saída de teste", Amount = 100m, Type = TransactionType.Expense, Date = new DateOnly(2026, 9, 19), CategoryId = category.Id },
+            CancellationToken.None);
+
+        Assert.NotNull(created.Transaction);
+        Assert.True(await service.DeleteAsync(created.Transaction!.Id, CancellationToken.None));
+
+        Assert.Null(await db.Transactions.SingleOrDefaultAsync(x => x.Id == created.Transaction.Id));
+        var summary = await new FinancialSummaryService(db).GetAsync(CancellationToken.None);
+        Assert.Equal(0m, summary.TotalExpense);
+        Assert.Equal(0m, summary.Balance);
+    }
+
+    [Fact]
+    public async Task TransactionService_ListsExpensesWithoutCategory()
+    {
+        await using var db = CreateDbContext();
+        db.Transactions.AddRange(
+            new Transaction("Teste 2", 2m, TransactionType.Expense, new DateOnly(2026, 9, 18), null),
+            new Transaction("Teste 5 A", 5m, TransactionType.Expense, new DateOnly(2026, 9, 18), null),
+            new Transaction("Teste 5 B", 5m, TransactionType.Expense, new DateOnly(2026, 9, 18), null));
+        await db.SaveChangesAsync();
+
+        var result = await new TransactionService(db).GetAllAsync(
+            new TransactionQueryParameters { Type = TransactionType.Expense, PageSize = 100 },
+            CancellationToken.None);
+
+        Assert.Equal(3, result.TotalCount);
+        Assert.Equal(new[] { 2m, 5m, 5m }, result.Items.Select(x => x.Amount).OrderBy(x => x));
+        Assert.All(result.Items, item => Assert.Null(item.CategoryId));
     }
 
     [Fact]
@@ -108,6 +155,29 @@ public sealed class ApiServicesTests
         Assert.Equal(0m, summary.TotalIncome);
         Assert.Equal(0m, summary.TotalExpense);
         Assert.Equal(0m, summary.Balance);
+    }
+
+    [Fact]
+    public async Task FinancialCommitmentService_AllowsNullPriorityAndGroupAndCanClearThem()
+    {
+        await using var db = CreateDbContext();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+        var request = new FinancialCommitmentCreateRequest(
+            "Compromisso sem classificação", 100m, 1, null, true,
+            CategoryId: null, DueDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
+
+        var created = await service.CreateAsync(request, CancellationToken.None);
+        Assert.Null(created.Priority);
+        Assert.Null(created.CategoryId);
+
+        var updated = await service.UpdateAsync(created.Id, new FinancialCommitmentUpdateRequest(
+            created.Name, created.InstallmentAmount, created.TotalInstallments, null, created.IsFullyCommitted,
+            CategoryId: null, DueDate: created.DueDate), CancellationToken.None);
+
+        Assert.NotNull(updated);
+        Assert.Null(updated!.Priority);
+        Assert.Null(updated.CategoryId);
+        Assert.Null((await service.GetByIdAsync(created.Id, CancellationToken.None))!.Priority);
     }
 
     private static AlocaDbContext CreateDbContext() => new(
