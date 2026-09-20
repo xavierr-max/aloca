@@ -3,6 +3,7 @@ using System;
 using Aloca.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aloca.Api.Data.Migrations
 {
     [DbContext(typeof(AlocaDbContext))]
-    partial class AlocaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260919191929_MakeTransactionCategoryOptionalInModel")]
+    partial class MakeTransactionCategoryOptionalInModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,9 +63,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("WasAutomatic")
-                        .HasColumnType("boolean");
-
                     b.HasKey("Id");
 
                     b.HasIndex("FinancialCommitmentId", "InstallmentNumber")
@@ -84,33 +84,17 @@ namespace Aloca.Api.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<bool>("AutomaticProcessing")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("AutomaticProcessingWarning")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<DateOnly>("DueDate")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("Frequency")
-                        .HasColumnType("integer");
-
                     b.Property<decimal>("InstallmentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<bool>("IsFullyCommitted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsRecurring")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
@@ -125,7 +109,7 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<int>("PaidInstallments")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("Priority")
+                    b.Property<int>("Priority")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalInstallments")
@@ -146,11 +130,11 @@ namespace Aloca.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_financial_commitments_installment_amount_positive", "\"InstallmentAmount\" > 0");
 
-                            t.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND (\"TotalInstallments\" = 0 OR \"PaidInstallments\" <= \"TotalInstallments\")");
+                            t.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND \"PaidInstallments\" <= \"TotalInstallments\"");
 
                             t.HasCheckConstraint("ck_financial_commitments_priority_positive", "\"Priority\" > 0");
 
-                            t.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" >= 0");
+                            t.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" > 0");
                         });
                 });
 
@@ -183,9 +167,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<bool>("AutomaticProcessing")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
@@ -240,14 +221,7 @@ namespace Aloca.Api.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<string>("CancellationSource")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("RecurringIncomeId")
@@ -296,9 +270,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("RecurringIncomeOccurrenceId")
                         .HasColumnType("uuid");

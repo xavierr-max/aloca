@@ -17,6 +17,46 @@ public sealed class FinancialCommitmentTests
     }
 
     [Fact]
+    public void UrgentCommitmentRequiresAttentionFromOverallCoverage()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 189.90m, urgent: true);
+
+        Assert.Equal(33.3m, Math.Round(commitment.OverallCoveragePercentage, 1));
+        Assert.Equal(379.80m, commitment.OverallRemainingAmount);
+        Assert.True(commitment.RequiresAttention);
+    }
+
+    [Fact]
+    public void UrgentCommitmentWithNoCoverageRequiresAttention()
+    {
+        var commitment = CreateCommitment(urgent: true);
+
+        Assert.Equal(0m, commitment.OverallCoveragePercentage);
+        Assert.Equal(commitment.TotalAmount, commitment.OverallRemainingAmount);
+        Assert.True(commitment.RequiresAttention);
+    }
+
+    [Fact]
+    public void NonUrgentPartialCommitmentDoesNotUseCriticalUrgentAttention()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 189.90m);
+
+        Assert.Equal(33.3m, Math.Round(commitment.OverallCoveragePercentage, 1));
+        Assert.False(commitment.RequiresAttention);
+    }
+
+    [Fact]
+    public void UrgentCommitmentStopsRequiringAttentionOnlyAtFullOverallCoverage()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 189.90m, urgent: true);
+        commitment.Allocate(379.80m);
+
+        Assert.Equal(100m, commitment.OverallCoveragePercentage);
+        Assert.Equal(0m, commitment.OverallRemainingAmount);
+        Assert.False(commitment.RequiresAttention);
+    }
+
+    [Fact]
     public void CalculatesCoverage_WhenOneHundredIsAllocated()
     {
         var commitment = CreateCommitment(allocatedAmount: 100m);
@@ -90,6 +130,25 @@ public sealed class FinancialCommitmentTests
     }
 
     [Fact]
+    public void AllowsCommitmentWithoutPriority()
+    {
+        var commitment = CreateCommitment(priority: null);
+
+        Assert.Null(commitment.Priority);
+    }
+
+    [Fact]
+    public void AllowsRemovingPriorityWhenUpdating()
+    {
+        var commitment = CreateCommitment(priority: 1);
+
+        commitment.UpdateDetails(commitment.Name, commitment.InstallmentAmount, commitment.TotalInstallments,
+            null, commitment.IsFullyCommitted, commitment.CategoryId);
+
+        Assert.Null(commitment.Priority);
+    }
+
+    [Fact]
     public void DoesNotAllowChangingTheFirstDueDateAfterPayment()
     {
         var commitment = CreateCommitment();
@@ -151,7 +210,8 @@ public sealed class FinancialCommitmentTests
         int totalInstallments = 3,
         int paidInstallments = 0,
         decimal allocatedAmount = 0m,
-        int priority = 1) =>
+        int? priority = 1,
+        bool urgent = false) =>
         new(
             "Notebook",
             installmentAmount,
@@ -159,5 +219,6 @@ public sealed class FinancialCommitmentTests
             paidInstallments,
             allocatedAmount,
             priority,
-            isFullyCommitted: true);
+            isFullyCommitted: true,
+            urgent: urgent);
 }

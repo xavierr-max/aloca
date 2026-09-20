@@ -40,7 +40,7 @@ public sealed class TransactionsController(TransactionService transactionService
         var result = await transactionService.CreateAsync(request, cancellationToken);
         if (result.Status == TransactionWriteStatus.CategoryNotFound)
         {
-            return BadRequest(new { message = request.Type == Aloca.Api.Models.TransactionType.Income ? "Entradas precisam de uma categoria." : "Category was not found." });
+            return BadRequest(new { message = request.Type == Aloca.Api.Models.TransactionType.Income ? "Entradas precisam de um grupo." : "Group was not found." });
         }
 
         var response = await transactionService.GetByIdAsync(result.Transaction!.Id, cancellationToken);
@@ -58,7 +58,7 @@ public sealed class TransactionsController(TransactionService transactionService
     {
         var result = await transactionService.UpdateAsync(id, request, cancellationToken);
         if (result.Status == TransactionWriteStatus.NotFound) return NotFound();
-        if (result.Status == TransactionWriteStatus.CategoryNotFound) return BadRequest(new { message = "Categoria inválida para esta movimentação." });
+        if (result.Status == TransactionWriteStatus.CategoryNotFound) return BadRequest(new { message = "Grupo inválido para esta movimentação." });
         return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
     }
 }

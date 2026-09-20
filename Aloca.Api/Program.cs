@@ -21,9 +21,9 @@ builder.Services.AddScoped<FinancialSummaryService>(serviceProvider =>
     new FinancialSummaryService(serviceProvider.GetRequiredService<FinancialBalanceService>()));
 builder.Services.AddScoped<FinancialBalanceService>();
 builder.Services.AddScoped<FinancialCommitmentService>();
-builder.Services.AddScoped<FinancialAllocationService>();
 builder.Services.AddScoped<FinancialSettingsService>();
 builder.Services.AddScoped<FinancialProjectionService>();
+builder.Services.AddHostedService<AutomaticProcessingHostedService>();
 
 var app = builder.Build();
 
@@ -37,8 +37,6 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseHttpsRedirection();
 
 app.MapControllers();
 app.MapHealthChecks("/health");

@@ -1,4 +1,4 @@
-﻿namespace Aloca.Api.DTOs;
+namespace Aloca.Api.DTOs;
 
 public sealed record AllocationChangeResponse(Guid FinancialCommitmentId, string Name, decimal Amount);
 

@@ -101,10 +101,30 @@ public sealed class CategoryService(AlocaDbContext dbContext)
             return CategoryDeleteStatus.NotFound;
         }
 
-        var isInUse = await dbContext.Transactions
-            .AnyAsync(transaction => transaction.CategoryId == id, cancellationToken);
+        // Groups are labels. Removing one must never remove the financial records
+        // that use it, and the FK is intentionally restrictive for transactions.
+        var transactions = await dbContext.Transactions
+            .Where(transaction => transaction.CategoryId == id)
+            .ToListAsync(cancellationToken);
+        foreach (var transaction in transactions)
+        {
+            transaction.DetachCategory();
+        }
 
-        if (isInUse)
+        var commitments = await dbContext.FinancialCommitments
+            .Where(commitment => commitment.CategoryId == id)
+            .ToListAsync(cancellationToken);
+        foreach (var commitment in commitments)
+        {
+            commitment.SetCategory(null);
+        }
+
+        // Recurring incomes still require a group because generated income entries
+        // preserve the existing financial validation rule. Do not silently delete
+        // the group while leaving an invalid recurring definition behind.
+        var recurringIncomeUsesGroup = await dbContext.RecurringIncomes
+            .AnyAsync(income => income.CategoryId == id, cancellationToken);
+        if (recurringIncomeUsesGroup)
         {
             return CategoryDeleteStatus.InUse;
         }

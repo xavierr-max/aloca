@@ -103,6 +103,44 @@ public sealed class FinancialAllocationTests
     }
 
     [Fact]
+    public async Task ManualAllocationUsesUnallocatedBalanceEvenWhenFreeBalanceIsZero()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 528.28m, TransactionType.Income);
+        var commitment = Commitment("Reserva", 700m, 1, false, 100.74m);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var before = await new FinancialSummaryService(new FinancialBalanceService(db)).GetAsync(default);
+        var result = await service.AllocateAsync(commitment.Id, 198.90m, default);
+        var after = await new FinancialSummaryService(new FinancialBalanceService(db)).GetAsync(default);
+
+        Assert.Equal(427.54m, before.SaldoNaoAlocado);
+        Assert.Equal(0m, before.SaldoLivre);
+        Assert.Equal(299.64m, result!.AllocatedAmount);
+        Assert.Equal(528.28m, after.SaldoReal);
+        Assert.Equal(299.64m, after.TotalReservado);
+        Assert.Equal(228.64m, after.SaldoNaoAlocado);
+    }
+
+    [Fact]
+    public async Task ManualAllocationRejectsOnlyWhenUnallocatedBalanceIsInsufficient()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 150m, TransactionType.Income);
+        var commitment = Commitment("Reserva", 200m, 1, false, 100m);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.AllocateAsync(commitment.Id, 66.30m, default));
+
+        Assert.Equal("Saldo não alocado insuficiente para esta reserva.", error.Message);
+        Assert.Equal(50m, (await new FinancialSummaryService(db).GetAsync(default)).SaldoNaoAlocado);
+    }
+
+    [Fact]
     public async Task PaymentConsumesReservePersistsHistoryAndReducesRealBalance()
     {
         await using var db = CreateDb();

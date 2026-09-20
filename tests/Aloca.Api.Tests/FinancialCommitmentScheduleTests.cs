@@ -108,4 +108,43 @@ public sealed class FinancialCommitmentScheduleTests
             new DateOnly(2027, 1, 31), new DateOnly(2027, 2, 28), new DateOnly(2027, 3, 31)
         }, FinancialCommitmentSchedule.GetPendingInstallments(endOfMonth, ReferenceDate).Select(x => x.DueDate));
     }
+
+    [Fact]
+    public void GeneratesRecurringCommitmentFromFrequencyAndEndDate()
+    {
+        var commitment = new FinancialCommitment("Acordo", 150m, RecurringIncomeFrequency.Monthly,
+            new DateOnly(2026, 10, 10), new DateOnly(2027, 4, 10), 1, true);
+
+        var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2027, 4, 30));
+
+        Assert.Equal(7, schedule.Count);
+        Assert.Equal(new DateOnly(2026, 10, 10), schedule[0].DueDate);
+        Assert.Equal(new DateOnly(2027, 4, 10), schedule[^1].DueDate);
+    }
+
+    [Fact]
+    public void GeneratesOnlyOneDateForOneTimeCommitment()
+    {
+        var commitment = new FinancialCommitment("Compra", 150m, RecurringIncomeFrequency.Once,
+            new DateOnly(2026, 10, 10), null, 1, true);
+
+        var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2030, 1, 1));
+
+        Assert.Single(schedule);
+        Assert.Equal(new DateOnly(2026, 10, 10), schedule[0].DueDate);
+    }
+
+    [Fact]
+    public void GeneratesOpenEndedCommitmentOnlyInsideRequestedHorizon()
+    {
+        var commitment = new FinancialCommitment("Internet", 100m, RecurringIncomeFrequency.Monthly,
+            new DateOnly(2026, 10, 10), null, 1, true);
+
+        var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2027, 1, 31));
+
+        Assert.Equal(new[] {
+            new DateOnly(2026, 10, 10), new DateOnly(2026, 11, 10),
+            new DateOnly(2026, 12, 10), new DateOnly(2027, 1, 10)
+        }, schedule.Select(x => x.DueDate));
+    }
 }

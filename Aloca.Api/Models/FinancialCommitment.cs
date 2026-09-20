@@ -1,3 +1,5 @@
+using Aloca.Api.Services;
+
 namespace Aloca.Api.Models;
 
 public sealed class FinancialCommitment
@@ -12,9 +14,9 @@ public sealed class FinancialCommitment
         int totalInstallments,
         int paidInstallments,
         decimal allocatedAmount,
-        int priority,
+        int? priority,
         bool isFullyCommitted,
-        DateOnly? dueDate = null, string? objective = null, bool urgent = false)
+        DateOnly? dueDate = null, string? objective = null, bool urgent = false, bool automaticProcessing = false)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -41,7 +43,7 @@ public sealed class FinancialCommitment
             throw new ArgumentOutOfRangeException(nameof(allocatedAmount), "Allocated amount cannot be negative.");
         }
 
-        if (priority <= 0)
+        if (priority is <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
         }
@@ -57,6 +59,26 @@ public sealed class FinancialCommitment
         DueDate = dueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         Objective = objective?.Trim();
         Urgent = urgent;
+        AutomaticProcessing = automaticProcessing;
+        Frequency = totalInstallments == 1 ? RecurringIncomeFrequency.Once : RecurringIncomeFrequency.Monthly;
+        EndDate = DueDate.AddMonths(totalInstallments - 1);
+        IsRecurring = totalInstallments > 1;
+    }
+
+    public FinancialCommitment(string name, decimal amount, RecurringIncomeFrequency frequency, DateOnly firstDueDate, DateOnly? endDate,
+        int? priority, bool isFullyCommitted, string? objective = null, bool urgent = false, bool automaticProcessing = false)
+    {
+        ValidateName(name);
+        ValidateInstallmentAmount(amount);
+        if (!Enum.IsDefined(frequency)) throw new ArgumentOutOfRangeException(nameof(frequency));
+        if (endDate < firstDueDate) throw new ArgumentException("End date cannot be before first due date.", nameof(endDate));
+        ValidatePriority(priority);
+
+        Id = Guid.NewGuid(); Name = name.Trim(); InstallmentAmount = amount;
+        PaidInstallments = 0; AllocatedAmount = 0m; Priority = priority; IsFullyCommitted = isFullyCommitted;
+        DueDate = firstDueDate; Frequency = frequency; EndDate = frequency == RecurringIncomeFrequency.Once ? firstDueDate : endDate;
+        IsRecurring = frequency != RecurringIncomeFrequency.Once; TotalInstallments = EndDate.HasValue ? RecurringScheduleServiceCount(firstDueDate, frequency, EndDate) : 0;
+        Objective = objective?.Trim(); Urgent = urgent; AutomaticProcessing = automaticProcessing;
     }
 
     public Guid Id { get; private set; }
@@ -71,7 +93,7 @@ public sealed class FinancialCommitment
 
     public decimal AllocatedAmount { get; private set; }
 
-    public int Priority { get; private set; }
+    public int? Priority { get; private set; }
 
     public bool IsFullyCommitted { get; private set; }
 
@@ -79,15 +101,33 @@ public sealed class FinancialCommitment
     public Category? Category { get; private set; }
 
     public DateOnly DueDate { get; private set; }
+    public RecurringIncomeFrequency Frequency { get; private set; }
+    public DateOnly? EndDate { get; private set; }
+    public bool IsRecurring { get; private set; }
     public string? Objective { get; private set; }
 
     public bool Urgent { get; private set; }
+    public bool AutomaticProcessing { get; private set; }
+    public string? AutomaticProcessingWarning { get; private set; }
 
-    public decimal TotalAmount => InstallmentAmount * TotalInstallments;
+    public bool IsOpenEnded => IsRecurring && !EndDate.HasValue;
+    public decimal TotalAmount => IsOpenEnded ? 0m : InstallmentAmount * TotalInstallments;
 
-    public int RemainingInstallments => TotalInstallments - PaidInstallments;
+    // AllocatedAmount tracks the reserve still attached to unpaid installments.
+    // Include paid installments here so overall coverage remains meaningful
+    // throughout the full commitment lifecycle.
+    public decimal TotalAllocatedAmount => PaidInstallments * InstallmentAmount + AllocatedAmount;
 
-    public decimal RemainingAmount => InstallmentAmount * RemainingInstallments;
+    public decimal OverallRemainingAmount => IsOpenEnded ? AmountNeededForNextInstallment : decimal.Max(TotalAmount - TotalAllocatedAmount, 0m);
+
+    public decimal OverallCoveragePercentage => IsOpenEnded
+        ? (InstallmentAmount <= 0m ? 0m : decimal.Min(AllocatedAmount / InstallmentAmount * 100m, 100m))
+        : TotalAmount <= 0m ? 100m
+        : decimal.Min(TotalAllocatedAmount / TotalAmount * 100m, 100m);
+
+    public int RemainingInstallments => IsOpenEnded ? int.MaxValue : TotalInstallments - PaidInstallments;
+
+    public decimal RemainingAmount => IsOpenEnded ? AmountNeededForNextInstallment : InstallmentAmount * RemainingInstallments;
 
     public int CoveredInstallments
     {
@@ -106,9 +146,11 @@ public sealed class FinancialCommitment
 
     public decimal ExcessAllocatedAmount => decimal.Max(AllocatedAmount - RemainingAmount, 0m);
 
-    public bool IsCompleted => PaidInstallments == TotalInstallments;
+    public bool IsCompleted => !IsOpenEnded && PaidInstallments == TotalInstallments;
 
-    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null, string? objective = null, bool urgent = false)
+    public bool RequiresAttention => Urgent && !IsCompleted && OverallRemainingAmount > 0m;
+
+    public void UpdateDetails(string name, decimal installmentAmount, int totalInstallments, int? priority, bool isFullyCommitted, Guid? categoryId, DateOnly? dueDate = null, string? objective = null, bool urgent = false, bool automaticProcessing = false)
     {
         ValidateName(name);
         ValidateInstallmentAmount(installmentAmount);
@@ -134,6 +176,20 @@ public sealed class FinancialCommitment
         DueDate = dueDate ?? DueDate;
         Objective = objective?.Trim();
         Urgent = urgent;
+        AutomaticProcessing = automaticProcessing;
+    }
+
+    public void UpdateSchedule(string name, decimal amount, RecurringIncomeFrequency frequency, DateOnly firstDueDate, DateOnly? endDate,
+        int? priority, bool isFullyCommitted, Guid? categoryId, string? objective = null, bool urgent = false, bool automaticProcessing = false)
+    {
+        ValidateName(name); ValidateInstallmentAmount(amount); ValidatePriority(priority);
+        if (endDate < firstDueDate) throw new ArgumentException("End date cannot be before first due date.", nameof(endDate));
+        if (PaidInstallments > 0 && firstDueDate != DueDate) throw new InvalidOperationException("The first due date cannot be changed after a payment has been registered.");
+        Name = name.Trim(); InstallmentAmount = amount; Frequency = frequency; EndDate = frequency == RecurringIncomeFrequency.Once ? firstDueDate : endDate;
+        IsRecurring = frequency != RecurringIncomeFrequency.Once; DueDate = firstDueDate; Priority = priority; IsFullyCommitted = isFullyCommitted;
+        CategoryId = categoryId; Objective = objective?.Trim(); Urgent = urgent; AutomaticProcessing = automaticProcessing;
+        if (!IsOpenEnded) TotalInstallments = RecurringScheduleServiceCount(firstDueDate, frequency, EndDate);
+        else TotalInstallments = 0;
     }
 
     public void SetCategory(Guid? categoryId) => CategoryId = categoryId;
@@ -168,6 +224,8 @@ public sealed class FinancialCommitment
         return paymentAmount;
     }
 
+    public void SetAutomaticProcessingWarning(string? warning) => AutomaticProcessingWarning = warning;
+
     public void ReverseLatestPayment(decimal paymentAmount)
     {
         if (PaidInstallments == 0)
@@ -194,9 +252,19 @@ public sealed class FinancialCommitment
         if (total <= 0) throw new ArgumentOutOfRangeException(nameof(total), "Total installments must be greater than zero.");
     }
 
-    private static void ValidatePriority(int priority)
+    private static int RecurringScheduleServiceCount(DateOnly start, RecurringIncomeFrequency frequency, DateOnly? end)
     {
-        if (priority <= 0) throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
+        if (frequency == RecurringIncomeFrequency.Once) return 1;
+        if (!end.HasValue) return 0;
+        var count = 0;
+        var current = start;
+        while (current <= end.Value) { count++; current = RecurringScheduleService.Next(current, frequency, start.Day); }
+        return count;
+    }
+
+    private static void ValidatePriority(int? priority)
+    {
+        if (priority is <= 0) throw new ArgumentOutOfRangeException(nameof(priority), "Priority must be greater than zero.");
     }
 
     private static void ValidatePositiveAmount(decimal amount, string parameterName)

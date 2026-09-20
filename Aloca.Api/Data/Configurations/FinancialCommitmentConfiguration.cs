@@ -11,8 +11,8 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.ToTable("financial_commitments", tableBuilder =>
         {
             tableBuilder.HasCheckConstraint("ck_financial_commitments_installment_amount_positive", "\"InstallmentAmount\" > 0");
-            tableBuilder.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" > 0");
-            tableBuilder.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND \"PaidInstallments\" <= \"TotalInstallments\"");
+            tableBuilder.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" >= 0");
+            tableBuilder.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND (\"TotalInstallments\" = 0 OR \"PaidInstallments\" <= \"TotalInstallments\")");
             tableBuilder.HasCheckConstraint("ck_financial_commitments_allocated_amount_non_negative", "\"AllocatedAmount\" >= 0");
             tableBuilder.HasCheckConstraint("ck_financial_commitments_priority_positive", "\"Priority\" > 0");
         });
@@ -33,11 +33,16 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
 
         builder.Property(commitment => commitment.TotalInstallments).IsRequired();
         builder.Property(commitment => commitment.PaidInstallments).IsRequired();
-        builder.Property(commitment => commitment.Priority).IsRequired();
+        builder.Property(commitment => commitment.Priority).IsRequired(false);
         builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
         builder.Property(commitment => commitment.DueDate).IsRequired();
+        builder.Property(commitment => commitment.Frequency).IsRequired();
+        builder.Property(commitment => commitment.EndDate).IsRequired(false);
+        builder.Property(commitment => commitment.IsRecurring).IsRequired();
         builder.Property(commitment => commitment.Objective).HasMaxLength(500);
         builder.Property(commitment => commitment.Urgent).IsRequired();
+        builder.Property(commitment => commitment.AutomaticProcessing).IsRequired();
+        builder.Property(commitment => commitment.AutomaticProcessingWarning).HasMaxLength(300);
 
         builder.HasIndex(commitment => new { commitment.IsFullyCommitted, commitment.Priority });
 

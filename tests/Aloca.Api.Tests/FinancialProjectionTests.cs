@@ -297,6 +297,88 @@ public sealed class FinancialProjectionTests
     }
 
     [Fact]
+    public async Task ProjectionIdentifiesRecordedExpensesSeparatelyFromCommitmentInstallments()
+    {
+        await using var db = CreateDb();
+        var category = await AddCategory(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        db.Transactions.Add(new Transaction("Saída realizada", 25m, TransactionType.Expense, today.AddMonths(1).AddDays(1), category.Id));
+        db.FinancialCommitments.Add(new FinancialCommitment("Compromisso", 14.17m, 2, 0, 0m, 1, true, today.AddMonths(1)));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(2, default);
+        var month = projection.Months.Last();
+
+        Assert.Equal(25m, month.RecordedExpense);
+        Assert.Equal(14.17m, month.CommitmentExpense);
+        Assert.Contains(month.Expenses, x => x.Source == ProjectionMovementSources.Transaction && x.Id != "");
+        Assert.Contains(month.Expenses, x => x.Source == ProjectionMovementSources.Commitment && x.Id.Contains(":"));
+    }
+
+    [Fact]
+    public async Task ProjectionCalculatesMonthlyInstallmentCoverageFromAllocationAndPayments()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var commitment = new FinancialCommitment("Compra", 100m, 3, 0, 166.30m, 1, true, today);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(1, default);
+        var month = projection.Months.Single();
+        var installment = Assert.Single(month.Expenses.Where(x => x.Source == ProjectionMovementSources.Commitment));
+
+        Assert.Equal(100m, month.CommitmentExpense);
+        Assert.Equal(100m, month.CommitmentReserved);
+        Assert.Equal(0m, month.CommitmentPending);
+        Assert.Equal(100m, installment.ReservedAmount);
+        Assert.Equal(0m, installment.RemainingAmount);
+        Assert.Equal(100m, installment.CoveragePercentage);
+        Assert.Equal("covered", installment.CoverageStatus);
+    }
+
+    [Fact]
+    public async Task ProjectionAllocatesOnlyTheRemainderToASelectedMonthInstallment()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var commitment = new FinancialCommitment("Compra", 100m, 3, 0, 66.30m, 1, true, today);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(1, default);
+        var nextMonth = projection.Months.Single();
+        var installment = Assert.Single(nextMonth.Expenses.Where(x => x.Source == ProjectionMovementSources.Commitment));
+
+        Assert.Equal(66.30m, installment.ReservedAmount);
+        Assert.Equal(33.70m, installment.RemainingAmount);
+        Assert.Equal(66.3m, installment.CoveragePercentage);
+        Assert.Equal("partial", installment.CoverageStatus);
+        Assert.Equal(33.70m, nextMonth.CommitmentPending);
+    }
+
+    [Fact]
+    public async Task UrgentAttentionIsReturnedIndependentlyOfTheSelectedMonth()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        db.FinancialCommitments.Add(new FinancialCommitment(
+            "Urgente futuro", 66.30m, 3, 0, 66.30m, 1, true,
+            today.AddMonths(4), urgent: true));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(1, today, default);
+
+        var urgent = Assert.Single(projection.UrgentCommitments);
+        Assert.Equal(198.90m, urgent.TotalAmount);
+        Assert.Equal(66.30m, urgent.AllocatedAmount);
+        Assert.Equal(132.60m, urgent.RemainingAmount);
+        Assert.Equal(33.3m, Math.Round(urgent.OverallCoverage, 1));
+        Assert.True(urgent.RequiresAttention);
+        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Expenses), x => x.Description == "Urgente futuro");
+    }
+
+    [Fact]
     public async Task FutureMonthProjectionUsesAccumulatedOpeningBalance()
     {
         await using var db = CreateDb();
