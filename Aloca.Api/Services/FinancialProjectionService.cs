@@ -53,7 +53,7 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
             .Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.TransactionId == null && x.ScheduledDate >= today && x.ScheduledDate < endExclusive)
             .ToListAsync(ct);
         var commitments = await db.FinancialCommitments.AsNoTracking().Include(x => x.Category)
-            .Where(x => x.PaidInstallments < x.TotalInstallments).ToListAsync(ct);
+            .Where(x => x.TotalInstallments == 0 || x.PaidInstallments < x.TotalInstallments).ToListAsync(ct);
         var currentBalance = (await balanceService.GetAsync(ct)).SaldoReal;
 
         var futureIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date >= calculationStart && x.Date < endExclusive && x.Date > today)
@@ -73,7 +73,7 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
             }).ToList();
         foreach (var commitment in commitments)
         {
-            foreach (var installment in FinancialCommitmentSchedule.GetPendingInstallments(commitment, today))
+            foreach (var installment in FinancialCommitmentSchedule.GetPendingInstallments(commitment, today, endExclusive.AddDays(-1)))
             {
                 if (installment.DueDate < firstMonth || installment.DueDate >= endExclusive) continue;
                 futureExpenses.Add(new ProjectionMovementResponse(

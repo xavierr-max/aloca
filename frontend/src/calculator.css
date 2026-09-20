@@ -1,5 +1,6 @@
 .calculator-trigger {
   display: inline-grid;
+  flex: 0 0 38px;
   place-items: center;
   width: 38px;
   height: 38px;
@@ -13,6 +14,7 @@
   cursor: pointer;
   transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
 }
+.calculator-trigger svg { width: 20px; height: 20px; display: block; }
 .calculator-trigger:hover,
 .calculator-trigger:focus-visible,
 .calculator-trigger.active {
@@ -93,7 +95,7 @@
 
 @media (max-width: 760px) {
   .calculator-popover { top: 82px; right: 12px; }
-  .calculator-trigger { width: 36px; height: 36px; }
+  .calculator-trigger { width: 36px; height: 36px; flex-basis: 36px; }
 }
 @media (max-width: 600px) {
   .calculator-popover {

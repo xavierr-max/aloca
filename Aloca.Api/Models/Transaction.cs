@@ -40,6 +40,7 @@ public sealed class Transaction
         CreatedAt = DateTime.UtcNow;
         CategoryId = categoryId;
         RecurringIncomeOccurrenceId = recurringIncomeOccurrenceId;
+        ProcessedAt = CreatedAt;
     }
 
     public Guid Id { get; private set; }
@@ -53,6 +54,7 @@ public sealed class Transaction
     public DateOnly Date { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
+    public DateTime? ProcessedAt { get; private set; }
 
     public Guid? CategoryId { get; private set; }
 

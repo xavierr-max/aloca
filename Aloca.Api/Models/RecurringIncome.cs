@@ -4,7 +4,7 @@ public sealed class RecurringIncome
 {
     private RecurringIncome() { }
 
-    public RecurringIncome(string description, decimal amount, Guid categoryId, RecurringIncomeFrequency frequency, DateOnly startDate, DateOnly? endDate, int? dayOfMonth)
+    public RecurringIncome(string description, decimal amount, Guid categoryId, RecurringIncomeFrequency frequency, DateOnly startDate, DateOnly? endDate, int? dayOfMonth, bool automaticProcessing = false)
     {
         if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("Description is required.", nameof(description));
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
@@ -13,7 +13,7 @@ public sealed class RecurringIncome
         if (endDate < startDate) throw new ArgumentException("End date cannot be before start date.", nameof(endDate));
         if (frequency == RecurringIncomeFrequency.Monthly && dayOfMonth is < 1 or > 31) throw new ArgumentOutOfRangeException(nameof(dayOfMonth));
         Id = Guid.NewGuid(); Description = description.Trim(); Amount = amount; CategoryId = categoryId; Frequency = frequency;
-        StartDate = startDate; EndDate = endDate; DayOfMonth = dayOfMonth; IsActive = true; CreatedAt = DateTime.UtcNow; UpdatedAt = CreatedAt;
+        StartDate = startDate; EndDate = endDate; DayOfMonth = dayOfMonth; AutomaticProcessing = automaticProcessing; IsActive = true; CreatedAt = DateTime.UtcNow; UpdatedAt = CreatedAt;
     }
 
     public Guid Id { get; private set; }
@@ -26,14 +26,15 @@ public sealed class RecurringIncome
     public DateOnly? EndDate { get; private set; }
     public int? DayOfMonth { get; private set; }
     public bool IsActive { get; private set; }
+    public bool AutomaticProcessing { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public ICollection<RecurringIncomeOccurrence> Occurrences { get; private set; } = new List<RecurringIncomeOccurrence>();
 
-    public void Update(string description, decimal amount, Guid categoryId, RecurringIncomeFrequency frequency, DateOnly startDate, DateOnly? endDate, int? dayOfMonth)
+    public void Update(string description, decimal amount, Guid categoryId, RecurringIncomeFrequency frequency, DateOnly startDate, DateOnly? endDate, int? dayOfMonth, bool automaticProcessing = false)
     {
         if (string.IsNullOrWhiteSpace(description) || amount <= 0 || categoryId == Guid.Empty || !Enum.IsDefined(frequency) || endDate < startDate || (frequency == RecurringIncomeFrequency.Monthly && dayOfMonth is < 1 or > 31)) throw new ArgumentException("Recurring income data is invalid.");
-        Description = description.Trim(); Amount = amount; CategoryId = categoryId; Frequency = frequency; StartDate = startDate; EndDate = endDate; DayOfMonth = dayOfMonth; UpdatedAt = DateTime.UtcNow;
+        Description = description.Trim(); Amount = amount; CategoryId = categoryId; Frequency = frequency; StartDate = startDate; EndDate = endDate; DayOfMonth = dayOfMonth; AutomaticProcessing = automaticProcessing; UpdatedAt = DateTime.UtcNow;
     }
     public void SetActive(bool active) { IsActive = active; UpdatedAt = DateTime.UtcNow; }
 }

@@ -17,17 +17,20 @@ public sealed class RecurringIncomeOccurrence
     public Guid? TransactionId { get; private set; }
     public Transaction? Transaction { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    public DateTime? ProcessedAt { get; private set; }
     public void Receive(Guid transactionId)
     {
         if (Status is RecurringIncomeOccurrenceStatus.Cancelled or RecurringIncomeOccurrenceStatus.Paused || TransactionId.HasValue) return;
         Status = RecurringIncomeOccurrenceStatus.Received;
         TransactionId = transactionId;
+        ProcessedAt = DateTime.UtcNow;
     }
 
     public void LinkExistingTransaction(Guid transactionId)
     {
         TransactionId = transactionId;
         Status = RecurringIncomeOccurrenceStatus.Received;
+        ProcessedAt = DateTime.UtcNow;
     }
     public void RestoreAfterTransactionDeletion()
     {
@@ -35,6 +38,7 @@ public sealed class RecurringIncomeOccurrence
         {
             TransactionId = null;
             Status = RecurringIncomeOccurrenceStatus.Planned;
+            ProcessedAt = null;
         }
     }
     public void Cancel(RecurringIncomeOccurrenceCancellationSource source = RecurringIncomeOccurrenceCancellationSource.User)

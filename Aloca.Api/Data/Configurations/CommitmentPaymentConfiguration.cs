@@ -14,6 +14,7 @@ public sealed class CommitmentPaymentConfiguration : IEntityTypeConfiguration<Co
         builder.Property(x => x.Amount).HasPrecision(18, 2).IsRequired();
         builder.Property(x => x.InstallmentNumber).IsRequired();
         builder.Property(x => x.PaidAt).IsRequired();
+        builder.Property(x => x.WasAutomatic).IsRequired();
         builder.HasOne(x => x.FinancialCommitment)
             .WithMany()
             .HasForeignKey(x => x.FinancialCommitmentId)

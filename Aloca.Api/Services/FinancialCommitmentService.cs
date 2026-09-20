@@ -25,7 +25,11 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var dueDate = request.DueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         if (dueDate < DateOnly.FromDateTime(DateTime.UtcNow))
             throw new InvalidOperationException("The first due date cannot be earlier than today for a new commitment.");
-        var item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments, 0, 0m, request.Priority, request.IsFullyCommitted, dueDate, request.Objective, request.Urgent);
+        FinancialCommitment item;
+        if (request.Frequency.HasValue)
+            item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.Frequency.Value, dueDate, request.EndDate, request.Priority, request.IsFullyCommitted ?? true, request.Objective, request.Urgent, request.AutomaticProcessing);
+        else
+            item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments ?? throw new ArgumentException("Informe o total de parcelas ou a frequência."), 0, 0m, request.Priority, request.IsFullyCommitted ?? true, dueDate, request.Objective, request.Urgent, request.AutomaticProcessing);
         item.SetCategory(request.CategoryId);
         dbContext.FinancialCommitments.Add(item); await dbContext.SaveChangesAsync(ct); return item;
     }
@@ -34,7 +38,10 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     {
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null;
         await ValidateCategoryAsync(request.CategoryId, ct);
-        item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments, request.Priority, request.IsFullyCommitted, request.CategoryId, request.DueDate, request.Objective, request.Urgent);
+        if (request.Frequency.HasValue)
+            item.UpdateSchedule(request.Name, request.InstallmentAmount, request.Frequency.Value, request.DueDate ?? item.DueDate, request.EndDate, request.Priority, request.IsFullyCommitted ?? item.IsFullyCommitted, request.CategoryId, request.Objective, request.Urgent, request.AutomaticProcessing);
+        else
+            item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments ?? throw new ArgumentException("Informe o total de parcelas ou a frequência."), request.Priority, request.IsFullyCommitted ?? item.IsFullyCommitted, request.CategoryId, request.DueDate, request.Objective, request.Urgent, request.AutomaticProcessing);
         await dbContext.SaveChangesAsync(ct); return item;
     }
 
@@ -43,17 +50,39 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     public async Task<FinancialCommitment?> MutateAsync(Guid id, Action<FinancialCommitment> mutation, CancellationToken ct)
     { var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null; mutation(item); await dbContext.SaveChangesAsync(ct); return item; }
 
-    public async Task<FinancialCommitment?> RegisterPaymentAsync(Guid id, CancellationToken ct)
+    public async Task<FinancialCommitment?> RegisterPaymentAsync(Guid id, CancellationToken ct, bool automatic = false)
     {
         await using var transaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(ct) : null;
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return null;
         if (item.AllocatedAmount < item.InstallmentAmount) throw new InvalidOperationException($"Insufficient allocation. Missing {item.InstallmentAmount - item.AllocatedAmount:C} for the next installment.");
         var amount = item.RegisterPayment();
-        dbContext.CommitmentPayments.Add(new CommitmentPayment(item.Id, amount, item.PaidInstallments, DateTime.UtcNow));
+        item.SetAutomaticProcessingWarning(null);
+        dbContext.CommitmentPayments.Add(new CommitmentPayment(item.Id, amount, item.PaidInstallments, DateTime.UtcNow, automatic));
         await dbContext.SaveChangesAsync(ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return item;
+    }
+
+    public async Task<int> ProcessDueAsync(DateOnly today, CancellationToken ct)
+    {
+        var items = await dbContext.FinancialCommitments.Where(x => x.AutomaticProcessing && x.PaidInstallments < x.TotalInstallments).ToListAsync(ct);
+        var processed = 0;
+        foreach (var item in items)
+        {
+            while (FinancialCommitmentSchedule.GetPendingInstallments(item, today).FirstOrDefault() is { } due && due.DueDate <= today)
+            {
+                if (item.AllocatedAmount < item.InstallmentAmount)
+                {
+                    item.SetAutomaticProcessingWarning($"Pagamento automático não realizado: faltam {(item.InstallmentAmount - item.AllocatedAmount):C}.");
+                    break;
+                }
+                await RegisterPaymentAsync(item.Id, ct, automatic: true);
+                processed++;
+            }
+        }
+        await dbContext.SaveChangesAsync(ct);
+        return processed;
     }
 
     public async Task<FinancialCommitment?> ReverseLatestPaymentAsync(Guid id, CancellationToken ct)
@@ -108,6 +137,6 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     private static FinancialCommitmentResponse ToResponse(FinancialCommitment x)
     {
         var nextDueDate = FinancialCommitmentSchedule.GetPendingInstallments(x, DateOnly.FromDateTime(DateTime.UtcNow)).FirstOrDefault()?.DueDate;
-        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention);
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention, x.AutomaticProcessing, x.AutomaticProcessingWarning, x.Frequency, x.EndDate, x.IsRecurring, x.IsOpenEnded);
     }
 }

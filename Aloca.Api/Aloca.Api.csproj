@@ -5,9 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>f6c82309-32ac-49c3-a726-91074a6e97cf</UserSecretsId>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="artifacts\**" />
+    <Compile Remove="obj\**" />
+    <None Remove="artifacts\**" />
+    <Content Remove="artifacts\**" />
+    <EmbeddedResource Remove="artifacts\**" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
       <PrivateAssets>all</PrivateAssets>

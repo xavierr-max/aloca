@@ -15,12 +15,12 @@ const tutorialDefinitions = {
     { selector: '[data-tour="dashboard-movements"]', title: 'Registre movimentações', description: 'Nesta seção você consulta lançamentos recentes e pode registrar uma nova entrada ou saída.' },
   ],
   incomes: [
-    { selector: '[data-tour="movements-page"]', title: 'Organize movimentações', description: 'Consulte entradas, saídas e recorrências já registradas nesta página.' },
+    { selector: '[data-tour="movements-page"]', title: 'Organize movimentações', description: 'Consulte entradas, saídas e entradas recorrentes já registradas nesta página.' },
     { selector: '[data-tour="movement-create"]', title: 'Crie um lançamento', description: 'Use Novo para registrar uma entrada, uma saída ou uma entrada recorrente. Os dados salvos afetam o saldo conforme o tipo.' },
-    { selector: '[data-tour="movement-tabs"]', title: 'Escolha uma visão', description: 'Alterne entre todas as movimentações, apenas entradas, apenas saídas ou recorrências.' },
+    { selector: '[data-tour="movement-tabs"]', title: 'Escolha uma visão', description: 'Alterne entre todas as movimentações, apenas entradas, apenas saídas ou entradas recorrentes.' },
     { selector: '[data-tour="movement-filters"]', title: 'Filtre e ordene', description: 'Pesquise pela descrição, grupo ou mês e ordene os resultados por data ou valor.' },
-    { selector: '[data-tour="movement-results"]', title: 'Gerencie lançamentos', description: 'Saídas podem ser editadas ou excluídas. Entradas podem ser excluídas e recorrências abrem detalhes em um drawer.' },
-    { selector: '[data-tour="recurring-tab"]', title: 'Acompanhe recorrências', description: 'Na aba Recorrentes você pesquisa, pausa, retoma, edita e acompanha as próximas ocorrências de entradas periódicas.' },
+    { selector: '[data-tour="movement-results"]', title: 'Gerencie lançamentos', description: 'Saídas podem ser editadas ou excluídas. Entradas podem ser excluídas e entradas recorrentes abrem detalhes em um drawer.' },
+    { selector: '[data-tour="recurring-tab"]', title: 'Acompanhe entradas recorrentes', description: 'Na aba Entradas recorrentes você pesquisa, pausa, retoma, edita e acompanha as próximas ocorrências.' },
   ],
   commitments: [
     { selector: '[data-tour="commitments-page"]', title: 'Planeje compromissos', description: 'Organize compromissos parcelados, acompanhe a cobertura e decida quando reservar ou pagar cada parcela.' },

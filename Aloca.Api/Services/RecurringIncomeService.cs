@@ -20,7 +20,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
     public async Task<RecurringIncomeResponse?> CreateAsync(RecurringIncomeRequest request, CancellationToken ct)
     {
         if (!await db.Categories.AnyAsync(x => x.Id == request.CategoryId, ct)) return null;
-        var item = new RecurringIncome(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth); db.RecurringIncomes.Add(item); await db.SaveChangesAsync(ct); await EnsureOccurrencesAsync(DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(24), ct); return await GetAsync(item.Id, ct);
+        var item = new RecurringIncome(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth, request.AutomaticProcessing); db.RecurringIncomes.Add(item); await db.SaveChangesAsync(ct); await EnsureOccurrencesAsync(DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(24), ct); return await GetAsync(item.Id, ct);
     }
 
     public async Task<RecurringIncomeResponse?> UpdateAsync(Guid id, RecurringIncomeRequest request, CancellationToken ct)
@@ -29,7 +29,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
         var item = await db.RecurringIncomes.Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null;
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         RepairLegacyCancelledBatch(item, GenerateDates(item, today.AddMonths(24)), today);
-        item.Update(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth);
+        item.Update(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth, request.AutomaticProcessing);
         await ReconcileFutureOccurrencesAsync(item, today.AddMonths(24), ct);
         await db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
@@ -77,7 +77,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
         return true;
     }
 
-    public async Task<RecurringIncomeOccurrenceResponse?> ReceiveAsync(Guid occurrenceId, CancellationToken ct)
+    public async Task<RecurringIncomeOccurrenceResponse?> ReceiveAsync(Guid occurrenceId, CancellationToken ct, DateOnly? processingDate = null)
     {
         var occurrence = await db.RecurringIncomeOccurrences.Include(x => x.RecurringIncome).SingleOrDefaultAsync(x => x.Id == occurrenceId, ct);
         if (occurrence is null || !occurrence.RecurringIncome.IsActive || occurrence.Status is RecurringIncomeOccurrenceStatus.Cancelled or RecurringIncomeOccurrenceStatus.Paused) return null;
@@ -94,7 +94,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
                 // Um recebimento antecipado entra no saldo real no dia em que foi confirmado.
                 // A data agendada continua pertencendo à ocorrência, que fica marcada como recebida
                 // e deixa de ser considerada pela projeção.
-                var transactionDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                var transactionDate = processingDate ?? BusinessClock.Today();
                 if (occurrence.ScheduledDate < transactionDate) transactionDate = occurrence.ScheduledDate;
                 var transaction = new Transaction(occurrence.RecurringIncome.Description, occurrence.Amount, TransactionType.Income, transactionDate, occurrence.RecurringIncome.CategoryId, occurrence.Id);
                 db.Transactions.Add(transaction);
@@ -111,7 +111,22 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
                 }
             }
         }
-        return new(occurrence.Id, occurrence.ScheduledDate, occurrence.Amount, occurrence.Status, occurrence.TransactionId, occurrence.CancellationSource);
+        return new(occurrence.Id, occurrence.ScheduledDate, occurrence.Amount, occurrence.Status, occurrence.TransactionId, occurrence.CancellationSource, occurrence.ProcessedAt);
+    }
+
+    public async Task<int> ProcessDueAsync(DateOnly today, CancellationToken ct)
+    {
+        await EnsureOccurrencesAsync(today, ct);
+        var due = await db.RecurringIncomeOccurrences
+            .Include(x => x.RecurringIncome)
+            .Where(x => x.ScheduledDate <= today && x.Status == RecurringIncomeOccurrenceStatus.Planned && x.RecurringIncome.IsActive && x.RecurringIncome.AutomaticProcessing)
+            .OrderBy(x => x.ScheduledDate).ToListAsync(ct);
+        var processed = 0;
+        foreach (var occurrence in due)
+        {
+            if (await ReceiveAsync(occurrence.Id, ct, today) is { Status: RecurringIncomeOccurrenceStatus.Received }) processed++;
+        }
+        return processed;
     }
 
     public async Task<IReadOnlyCollection<ProjectionMonthResponse>> ProjectionAsync(CancellationToken ct)
@@ -150,14 +165,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
     }
     private static HashSet<DateOnly> GenerateDates(RecurringIncome item, DateOnly horizon)
     {
-        var dates = new HashSet<DateOnly>();
-        var date = item.StartDate;
-        while (date <= horizon && (!item.EndDate.HasValue || date <= item.EndDate))
-        {
-            dates.Add(date);
-            date = Next(date, item.Frequency, item.DayOfMonth);
-        }
-        return dates;
+        return RecurringScheduleService.Generate(item.StartDate, item.Frequency, item.EndDate, horizon, item.DayOfMonth).ToHashSet();
     }
     private static void RepairLegacyCancelledBatch(RecurringIncome item, IEnumerable<DateOnly> expectedDates, DateOnly today)
     {
@@ -177,8 +185,8 @@ public sealed class RecurringIncomeService(AlocaDbContext db)
         var next = x.IsActive
             ? x.Occurrences.Where(o => o.Status == RecurringIncomeOccurrenceStatus.Planned && o.ScheduledDate >= today).OrderBy(o => o.ScheduledDate).Select(o => (DateOnly?)o.ScheduledDate).FirstOrDefault()
             : null;
-        return new(x.Id, x.Description, x.Amount, x.CategoryId, x.Category.Name, x.Frequency, x.StartDate, x.EndDate, x.DayOfMonth, x.IsActive, next, x.Occurrences.OrderBy(o => o.ScheduledDate).Select(o => new RecurringIncomeOccurrenceResponse(o.Id, o.ScheduledDate, o.Amount, o.Status, o.TransactionId, o.CancellationSource)).ToList());
+        return new(x.Id, x.Description, x.Amount, x.CategoryId, x.Category.Name, x.Frequency, x.StartDate, x.EndDate, x.DayOfMonth, x.IsActive, x.AutomaticProcessing, next, x.Occurrences.OrderBy(o => o.ScheduledDate).Select(o => new RecurringIncomeOccurrenceResponse(o.Id, o.ScheduledDate, o.Amount, o.Status, o.TransactionId, o.CancellationSource, o.ProcessedAt)).ToList());
     }
 }
 
-file static class DateOnlyExtensions { public static DateOnly WithDay(this DateOnly date, int day) => new(date.Year, date.Month, Math.Min(day, DateTime.DaysInMonth(date.Year, date.Month))); }
+ 
