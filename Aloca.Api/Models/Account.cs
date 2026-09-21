@@ -1,13 +1,17 @@
+using System.Text.RegularExpressions;
+
 namespace Aloca.Api.Models;
 
 public sealed class Account
 {
     private Account() { }
 
-    public Account(string displayName, bool isLocal = true)
+    public Account(string displayName, bool isLocal = true, string? email = null)
     {
         Id = Guid.NewGuid();
         DisplayName = ValidateDisplayName(displayName);
+        Email = email is null ? null : ValidateEmail(email);
+        NormalizedEmail = Email is null ? null : NormalizeEmail(Email);
         IsLocal = isLocal;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = CreatedAt;
@@ -19,6 +23,8 @@ public sealed class Account
     public string DisplayName { get; private set; } = null!;
     public string? Username { get; private set; }
     public string? NormalizedUsername { get; private set; }
+    public string? Email { get; private set; }
+    public string? NormalizedEmail { get; private set; }
     public string? PasswordHash { get; private set; }
     public bool IsLocal { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -32,12 +38,20 @@ public sealed class Account
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Protect(string displayName, string username, string normalizedUsername, string passwordHash)
+    public void SetEmail(string email)
+    {
+        Email = ValidateEmail(email);
+        NormalizedEmail = NormalizeEmail(Email);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void Protect(string displayName, string username, string normalizedUsername, string passwordHash, string? email = null)
     {
         DisplayName = ValidateDisplayName(displayName);
         Username = username.Trim();
         NormalizedUsername = normalizedUsername;
         PasswordHash = passwordHash;
+        if (!string.IsNullOrWhiteSpace(email)) SetEmail(email);
         IsLocal = false;
         TouchSecurity();
     }
@@ -64,6 +78,17 @@ public sealed class Account
         if (value.Length > 80) throw new ArgumentException("O nome da conta deve ter no máximo 80 caracteres.", nameof(displayName));
         return value;
     }
+
+    private static string ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new ArgumentException("Informe um e-mail válido.", nameof(email));
+        var value = email.Trim();
+        if (value.Length > 254) throw new ArgumentException("O e-mail deve ter no máximo 254 caracteres.", nameof(email));
+        return value;
+    }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
 
     private static string CreateStamp() => Guid.NewGuid().ToString("N");
 }

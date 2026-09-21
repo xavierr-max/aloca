@@ -55,4 +55,12 @@ public sealed class TransactionQueryParameters
     public int PageSize { get; init; } = 50;
 }
 
-public sealed record PagedResponse<T>(IReadOnlyCollection<T> Items, int Page, int PageSize, int TotalCount);
+public sealed record PagedResponse<T>(IReadOnlyCollection<T> Items, int Page, int PageSize, int TotalItems)
+{
+    public int TotalPages => TotalItems == 0 ? 0 : (int)Math.Ceiling(TotalItems / (double)PageSize);
+
+    // Kept for source compatibility with existing consumers; the API contract
+    // serializes totalItems and totalPages as the canonical pagination fields.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int TotalCount => TotalItems;
+}

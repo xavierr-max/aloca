@@ -17,6 +17,8 @@ appsettings.Local.json
 appsettings.*.local.json
 secrets.json
 secrets/
+.aloca-production-migration.lock
+backups/
 
 # Test output
 TestResults/

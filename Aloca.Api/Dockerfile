@@ -23,6 +23,7 @@ COPY --from=build /app/publish .
 COPY Aloca.Api/docker-entrypoint.sh /usr/local/bin/aloca-api-entrypoint
 RUN chmod 0755 /usr/local/bin/aloca-api-entrypoint \
     && mkdir -p /app/data-protection-keys \
+    && chmod 0700 /app/data-protection-keys \
     && chown -R $APP_UID:$APP_UID /app
 
 USER $APP_UID

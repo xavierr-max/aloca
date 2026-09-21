@@ -3,5 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { '/api': 'http://localhost:5243', '/health': 'http://localhost:5243' } }
+  server: {
+    proxy: {
+      '/api': { target: 'http://localhost:5243', changeOrigin: true },
+      '/health': { target: 'http://localhost:5243', changeOrigin: true }
+    }
+  }
 })

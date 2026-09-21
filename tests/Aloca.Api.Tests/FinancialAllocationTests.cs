@@ -372,6 +372,27 @@ public sealed class FinancialAllocationTests
     }
 
     [Fact]
+    public async Task ConcurrentPaymentsCreateOnlyOnePaymentAndExpense()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using var seed = CreateDb(databaseName);
+        var commitment = Commitment("Pagamento concorrente", 100m, 1, true, 100m);
+        seed.FinancialCommitments.Add(commitment);
+        await seed.SaveChangesAsync();
+
+        await using var dbA = CreateDb(databaseName);
+        await using var dbB = CreateDb(databaseName);
+        var results = await Task.WhenAll(
+            new FinancialCommitmentService(dbA, new FinancialBalanceService(dbA)).RegisterPaymentAsync(commitment.Id, default),
+            new FinancialCommitmentService(dbB, new FinancialBalanceService(dbB)).RegisterPaymentAsync(commitment.Id, default));
+
+        Assert.All(results, result => Assert.NotNull(result));
+        await using var verify = CreateDb(databaseName);
+        Assert.Single(await verify.CommitmentPayments.ToListAsync());
+        Assert.Single(await verify.Transactions.Where(x => x.CommitmentPaymentId != null).ToListAsync());
+    }
+
+    [Fact]
     public async Task OpenEndedCommitmentDoesNotExposeFictitiousZeroOfZeroCoverage()
     {
         await using var db = CreateDb();

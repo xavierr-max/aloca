@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aloca.Api.Services;
 
-public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncomeService recurringService, FinancialBalanceService balanceService)
+public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncomeService recurringService, FinancialBalanceService balanceService, IBusinessClock? clock = null)
 {
+    public const int MaxMonths = 24;
+    private IBusinessClock Clock => clock ?? new SystemBusinessClock(new ConfigurationBuilder().Build());
     public static FinancialProjectionMonthResponse ProjectMonth(
         DateOnly month,
         decimal openingBalance,
@@ -30,8 +32,11 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
         // The chart decides how many returned months it displays. The caller may
         // request a longer horizon so a selected month outside that view still
         // uses the same accumulated projection engine.
-        months = Math.Max(1, months);
-        var today = BusinessClock.Today();
+        // Keep this limit in the domain service as well as the HTTP endpoint:
+        // background jobs and internal callers must not be able to allocate an
+        // unbounded projection accidentally.
+        months = Math.Clamp(months, 1, MaxMonths);
+        var today = Clock.Today;
         var firstMonth = requestedStart.HasValue ? new DateOnly(requestedStart.Value.Year, requestedStart.Value.Month, 1) : new DateOnly(today.Year, today.Month, 1);
         // A projection requested for a future month still needs to walk the
         // months before it so its opening balance is the accumulated forecast,

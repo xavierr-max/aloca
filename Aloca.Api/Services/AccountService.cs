@@ -29,6 +29,7 @@ public sealed class AccountService(
     ICurrentUserAccessor currentUser,
     IHostEnvironment environment)
 {
+    public const string LocalAccountDeletionConfirmation = "APAGAR MINHA CONTA";
     public const int MaxDeviceAccounts = 4;
     public const string DeviceCookieName = "aloca.device";
     public const string AuthScheme = "aloca.auth";
@@ -47,7 +48,6 @@ public sealed class AccountService(
         currentUser.Set(null);
 
         var local = await db.DeviceAccounts
-            .IgnoreQueryFilters()
             .Where(x => x.DeviceId == device.Id && x.Account.IsLocal)
             .OrderByDescending(x => x.LastUsedAt)
             .Select(x => x.Account)
@@ -77,27 +77,32 @@ public sealed class AccountService(
         await SignInAsync(httpContext, local, device, ct);
     }
 
+    public async Task LogoutAsync(HttpContext httpContext)
+    {
+        await SignOutAsync(httpContext);
+        currentUser.Set(null);
+    }
+
     public async Task<AccountListDto> GetAccountsAsync(HttpContext httpContext, CancellationToken ct)
     {
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
         var rows = await db.DeviceAccounts
-            .IgnoreQueryFilters()
             .Where(x => x.DeviceId == device.Id)
             .Include(x => x.Account)
             .OrderByDescending(x => x.LastUsedAt)
             .ToListAsync(ct);
         var current = currentUser.UserId.HasValue
             ? rows.FirstOrDefault(x => x.AccountId == currentUser.UserId.Value)?.Account
-              ?? await db.Accounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == currentUser.UserId.Value, ct)
+              ?? await db.Accounts.SingleOrDefaultAsync(x => x.Id == currentUser.UserId.Value, ct)
             : null;
-        return new(rows.Select(x => ToDto(x.Account)).ToList(), current is null ? null : ToDto(current), MaxDeviceAccounts,
+        return new(rows.Select(x => ToDto(x.Account, current?.Id == x.Account.Id)).ToList(), current is null ? null : ToDto(current), MaxDeviceAccounts,
             currentUser.UserId is null && rows.Any(x => !x.Account.IsLocal));
     }
 
     public async Task<CurrentAccountDto> ContinueLocalAsync(HttpContext httpContext, CancellationToken ct)
     {
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
-        var local = await db.DeviceAccounts.IgnoreQueryFilters()
+        var local = await db.DeviceAccounts
             .Where(x => x.DeviceId == device.Id && x.Account.IsLocal)
             .OrderByDescending(x => x.LastUsedAt)
             .Select(x => x.Account)
@@ -127,9 +132,11 @@ public sealed class AccountService(
 
     public async Task<CurrentAccountDto> CreateLocalAsync(HttpContext httpContext, CreateLocalAccountRequest request, CancellationToken ct)
     {
+        var email = ValidateEmail(request.Email);
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
         EnsureCapacity(await DeviceAccountCountAsync(device.Id, ct));
-        var local = new Account(string.IsNullOrWhiteSpace(request.DisplayName) ? "Minha conta" : request.DisplayName!);
+        await EnsureEmailAvailableAsync(email, null, ct);
+        var local = new Account(string.IsNullOrWhiteSpace(request.DisplayName) ? "Minha conta" : request.DisplayName!, true, email);
         db.Accounts.Add(local);
         db.DeviceAccounts.Add(new DeviceAccount(device.Id, local.Id));
         await db.SaveChangesAsync(ct);
@@ -140,12 +147,12 @@ public sealed class AccountService(
     public async Task<CurrentAccountDto> LoginAsync(HttpContext httpContext, LoginRequest request, CancellationToken ct)
     {
         var normalized = NormalizeUsername(request.Username);
-        var account = await db.Accounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.NormalizedUsername == normalized && !x.IsLocal, ct);
+        var account = await db.Accounts.SingleOrDefaultAsync(x => x.NormalizedUsername == normalized && !x.IsLocal, ct);
         if (account is null || account.PasswordHash is null || passwordHasher.VerifyHashedPassword(account, account.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             throw new AccountAuthenticationException();
 
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
-        var link = await db.DeviceAccounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
+        var link = await db.DeviceAccounts.SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
         if (link is null)
         {
             EnsureCapacity(await DeviceAccountCountAsync(device.Id, ct));
@@ -166,17 +173,30 @@ public sealed class AccountService(
         return ToDto(account);
     }
 
+    public async Task<CurrentAccountDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken ct)
+    {
+        var account = await GetCurrentAccountAsync(ct);
+        var email = ValidateEmail(request.Email);
+        await EnsureEmailAvailableAsync(email, account.Id, ct);
+        account.Rename(request.DisplayName);
+        account.SetEmail(email);
+        await db.SaveChangesAsync(ct);
+        return ToDto(account);
+    }
+
     public async Task<CurrentAccountDto> ProtectAsync(HttpContext httpContext, ProtectAccountRequest request, CancellationToken ct)
     {
         var account = await GetCurrentAccountAsync(ct);
         if (!account.IsLocal) throw new AccountConflictException("Esta conta já está protegida.");
         if (!string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)) throw new AccountConflictException("As senhas não conferem.");
         ValidatePassword(request.Password);
+        var email = ValidateEmail(request.Email);
+        await EnsureEmailAvailableAsync(email, account.Id, ct);
         var username = NormalizeUsername(request.Username);
-        if (await db.Accounts.IgnoreQueryFilters().AnyAsync(x => x.NormalizedUsername == username && x.Id != account.Id, ct))
+        if (await db.Accounts.AnyAsync(x => x.NormalizedUsername == username && x.Id != account.Id, ct))
             throw new AccountConflictException("Este username já está em uso.");
 
-        account.Protect(request.DisplayName, request.Username, username, passwordHasher.HashPassword(account, request.Password));
+        account.Protect(request.DisplayName, request.Username, username, passwordHasher.HashPassword(account, request.Password), email);
         await db.SaveChangesAsync(ct);
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
         await SignInAsync(httpContext, account, device, ct);
@@ -200,7 +220,7 @@ public sealed class AccountService(
     public async Task<CurrentAccountDto?> SwitchAsync(HttpContext httpContext, Guid accountId, CancellationToken ct)
     {
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
-        var link = await db.DeviceAccounts.IgnoreQueryFilters().Include(x => x.Account).SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == accountId, ct);
+        var link = await db.DeviceAccounts.Include(x => x.Account).SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == accountId, ct);
         if (link is null) return null;
         link.MarkUsed();
         await db.SaveChangesAsync(ct);
@@ -215,7 +235,7 @@ public sealed class AccountService(
             throw new AccountConflictException("Contas locais só podem ser excluídas; não podem ser removidas sem apagar seus dados.");
 
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
-        var links = await db.DeviceAccounts.IgnoreQueryFilters()
+        var links = await db.DeviceAccounts
             .Where(x => x.DeviceId == device.Id && x.AccountId == account.Id)
             .ToListAsync(ct);
         if (links.Count > 0) db.DeviceAccounts.RemoveRange(links);
@@ -228,8 +248,20 @@ public sealed class AccountService(
     public async Task DeleteCurrentAsync(HttpContext httpContext, ConfirmAccountDeletionRequest request, CancellationToken ct)
     {
         var account = await GetCurrentAccountAsync(ct);
-        if (!string.Equals(request.Confirmation.Trim(), account.DisplayName, StringComparison.Ordinal))
-            throw new AccountConflictException("Digite exatamente o nome da conta para confirmar a exclusão.");
+        if (account.IsLocal)
+        {
+            if (!string.Equals(request.Confirmation.Trim(), LocalAccountDeletionConfirmation, StringComparison.Ordinal))
+                throw new AccountConflictException($"Digite exatamente {LocalAccountDeletionConfirmation} para confirmar a exclusão da conta local.");
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(request.Password)
+                || account.PasswordHash is null
+                || passwordHasher.VerifyHashedPassword(account, account.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+                throw new AccountAuthenticationException();
+            if (!string.Equals(request.Confirmation.Trim(), account.DisplayName, StringComparison.Ordinal))
+                throw new AccountConflictException("Digite exatamente o nome da conta para confirmar a exclusão.");
+        }
 
         var userId = account.Id;
         var occurrences = await db.RecurringIncomeOccurrences.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
@@ -239,6 +271,8 @@ public sealed class AccountService(
         var commitments = await db.FinancialCommitments.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
         var categories = await db.Categories.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
         var settings = await db.FinancialSettings.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
+        var deviceLinks = await db.DeviceAccounts.Where(x => x.AccountId == userId).ToListAsync(ct);
+        var deviceIds = deviceLinks.Select(x => x.DeviceId).Distinct().ToList();
 
         db.RemoveRange(occurrences);
         db.RemoveRange(recurring);
@@ -247,9 +281,21 @@ public sealed class AccountService(
         db.RemoveRange(transactions);
         db.RemoveRange(settings);
         db.RemoveRange(categories);
+        db.RemoveRange(deviceLinks);
         db.Accounts.Remove(account);
         await db.SaveChangesAsync(ct);
 
+        var orphanedDevices = await db.Devices
+            .Where(x => deviceIds.Contains(x.Id) && !db.DeviceAccounts.Any(link => link.DeviceId == x.Id))
+            .ToListAsync(ct);
+        if (orphanedDevices.Count > 0)
+        {
+            db.Devices.RemoveRange(orphanedDevices);
+            await db.SaveChangesAsync(ct);
+        }
+
+        // Remove persistent device associations before establishing the next local session.
+        // The authentication cookie is also explicitly signed out so a deleted session cannot be reused.
         await SignOutAsync(httpContext);
         currentUser.Set(null);
         await EnsureSessionAsync(httpContext, ct);
@@ -259,7 +305,7 @@ public sealed class AccountService(
     {
         var idValue = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(idValue, out var id)) return null;
-        var account = await db.Accounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var account = await db.Accounts.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (account is null) return null;
         var stamp = principal.FindFirstValue("aloca_security_stamp");
         var version = principal.FindFirstValue("aloca_session_version");
@@ -270,7 +316,7 @@ public sealed class AccountService(
     {
         var account = await GetAuthenticatedAccountAsync(principal, ct);
         if (account is null) return false;
-        var link = await db.DeviceAccounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
+        var link = await db.DeviceAccounts.SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
         // A sessão persistente autoriza a troca de contexto somente enquanto a
         // associação deste dispositivo existir. Login explícito é o único fluxo
         // que pode criar uma associação novamente.
@@ -285,7 +331,7 @@ public sealed class AccountService(
     private async Task<Account> GetCurrentAccountAsync(CancellationToken ct)
     {
         if (!currentUser.UserId.HasValue) throw new UnauthorizedAccessException("A conta atual não foi autenticada.");
-        return await db.Accounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == currentUser.UserId.Value, ct)
+        return await db.Accounts.SingleOrDefaultAsync(x => x.Id == currentUser.UserId.Value, ct)
             ?? throw new UnauthorizedAccessException("A sessão da conta é inválida.");
     }
 
@@ -308,11 +354,10 @@ public sealed class AccountService(
         return device;
     }
 
-    private async Task<int> DeviceAccountCountAsync(Guid deviceId, CancellationToken ct) => await db.DeviceAccounts.IgnoreQueryFilters().CountAsync(x => x.DeviceId == deviceId, ct);
+    private async Task<int> DeviceAccountCountAsync(Guid deviceId, CancellationToken ct) => await db.DeviceAccounts.CountAsync(x => x.DeviceId == deviceId, ct);
 
     private Task<Account?> FindUnassignedMigratedAccountAsync(CancellationToken ct) => db.Accounts
-        .IgnoreQueryFilters()
-        .Where(x => x.IsLocal && x.SecurityStamp.StartsWith("migration-") && !db.DeviceAccounts.IgnoreQueryFilters().Any(link => link.AccountId == x.Id))
+        .Where(x => x.IsLocal && x.SecurityStamp.StartsWith("migration-") && !db.DeviceAccounts.Any(link => link.AccountId == x.Id))
         .OrderBy(x => x.CreatedAt)
         .FirstOrDefaultAsync(ct);
 
@@ -328,7 +373,7 @@ public sealed class AccountService(
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthScheme));
         await httpContext.SignInAsync(AuthScheme, principal, new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(14), AllowRefresh = true });
-        var link = await db.DeviceAccounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
+        var link = await db.DeviceAccounts.SingleOrDefaultAsync(x => x.DeviceId == device.Id && x.AccountId == account.Id, ct);
         if (link is not null)
         {
             link.MarkUsed();
@@ -345,13 +390,31 @@ public sealed class AccountService(
         SameSite = SameSiteMode.Lax,
         IsEssential = true,
         Path = "/",
-        MaxAge = TimeSpan.FromDays(3650)
+        MaxAge = TimeSpan.FromDays(90)
     });
 
     private static string CreateToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
     public static string NormalizeUsername(string username) => username.Trim().ToUpperInvariant();
+
+    public static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
+
+    private static string ValidateEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || !Regex.IsMatch(email.Trim(), @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new AccountConflictException("Informe um e-mail válido.");
+        var value = email.Trim();
+        if (value.Length > 254) throw new AccountConflictException("O e-mail deve ter no máximo 254 caracteres.");
+        return value;
+    }
+
+    private async Task EnsureEmailAvailableAsync(string email, Guid? accountId, CancellationToken ct)
+    {
+        var normalized = NormalizeEmail(email);
+        if (await db.Accounts.AnyAsync(x => x.NormalizedEmail == normalized && (!accountId.HasValue || x.Id != accountId.Value), ct))
+            throw new AccountConflictException("Este e-mail já está em uso.");
+    }
 
     private static void ValidatePassword(string password)
     {
@@ -364,7 +427,7 @@ public sealed class AccountService(
         if (count >= MaxDeviceAccounts) throw new AccountLimitExceededException();
     }
 
-    private static CurrentAccountDto ToDto(Account account) => new(account.Id, account.DisplayName, account.Username, !account.IsLocal, account.IsLocal);
+    private static CurrentAccountDto ToDto(Account account, bool includeEmail = true) => new(account.Id, account.DisplayName, account.Username, includeEmail ? account.Email : null, !account.IsLocal, account.IsLocal);
 }
 
 public sealed class AccountSessionMiddleware(RequestDelegate next)

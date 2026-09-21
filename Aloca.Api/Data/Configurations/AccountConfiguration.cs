@@ -13,6 +13,8 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.DisplayName).HasMaxLength(80).IsRequired();
         builder.Property(x => x.Username).HasMaxLength(64);
         builder.Property(x => x.NormalizedUsername).HasMaxLength(64);
+        builder.Property(x => x.Email).HasMaxLength(254);
+        builder.Property(x => x.NormalizedEmail).HasMaxLength(254);
         builder.Property(x => x.PasswordHash).HasMaxLength(512);
         builder.Property(x => x.SecurityStamp).HasMaxLength(64).IsRequired();
         builder.Property(x => x.IsLocal).IsRequired();
@@ -20,6 +22,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.UpdatedAt).IsRequired();
         builder.Property(x => x.SessionVersion).IsRequired();
         builder.HasIndex(x => x.NormalizedUsername).IsUnique().HasFilter("\"NormalizedUsername\" IS NOT NULL");
+        builder.HasIndex(x => x.NormalizedEmail).IsUnique().HasFilter("\"NormalizedEmail\" IS NOT NULL");
     }
 }
 

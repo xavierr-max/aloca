@@ -5,10 +5,10 @@ const TutorialContext = createContext(null)
 
 const tutorialDefinitions = {
   dashboard: [
-    { selector: '[data-tour="dashboard-balance"]', title: 'Veja seu saldo', description: 'Aqui você acompanha o saldo real, o que já está comprometido e quanto continua disponível para novas decisões.' },
+    { selector: '[data-tour="dashboard-balance"]', title: 'Veja seu saldo', description: 'Aqui você acompanha o saldo real, o que já está reservado e quanto continua disponível para novas decisões.' },
     { selector: '[data-tour="initial-balance"]', title: 'Saldo inicial', description: 'Informe ou ajuste o valor que você já tinha antes de registrar novas movimentações. Isso não cria uma transação.' },
-    { selector: '[data-tour="allocation-action"]', title: 'Distribua o saldo', description: 'Simule quanto do saldo não distribuído pode ser reservado para os compromissos ativos, seguindo a prioridade de cada um.' },
-    { selector: '[data-tour="dashboard-objective"]', title: 'Defina uma direção', description: 'Escolha uma sugestão ou escreva o objetivo que orienta como você quer usar o saldo comprometido.' },
+    { selector: '[data-tour="allocation-action"]', title: 'Alocar saldo', description: 'Veja seus compromissos e faça a alocação diretamente por lá.' },
+    { selector: '[data-tour="dashboard-objective"]', title: 'Defina uma direção', description: 'Escolha uma sugestão ou escreva o objetivo que orienta como você quer usar o saldo reservado.' },
     { selector: '[data-tour="dashboard-details"]', title: 'Explore o mês', description: 'Abra esta área para consultar o resumo mensal, a projeção, as movimentações recentes e os próximos compromissos.' },
     { selector: '[data-tour="dashboard-summary"]', title: 'Leia o mês', description: 'Consulte entradas, saídas, resultado, cobertura dos compromissos e saldo estimado do mês selecionado.' },
     { selector: '[data-tour="dashboard-projection"]', title: 'Projete seu saldo', description: 'A projeção mostra entradas, saídas e saldo esperado. Escolha o período e clique em um mês para ver sua composição.' },

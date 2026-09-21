@@ -20,6 +20,12 @@ public sealed class TransactionsController(TransactionService transactionService
             return BadRequest(new { message = "StartDate cannot be after EndDate." });
         }
 
+        if (queryParameters.StartDate.HasValue && queryParameters.EndDate.HasValue &&
+            queryParameters.EndDate.Value > queryParameters.StartDate.Value.AddYears(10))
+        {
+            return BadRequest(new { message = "O período máximo para consultar movimentações é de 10 anos." });
+        }
+
         return Ok(await transactionService.GetAllAsync(queryParameters, cancellationToken));
     }
 

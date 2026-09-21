@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+umask 077
 
 if [ -f /run/secrets/postgres_password ]; then
   postgres_password=$(cat /run/secrets/postgres_password)

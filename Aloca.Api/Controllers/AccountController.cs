@@ -12,6 +12,13 @@ public sealed class AccountController(AccountService service) : ControllerBase
     [HttpGet("current")]
     public async Task<ActionResult<AccountListDto>> Current(CancellationToken ct) => Ok(await service.GetAccountsAsync(HttpContext, ct));
 
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(CancellationToken ct)
+    {
+        await service.LogoutAsync(HttpContext);
+        return NoContent();
+    }
+
     [HttpPost("local/continue"), EnableRateLimiting("account")]
     public async Task<ActionResult<CurrentAccountDto>> ContinueLocal(CancellationToken ct)
     {
@@ -24,6 +31,7 @@ public sealed class AccountController(AccountService service) : ControllerBase
     {
         try { return Ok(await service.CreateLocalAsync(HttpContext, request, ct)); }
         catch (AccountLimitExceededException ex) { return Conflict(new { message = ex.Message }); }
+        catch (AccountConflictException ex) { return Conflict(new { message = ex.Message }); }
     }
 
     [HttpPost("login"), EnableRateLimiting("account")]
@@ -42,7 +50,16 @@ public sealed class AccountController(AccountService service) : ControllerBase
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
     }
 
-    [HttpPatch("rename")]
+    [HttpPatch("profile"), EnableRateLimiting("account")]
+    public async Task<ActionResult<CurrentAccountDto>> UpdateProfile(UpdateProfileRequest request, CancellationToken ct)
+    {
+        try { return Ok(await service.UpdateProfileAsync(request, ct)); }
+        catch (AccountConflictException ex) { return Conflict(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpPatch("rename"), EnableRateLimiting("account")]
     public async Task<ActionResult<CurrentAccountDto>> Rename(RenameAccountRequest request, CancellationToken ct)
     {
         try { return Ok(await service.RenameAsync(request, ct)); }
@@ -58,14 +75,14 @@ public sealed class AccountController(AccountService service) : ControllerBase
         catch (AccountConflictException ex) { return Conflict(new { message = ex.Message }); }
     }
 
-    [HttpPost("switch/{accountId:guid}")]
+    [HttpPost("switch/{accountId:guid}"), EnableRateLimiting("account")]
     public async Task<ActionResult<CurrentAccountDto>> Switch(Guid accountId, CancellationToken ct)
     {
         try { return (await service.SwitchAsync(HttpContext, accountId, ct)) is { } account ? Ok(account) : NotFound(); }
         catch (AccountConflictException ex) { return Unauthorized(new { message = ex.Message }); }
     }
 
-    [HttpDelete("device")]
+    [HttpDelete("device"), EnableRateLimiting("account")]
     public async Task<IActionResult> RemoveFromDevice(CancellationToken ct)
     {
         try { await service.RemoveFromDeviceAsync(HttpContext, ct); return NoContent(); }
@@ -73,10 +90,11 @@ public sealed class AccountController(AccountService service) : ControllerBase
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
     }
 
-    [HttpDelete("current")]
+    [HttpDelete("current"), EnableRateLimiting("account")]
     public async Task<IActionResult> Delete(ConfirmAccountDeletionRequest request, CancellationToken ct)
     {
         try { await service.DeleteCurrentAsync(HttpContext, request, ct); return NoContent(); }
+        catch (AccountAuthenticationException ex) { return Unauthorized(new { message = ex.Message }); }
         catch (AccountConflictException ex) { return Conflict(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
     }

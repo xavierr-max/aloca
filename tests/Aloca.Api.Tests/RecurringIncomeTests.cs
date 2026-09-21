@@ -64,6 +64,32 @@ public sealed class RecurringIncomeTests
     }
 
     [Fact]
+    public async Task ConcurrentReceivesReturnTheSameOccurrenceAndCreateOneTransaction()
+    {
+        var databaseName = $"recurring-concurrent-{Guid.NewGuid()}";
+        await using var seed = CreateDbContext(databaseName);
+        var service = new RecurringIncomeService(seed);
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Entrada concorrente", Amount = 250m,
+            Frequency = RecurringIncomeFrequency.Once,
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow)
+        }, default);
+        var occurrenceId = created!.Occurrences.Single().Id;
+
+        await using var dbA = CreateDbContext(databaseName);
+        await using var dbB = CreateDbContext(databaseName);
+        var results = await Task.WhenAll(
+            new RecurringIncomeService(dbA).ReceiveAsync(occurrenceId, default),
+            new RecurringIncomeService(dbB).ReceiveAsync(occurrenceId, default));
+
+        Assert.All(results, result => Assert.Equal(RecurringIncomeOccurrenceStatus.Received, result!.Status));
+        Assert.Single(results.Select(result => result!.TransactionId).Distinct());
+        await using var verify = CreateDbContext(databaseName);
+        Assert.Single(await verify.Transactions.ToListAsync());
+    }
+
+    [Fact]
     public async Task ReactivatingPausedRecurringIncomeRestoresFutureOccurrencesAndNextOccurrence()
     {
         await using var db = CreateDbContext();
@@ -436,5 +462,7 @@ public sealed class RecurringIncomeTests
         Assert.Equal(0, await db.Transactions.CountAsync());
     }
 
-    private static AlocaDbContext CreateDbContext() => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase($"recurring-tests-{Guid.NewGuid()}").Options);
+    private static AlocaDbContext CreateDbContext() => CreateDbContext($"recurring-tests-{Guid.NewGuid()}");
+
+    private static AlocaDbContext CreateDbContext(string databaseName) => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(databaseName).Options);
 }
