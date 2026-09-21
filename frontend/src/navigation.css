@@ -1,0 +1,187 @@
+.app-shell {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-content-layout {
+  /* This is the shell's fixed layout boundary. Its width must come from the
+     viewport, never from an intrinsic child contribution. */
+  width: 100%;
+  max-width: var(--content-max);
+  min-width: 0;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 4vw, 42px);
+  padding: 0 var(--content-gutter);
+}
+
+.app-content-layout main {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding: clamp(32px, 4vw, 56px) 0 80px;
+  min-width: 0;
+}
+
+.app-content-layout > * {
+  min-width: 0;
+}
+
+.app-content-layout main > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 22px;
+  z-index: 1;
+  padding: 24px 0;
+}
+
+.sidebar-navigation {
+  display: grid;
+  gap: 4px;
+}
+
+.sidebar-section-label {
+  margin: 12px 10px 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.sidebar-navigation a,
+.sidebar-navigation button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sidebar-navigation a:hover,
+.sidebar-navigation a:focus-visible,
+.sidebar-navigation button:hover,
+.sidebar-navigation button:focus-visible {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-navigation a.active,
+.sidebar-navigation button.active {
+  border-color: color-mix(in srgb, var(--color-success) 20%, var(--border-default));
+  background: var(--success-surface);
+  color: var(--color-success);
+}
+
+.sidebar-icon {
+  display: grid;
+  flex: 0 0 25px;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  color: var(--color-success);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.sidebar-help-icon {
+  border: 1px solid currentColor;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.mobile-navigation-list {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.mobile-navigation-label {
+  margin: 0 0 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.mobile-navigation-list a,
+.mobile-navigation-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-navigation-list a.active,
+.mobile-navigation-action:hover,
+.mobile-navigation-list a:hover,
+.mobile-navigation-list a:focus-visible,
+.mobile-navigation-action:focus-visible {
+  border-color: color-mix(in srgb, var(--color-success) 20%, var(--border-default));
+  background: var(--success-surface);
+  color: var(--color-success);
+}
+
+.mobile-navigation-list a span,
+.mobile-navigation-action span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  color: var(--color-success);
+  font-size: 16px;
+}
+
+.group-manager-row > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .app-content-layout {
+    display: block;
+    width: 100%;
+    padding: 0;
+  }
+
+  .app-sidebar { display: none; }
+
+  .app-content-layout main {
+    width: 100%;
+    max-width: var(--content-max);
+    margin: 0 auto;
+    padding-top: 24px;
+  }
+
+  .mobile-actions-drawer .app-drawer-content {
+    overflow-y: auto;
+  }
+}
