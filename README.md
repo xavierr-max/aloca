@@ -31,7 +31,7 @@ O endpoint `GET /health` confirma que a API está em execução. Em ambiente de 
 
 ## PostgreSQL local com Docker
 
-O Compose usa a imagem oficial `postgres:18`, cria o container `aloca-postgres`, publica a porta `5432` e mantém os dados no volume `aloca_aloca_postgres_data`. O arquivo `.env` local é ignorado pelo Git; copie `.env.example` para `.env` e ajuste a senha quando necessário.
+O Compose padrão é destinado ao desenvolvimento: usa a imagem oficial `postgres:18`, publica a porta `5432` para a API executada diretamente na máquina e mantém os dados em volume. O arquivo `.env` local é ignorado pelo Git; copie `.env.example` para `.env` e ajuste a senha quando necessário.
 
 ```powershell
 Copy-Item .env.example .env
@@ -156,3 +156,17 @@ docker compose down
 ```
 
 Para remover deliberadamente os dados persistidos, use `docker compose down -v` e confirme que essa perda é desejada.
+
+## Produção com Docker
+
+O arquivo `compose.production.yml` publica somente o frontend na porta HTTP configurada por `HTTP_PORT`. A API e o PostgreSQL ficam na rede interna `backend`; o PostgreSQL não possui porta publicada. O Nginx serve os assets gerados pelo Vite e encaminha `/api` e `/health` para a API.
+
+Crie o secret fora do Git e inicie a composição:
+
+```bash
+mkdir -p secrets
+openssl rand -base64 32 > secrets/postgres_password.txt
+POSTGRES_DB=aloca POSTGRES_USER=aloca docker compose -f compose.production.yml up -d --build
+```
+
+O arquivo `secrets/postgres_password.txt` e o diretório `secrets/` são ignorados pelo Git. Para usar outro caminho, defina `POSTGRES_PASSWORD_FILE` no ambiente antes de executar o Compose.

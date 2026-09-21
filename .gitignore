@@ -16,6 +16,7 @@ Aloca.Api/data-protection-keys/
 appsettings.Local.json
 appsettings.*.local.json
 secrets.json
+secrets/
 
 # Test output
 TestResults/

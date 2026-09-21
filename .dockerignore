@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+secrets/
+**/bin/
+**/obj/
+frontend/node_modules/
+frontend/dist/
+TestResults/
+README.md
