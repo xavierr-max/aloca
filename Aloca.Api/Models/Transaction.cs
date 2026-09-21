@@ -12,7 +12,10 @@ public sealed class Transaction
         TransactionType type,
         DateOnly date,
         Guid? categoryId,
-        Guid? recurringIncomeOccurrenceId = null)
+        Guid? recurringIncomeOccurrenceId = null,
+        Guid? financialCommitmentId = null,
+        bool wasAutomatic = false,
+        Guid? commitmentPaymentId = null)
     {
         if (string.IsNullOrWhiteSpace(description))
         {
@@ -29,8 +32,6 @@ public sealed class Transaction
             throw new ArgumentOutOfRangeException(nameof(type), "Transaction type is invalid.");
         }
 
-        if (type == TransactionType.Income && (!categoryId.HasValue || categoryId == Guid.Empty))
-            throw new ArgumentException("Category is required for income transactions.", nameof(categoryId));
 
         Id = Guid.NewGuid();
         Description = description.Trim();
@@ -40,10 +41,15 @@ public sealed class Transaction
         CreatedAt = DateTime.UtcNow;
         CategoryId = categoryId;
         RecurringIncomeOccurrenceId = recurringIncomeOccurrenceId;
+        FinancialCommitmentId = financialCommitmentId;
+        WasAutomatic = wasAutomatic;
+        CommitmentPaymentId = commitmentPaymentId;
         ProcessedAt = CreatedAt;
     }
 
     public Guid Id { get; private set; }
+
+    public Guid UserId { get; private set; }
 
     public string Description { get; private set; } = null!;
 
@@ -61,6 +67,9 @@ public sealed class Transaction
     public Category Category { get; private set; } = null!;
 
     public Guid? RecurringIncomeOccurrenceId { get; private set; }
+    public Guid? FinancialCommitmentId { get; private set; }
+    public bool WasAutomatic { get; private set; }
+    public Guid? CommitmentPaymentId { get; private set; }
 
     public void DetachRecurringIncomeOccurrence() => RecurringIncomeOccurrenceId = null;
 
@@ -70,7 +79,6 @@ public sealed class Transaction
     {
         if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("Transaction description is required.", nameof(description));
         if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
-        if (Type == TransactionType.Income && !categoryId.HasValue) throw new ArgumentException("Category is required for income transactions.", nameof(categoryId));
         Description = description.Trim(); Amount = amount; Date = date; CategoryId = categoryId;
     }
 

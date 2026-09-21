@@ -3,9 +3,9 @@ namespace Aloca.Api.DTOs;
 public sealed record AllocationChangeResponse(Guid FinancialCommitmentId, string Name, decimal Amount);
 
 public sealed record AllocationPreviewResponse(
-    decimal AvailableBalance,
+    decimal UnallocatedBalance,
     decimal WouldAllocate,
-    decimal RemainingFreeBalance,
+    decimal RemainingUnallocatedBalance,
     IReadOnlyCollection<AllocationChangeResponse> Allocations);
 
 public sealed record AllocationDistributionResponse(

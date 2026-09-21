@@ -1,10 +1,11 @@
 using Aloca.Api.DTOs;
 using Aloca.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Aloca.Api.Controllers;
 
-[ApiController, Route("api/financial-settings")]
+[ApiController, Route("api/financial-settings"), Authorize]
 public sealed class FinancialSettingsController(FinancialSettingsService service) : ControllerBase
 {
     [HttpGet]

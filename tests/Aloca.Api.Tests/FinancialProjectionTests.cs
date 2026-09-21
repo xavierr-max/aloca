@@ -379,6 +379,25 @@ public sealed class FinancialProjectionTests
     }
 
     [Fact]
+    public async Task UrgentAttentionUsesOverallCoverageWhenNextInstallmentIsFullyCovered()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        db.FinancialCommitments.Add(new FinancialCommitment(
+            "Urgente global", 300m, 4, 0, 300m, 1, true,
+            today, urgent: true));
+        await db.SaveChangesAsync();
+
+        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(1, default);
+
+        var urgent = Assert.Single(projection.UrgentCommitments);
+        Assert.Equal(1200m, urgent.TotalAmount);
+        Assert.Equal(300m, urgent.AllocatedAmount);
+        Assert.Equal(900m, urgent.RemainingAmount);
+        Assert.Equal(25m, urgent.OverallCoverage);
+    }
+
+    [Fact]
     public async Task FutureMonthProjectionUsesAccumulatedOpeningBalance()
     {
         await using var db = CreateDb();

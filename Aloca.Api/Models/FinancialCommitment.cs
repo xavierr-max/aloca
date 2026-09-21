@@ -83,6 +83,8 @@ public sealed class FinancialCommitment
 
     public Guid Id { get; private set; }
 
+    public Guid UserId { get; private set; }
+
     public string Name { get; private set; } = null!;
 
     public decimal InstallmentAmount { get; private set; }
@@ -122,7 +124,7 @@ public sealed class FinancialCommitment
 
     public decimal OverallCoveragePercentage => IsOpenEnded
         ? (InstallmentAmount <= 0m ? 0m : decimal.Min(AllocatedAmount / InstallmentAmount * 100m, 100m))
-        : TotalAmount <= 0m ? 100m
+        : TotalAmount <= 0m ? 0m
         : decimal.Min(TotalAllocatedAmount / TotalAmount * 100m, 100m);
 
     public int RemainingInstallments => IsOpenEnded ? int.MaxValue : TotalInstallments - PaidInstallments;
@@ -142,9 +144,14 @@ public sealed class FinancialCommitment
         ? 0m
         : decimal.Max(InstallmentAmount - AllocatedAmount, 0m);
 
-    public decimal AmountNeededForFullCoverage => decimal.Max(RemainingAmount - AllocatedAmount, 0m);
+    // For an open-ended commitment RemainingAmount already means the amount
+    // missing from the current occurrence. Finite commitments expose the
+    // amount due across all unpaid installments.
+    public decimal AmountNeededForFullCoverage => IsOpenEnded
+        ? AmountNeededForNextInstallment
+        : decimal.Max(RemainingAmount - AllocatedAmount, 0m);
 
-    public decimal ExcessAllocatedAmount => decimal.Max(AllocatedAmount - RemainingAmount, 0m);
+    public decimal ExcessAllocatedAmount => decimal.Max(AllocatedAmount - (IsOpenEnded ? InstallmentAmount : RemainingAmount), 0m);
 
     public bool IsCompleted => !IsOpenEnded && PaidInstallments == TotalInstallments;
 
@@ -197,6 +204,10 @@ public sealed class FinancialCommitment
     public void Allocate(decimal amount)
     {
         ValidatePositiveAmount(amount, nameof(amount));
+        if (amount > AmountNeededForFullCoverage)
+        {
+            throw new InvalidOperationException("A alocação não pode exceder o valor necessário para cobrir o compromisso.");
+        }
         AllocatedAmount += amount;
     }
 
@@ -209,6 +220,13 @@ public sealed class FinancialCommitment
         }
 
         AllocatedAmount -= amount;
+    }
+
+    public decimal ReleaseAllAllocation()
+    {
+        var released = AllocatedAmount;
+        AllocatedAmount = 0m;
+        return released;
     }
 
     public decimal RegisterPayment()

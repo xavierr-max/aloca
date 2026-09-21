@@ -172,7 +172,9 @@
     padding: 0;
   }
 
-  .app-sidebar { display: none; }
+  .app-sidebar { display: block; position: static; padding: 16px 15px 0; }
+  .sidebar-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sidebar-section-label { grid-column: 1 / -1; }
 
   .app-content-layout main {
     width: 100%;
@@ -185,3 +187,12 @@
     overflow-y: auto;
   }
 }
+
+/* Unified Lucide icon rhythm */
+:where(button, a, summary, .sidebar-icon, .income-icon, .icon-button) > svg,
+:where(button, a, summary) > svg { flex: 0 0 auto; vertical-align: middle; }
+.sidebar-navigation a, .sidebar-navigation button, .global-create-trigger,
+.income-actions button, .section-actions button, .modal-actions button,
+.drawer-actions button, .account-trigger { display: inline-flex; align-items: center; gap: 8px; }
+.sidebar-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
+.icon-button > svg { display: block; }

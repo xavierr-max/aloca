@@ -1,10 +1,11 @@
 using Aloca.Api.DTOs;
 using Aloca.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Aloca.Api.Controllers;
 
-[ApiController, Route("api/dashboard")]
+[ApiController, Route("api/dashboard"), Authorize]
 public sealed class DashboardController(FinancialProjectionService service) : ControllerBase
 {
     [HttpGet("projecao")]

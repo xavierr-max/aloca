@@ -28,7 +28,9 @@ public sealed record TransactionResponse(
     Guid? CategoryId,
     string? CategoryName,
     DateTime CreatedAt,
-    bool IsRecurring = false);
+    bool IsRecurring = false,
+    Guid? FinancialCommitmentId = null,
+    bool WasAutomatic = false);
 
 public sealed class TransactionQueryParameters
 {

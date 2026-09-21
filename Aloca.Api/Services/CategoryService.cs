@@ -122,12 +122,11 @@ public sealed class CategoryService(AlocaDbContext dbContext)
         // Recurring incomes still require a group because generated income entries
         // preserve the existing financial validation rule. Do not silently delete
         // the group while leaving an invalid recurring definition behind.
-        var recurringIncomeUsesGroup = await dbContext.RecurringIncomes
-            .AnyAsync(income => income.CategoryId == id, cancellationToken);
-        if (recurringIncomeUsesGroup)
-        {
-            return CategoryDeleteStatus.InUse;
-        }
+        var recurringIncomes = await dbContext.RecurringIncomes
+            .Where(income => income.CategoryId == id)
+            .ToListAsync(cancellationToken);
+        foreach (var income in recurringIncomes)
+            income.Update(income.Description, income.Amount, null, income.Frequency, income.StartDate, income.EndDate, income.DayOfMonth, income.AutomaticProcessing);
 
         dbContext.Categories.Remove(category);
         await dbContext.SaveChangesAsync(cancellationToken);

@@ -15,6 +15,7 @@ public sealed class CommitmentPayment
     }
 
     public Guid Id { get; private set; }
+    public Guid UserId { get; private set; }
     public Guid FinancialCommitmentId { get; private set; }
     public decimal Amount { get; private set; }
     public int InstallmentNumber { get; private set; }

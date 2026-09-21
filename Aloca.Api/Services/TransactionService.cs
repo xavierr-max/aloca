@@ -14,8 +14,9 @@ public enum TransactionWriteStatus
 
 public sealed record TransactionWriteResult(TransactionWriteStatus Status, Transaction? Transaction);
 
-public sealed class TransactionService(AlocaDbContext dbContext)
+public sealed class TransactionService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null)
 {
+    private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, new FinancialBalanceService(dbContext));
     public async Task<PagedResponse<TransactionResponse>> GetAllAsync(
         TransactionQueryParameters queryParameters,
         CancellationToken cancellationToken)
@@ -66,7 +67,9 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.CategoryId,
                 transaction.Category == null ? null : transaction.Category.Name,
                 transaction.CreatedAt,
-                transaction.RecurringIncomeOccurrenceId != null))
+                transaction.RecurringIncomeOccurrenceId != null,
+                transaction.FinancialCommitmentId,
+                transaction.WasAutomatic))
             .ToListAsync(cancellationToken);
 
         return new PagedResponse<TransactionResponse>(items, queryParameters.Page, queryParameters.PageSize, totalCount);
@@ -85,16 +88,17 @@ public sealed class TransactionService(AlocaDbContext dbContext)
                 transaction.CategoryId,
                 transaction.Category == null ? null : transaction.Category.Name,
                 transaction.CreatedAt,
-                transaction.RecurringIncomeOccurrenceId != null))
+                transaction.RecurringIncomeOccurrenceId != null,
+                transaction.FinancialCommitmentId,
+                transaction.WasAutomatic))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<TransactionWriteResult> CreateAsync(TransactionRequest request, CancellationToken cancellationToken)
     {
+        await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
         var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories
             .AnyAsync(category => category.Id == request.CategoryId.Value, cancellationToken);
 
-        if (request.Type == TransactionType.Income && !request.CategoryId.HasValue)
-            return new TransactionWriteResult(TransactionWriteStatus.CategoryNotFound, null);
 
         if (!categoryExists)
         {
@@ -104,11 +108,14 @@ public sealed class TransactionService(AlocaDbContext dbContext)
         var transaction = new Transaction(request.Description, request.Amount, request.Type, request.Date, request.CategoryId);
         dbContext.Transactions.Add(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await Reconciliation.ReconcileAsync(cancellationToken);
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         return new TransactionWriteResult(TransactionWriteStatus.Success, transaction);
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
+        await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
         var transaction = await dbContext.Transactions
             .SingleOrDefaultAsync(transaction => transaction.Id == id, cancellationToken);
 
@@ -126,18 +133,23 @@ public sealed class TransactionService(AlocaDbContext dbContext)
 
         dbContext.Transactions.Remove(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await Reconciliation.ReconcileAsync(cancellationToken);
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         return true;
     }
 
     public async Task<TransactionWriteResult> UpdateAsync(Guid id, TransactionRequest request, CancellationToken cancellationToken)
     {
+        await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
         var transaction = await dbContext.Transactions.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (transaction is null) return new(TransactionWriteStatus.NotFound, null);
         if (request.Type != transaction.Type) return new(TransactionWriteStatus.CategoryNotFound, null);
         var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, cancellationToken);
-        if (!categoryExists || (request.Type == TransactionType.Income && !request.CategoryId.HasValue)) return new(TransactionWriteStatus.CategoryNotFound, null);
+        if (!categoryExists) return new(TransactionWriteStatus.CategoryNotFound, null);
         transaction.UpdateDetails(request.Description, request.Amount, request.Date, request.CategoryId);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await Reconciliation.ReconcileAsync(cancellationToken);
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         return new(TransactionWriteStatus.Success, transaction);
     }
 }

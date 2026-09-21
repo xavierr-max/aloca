@@ -31,7 +31,7 @@ public sealed class FinancialProjectionService(AlocaDbContext db, RecurringIncom
         // request a longer horizon so a selected month outside that view still
         // uses the same accumulated projection engine.
         months = Math.Max(1, months);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = BusinessClock.Today();
         var firstMonth = requestedStart.HasValue ? new DateOnly(requestedStart.Value.Year, requestedStart.Value.Month, 1) : new DateOnly(today.Year, today.Month, 1);
         // A projection requested for a future month still needs to walk the
         // months before it so its opening balance is the accumulated forecast,

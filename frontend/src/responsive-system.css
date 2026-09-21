@@ -616,7 +616,7 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
 .monthly-insight-header {
   display: flex !important;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   padding: 15px 17px;
 }
@@ -641,7 +641,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   font-weight: 800;
 }
 .success-icon { color: var(--color-success); border-color: color-mix(in srgb, var(--color-success) 50%, transparent); background: var(--success-surface); }
-.monthly-insight-header > button { min-height: 36px; padding-inline: 13px; border-color: color-mix(in srgb, var(--color-warning) 34%, var(--border-default)); }
 .monthly-insight.has-alert .guidance-details {
   margin: 0;
   padding: 0;
@@ -695,7 +694,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .month-decision { padding: 18px 16px; }
   .month-decision-heading { align-items: stretch; }
   .monthly-insight-header { align-items: stretch; flex-direction: column; }
-  .monthly-insight-header > button { width: 100%; }
   .guidance-details > summary { align-items: flex-start; flex-direction: column; gap: 3px; }
   .coverage-detail { grid-template-columns: 1fr 1fr; gap: 9px 14px; padding-inline: 5px; }
   .coverage-detail-status { grid-column: 1 / -1; align-items: flex-start; flex-direction: row !important; gap: 7px !important; }
@@ -1016,3 +1014,4 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .commitment-card .next-installment-status,
   .commitment-card .summary-action { grid-column: auto; grid-row: auto; }
 }
+.inline-error:has(button){display:flex;align-items:center;justify-content:space-between;gap:12px}.inline-error:has(button) .secondary{padding:7px 10px;font-size:11px;white-space:nowrap}

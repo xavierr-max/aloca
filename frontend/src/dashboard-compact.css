@@ -12,19 +12,19 @@
 .command-free{gap:5px}
 .command-free>strong{font-size:28px}
 .command-free small{font-size:11px}
-.command-objective{grid-area:objective;display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;padding:14px 16px;background:var(--bg-card);border-left:1px solid var(--item-divider)}
+.command-objective{grid-area:objective;display:grid;grid-template-rows:auto minmax(0,180px) 12px;align-content:center;gap:8px;min-width:0;max-width:100%;padding:14px 16px;background:var(--bg-card);border-left:1px solid var(--item-divider);box-sizing:border-box;overflow:hidden}
 .objective-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .objective-heading h3{margin:3px 0 0;font-size:15px;letter-spacing:-.025em;color:var(--text-primary)}
 .objective-heading p{display:none}
 .objective-icon{display:none}
-.objective-composer{display:flex;align-items:center;justify-content:center;width:100%;height:180px;min-height:180px;max-height:180px;padding:16px;border:1px solid var(--border-default);border-radius:14px;background:var(--bg-subtle);cursor:text;box-shadow:inset 0 1px 2px color-mix(in srgb,var(--text-primary) 3%,transparent);transition:border-color .2s ease,box-shadow .2s ease,background-color .2s ease}
+.objective-composer{display:grid;place-items:center;width:100%;min-width:0;min-height:0;height:180px;padding:16px;border:1px solid var(--border-default);border-radius:14px;background:var(--bg-subtle);cursor:text;box-sizing:border-box;overflow:auto;box-shadow:inset 0 1px 2px color-mix(in srgb,var(--text-primary) 3%,transparent);transition:border-color .2s ease,box-shadow .2s ease,background-color .2s ease}
 .objective-composer:hover{border-color:var(--border-strong)}
 .objective-composer.is-editing{border-color:var(--color-success);background:var(--bg-elevated);box-shadow:0 0 0 3px color-mix(in srgb,var(--color-success) 13%,transparent),inset 0 1px 2px color-mix(in srgb,var(--text-primary) 3%,transparent)}
 .objective-editor{display:block;width:100%;height:72px;min-height:72px;max-height:72px;padding:2px 1px;border:0!important;outline:0!important;resize:none;overflow-y:auto;overflow-x:hidden;background:transparent!important;color:var(--text-primary);font:inherit;font-size:12px;line-height:1.5}
 .objective-editor::placeholder{color:var(--text-muted);opacity:.9}
-.objective-suggestions{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;opacity:1;animation:objective-suggestion-window-in .24s ease both}
+.objective-suggestions{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;min-width:0;max-width:100%;opacity:1;animation:objective-suggestion-window-in .24s ease both}
 .objective-suggestions-label{color:var(--text-muted);font-size:9px;font-weight:600;letter-spacing:.01em;text-align:center}
-.objective-suggestion-list{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%}
+.objective-suggestion-list{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:8px;width:100%;min-width:0;max-width:100%}
 .objective-suggestion{display:inline-flex;align-items:center;gap:5px;min-width:0;min-height:28px;max-width:100%;padding:6px 10px;border:1px solid var(--border-default);border-radius:999px;background:var(--bg-card);color:var(--text-secondary);font-size:10px;line-height:1.25;text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer;box-shadow:0 1px 2px color-mix(in srgb,var(--text-primary) 5%,transparent);transition:border-color .18s ease,background-color .18s ease,color .18s ease,box-shadow .18s ease}
 .objective-suggestion:hover,.objective-suggestion:focus-visible{border-color:var(--color-success);color:var(--color-success);background:var(--success-surface);transform:none}
 .objective-suggestion.is-primary{border-color:color-mix(in srgb,var(--color-success) 42%,var(--border-default));background:var(--success-surface);color:var(--color-success);font-weight:700}
@@ -61,3 +61,147 @@
 .movement-type-label{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.02em}.movement-type-label.income{color:var(--positive)}.movement-type-label.expense{color:var(--danger)}.movement-type-label.recurring{color:var(--warning)}
 @media(max-width:1000px){.command-center{grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr)}.command-free{grid-column:1/-1;min-height:95px;padding:15px 20px}}
 @media(max-width:760px){.command-center{display:block;margin-bottom:14px}.command-balance,.command-allocation,.command-free{padding:18px}.command-balance{min-height:0}.command-allocation{border-top:1px solid #d5e3d9;border-bottom:1px solid #d5e3d9}.command-flow-grid .metric{min-height:82px}.command-free{display:flex;min-height:0;flex-direction:row;align-items:center;flex-wrap:wrap;gap:4px 12px}.command-free .eyebrow{flex-basis:100%}.command-free>strong{font-size:25px}.command-deficit-inline{margin-left:auto}}
+
+/* Mobile composition: keep the three balances together and let the objective stay secondary. */
+@media (max-width: 760px) {
+  .command-center {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "balance"
+      "committed"
+      "free"
+      "objective"
+      "details";
+    gap: 0;
+    overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 14px;
+    border-radius: 18px;
+  }
+
+  .command-balance,
+  .command-allocation,
+  .command-free,
+  .command-objective,
+  .calculation-details {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .command-balance {
+    grid-area: balance;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .command-balance-head { gap: 10px; }
+  .command-balance h2 { margin: 5px 0 5px; font-size: clamp(30px, 9vw, 38px); }
+  .command-balance-action { align-self: flex-start; }
+
+  .command-allocation {
+    grid-area: committed;
+    min-height: 0;
+    padding: 14px 18px;
+    border-top: 1px solid var(--item-divider);
+    border-bottom: 0;
+  }
+
+  .command-allocation .metric strong { font-size: 22px; }
+  .command-secondary-action { margin-top: 6px; }
+
+  .command-free {
+    grid-area: free;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 12px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--item-divider);
+  }
+
+  .command-free .eyebrow,
+  .command-free > strong,
+  .command-free > small { grid-column: 1; }
+  .command-free > strong { font-size: 24px; }
+  .command-free small { line-height: 1.3; }
+  .command-free .command-deficit-inline {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    align-self: center;
+    margin-left: 0;
+    text-align: right;
+  }
+
+  .command-objective {
+    grid-area: objective;
+    display: block;
+    height: auto;
+    padding: 14px 18px 15px;
+    border-top: 1px solid var(--item-divider);
+    border-left: 0;
+    overflow: visible;
+  }
+
+  .objective-heading h3 { margin-top: 2px; font-size: 14px; }
+  .objective-composer {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .objective-composer.is-editing {
+    min-height: 72px;
+    padding: 10px;
+    border: 1px solid var(--color-success);
+    border-radius: 10px;
+    background: var(--bg-elevated);
+  }
+  .objective-suggestions {
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .objective-suggestions-label { text-align: left; }
+  .objective-suggestion-list {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 1px 1px 3px;
+    scrollbar-width: none;
+  }
+  .objective-suggestion-list::-webkit-scrollbar { display: none; }
+  .objective-suggestion { flex: 0 0 auto; min-height: 26px; padding: 5px 9px; }
+  .objective-suggestions-refresh { flex: 0 0 auto; width: 26px; height: 26px; }
+  .objective-editor { height: 52px; min-height: 52px; max-height: 52px; }
+  .objective-saved-feedback { min-height: 0; margin-top: 4px; }
+
+  .calculation-details { grid-area: details; border-top: 1px solid var(--item-divider); }
+  .calculation-details > summary { padding: 12px 18px; }
+  .calculation-content { padding: 0 18px 16px; }
+  .calculation-breakdown { gap: 7px; }
+}
+
+@media (min-width: 390px) and (max-width: 760px) {
+  .command-center {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "balance balance"
+      "committed free"
+      "objective objective"
+      "details details";
+  }
+  .command-free { border-left: 1px solid var(--item-divider); }
+  .command-free .command-deficit-inline { grid-column: 1 / -1; grid-row: auto; text-align: left; }
+}
+
+@media (max-width: 389px) {
+  .command-free .command-deficit-inline { grid-column: 1 / -1; grid-row: auto; text-align: left; }
+}

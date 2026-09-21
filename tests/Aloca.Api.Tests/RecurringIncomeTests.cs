@@ -9,6 +9,25 @@ namespace Aloca.Api.Tests;
 public sealed class RecurringIncomeTests
 {
     [Fact]
+    public async Task RecurringIncomeWithoutCategoryIsPersistedAndReturnedAsUncategorized()
+    {
+        await using var db = CreateDbContext();
+        var service = new RecurringIncomeService(db);
+
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Teste#05", Amount = 100m, CategoryId = null,
+            Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = new DateOnly(2026, 9, 21), DayOfMonth = 21
+        }, CancellationToken.None);
+
+        Assert.NotNull(created);
+        Assert.Null(created!.CategoryId);
+        Assert.Null(created.CategoryName);
+        Assert.Null((await db.RecurringIncomes.SingleAsync()).CategoryId);
+    }
+
+    [Fact]
     public async Task Monthly31_UsesLastValidDayAndDoesNotDuplicateOccurrences()
     {
         await using var db = CreateDbContext();

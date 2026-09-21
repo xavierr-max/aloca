@@ -22,6 +22,55 @@ namespace Aloca.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Aloca.Api.Models.Account", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsLocal")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NormalizedUsername")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("SessionVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedUsername")
+                        .IsUnique()
+                        .HasFilter("\"NormalizedUsername\" IS NOT NULL");
+
+                    b.ToTable("accounts", (string)null);
+                });
+
             modelBuilder.Entity("Aloca.Api.Models.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -33,9 +82,12 @@ namespace Aloca.Api.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("UserId", "Name")
                         .IsUnique();
 
                     b.ToTable("categories", (string)null);
@@ -60,10 +112,15 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("WasAutomatic")
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("FinancialCommitmentId", "InstallmentNumber")
                         .IsUnique();
@@ -72,6 +129,52 @@ namespace Aloca.Api.Data.Migrations
                         {
                             t.HasCheckConstraint("ck_commitment_payments_amount_positive", "\"Amount\" > 0");
                         });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.Device", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("devices", (string)null);
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.DeviceAccount", b =>
+                {
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DeviceId", "AccountId");
+
+                    b.HasIndex("AccountId");
+
+                    b.ToTable("device_accounts", (string)null);
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialCommitment", b =>
@@ -134,9 +237,14 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<bool>("Urgent")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("IsFullyCommitted", "Priority");
 
@@ -166,7 +274,13 @@ namespace Aloca.Api.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("financial_settings", null, t =>
                         {
@@ -187,7 +301,7 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<bool>("AutomaticProcessing")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("CategoryId")
+                    b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -218,9 +332,14 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("IsActive", "StartDate");
 
@@ -264,9 +383,14 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<Guid?>("TransactionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TransactionId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("RecurringIncomeId", "ScheduledDate")
                         .IsUnique();
@@ -287,6 +411,9 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CommitmentPaymentId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -296,6 +423,9 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
+
+                    b.Property<Guid?>("FinancialCommitmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
@@ -308,7 +438,16 @@ namespace Aloca.Api.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("WasAutomatic")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CommitmentPaymentId")
+                        .IsUnique();
 
                     b.HasIndex("Date");
 
@@ -316,7 +455,11 @@ namespace Aloca.Api.Data.Migrations
                         .IsUnique()
                         .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");
 
+                    b.HasIndex("UserId");
+
                     b.HasIndex("CategoryId", "Date");
+
+                    b.HasIndex("FinancialCommitmentId", "Date");
 
                     b.ToTable("transactions", null, t =>
                         {
@@ -324,6 +467,15 @@ namespace Aloca.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_transactions_type", "\"Type\" IN ('Income', 'Expense')");
                         });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.Category", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.CommitmentPayment", b =>
@@ -334,7 +486,32 @@ namespace Aloca.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("FinancialCommitment");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.DeviceAccount", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Aloca.Api.Models.Device", "Device")
+                        .WithMany("Accounts")
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Device");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialCommitment", b =>
@@ -344,7 +521,22 @@ namespace Aloca.Api.Data.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.FinancialSettings", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>
@@ -352,7 +544,12 @@ namespace Aloca.Api.Data.Migrations
                     b.HasOne("Aloca.Api.Models.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Category");
@@ -371,6 +568,12 @@ namespace Aloca.Api.Data.Migrations
                         .HasForeignKey("TransactionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("RecurringIncome");
 
                     b.Navigation("Transaction");
@@ -381,7 +584,13 @@ namespace Aloca.Api.Data.Migrations
                     b.HasOne("Aloca.Api.Models.Category", "Category")
                         .WithMany("Transactions")
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Category");
                 });
@@ -389,6 +598,11 @@ namespace Aloca.Api.Data.Migrations
             modelBuilder.Entity("Aloca.Api.Models.Category", b =>
                 {
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.Device", b =>
+                {
+                    b.Navigation("Accounts");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>

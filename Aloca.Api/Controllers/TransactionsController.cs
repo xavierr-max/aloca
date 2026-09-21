@@ -1,10 +1,11 @@
 using Aloca.Api.DTOs;
 using Aloca.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Aloca.Api.Controllers;
 
-[ApiController]
+[ApiController, Authorize]
 [Route("api/transactions")]
 public sealed class TransactionsController(TransactionService transactionService) : ControllerBase
 {

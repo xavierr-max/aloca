@@ -132,6 +132,14 @@ Teste `http://localhost:5243/health` (ou a porta exibida pelo `dotnet run`). A d
 
 As APIs atuais são `GET/POST/PUT/DELETE /api/categories`, `GET/POST/PUT/DELETE /api/transactions` (com filtros `type`, `categoryId`, `startDate`, `endDate`, `page` e `pageSize`) e `GET /api/financial-summary`. O resumo calcula apenas `totalIncome - totalExpense`; alocações ainda não são descontadas.
 
+## Contas e isolamento
+
+O primeiro acesso usa o middleware de sessão para criar ou recuperar uma conta local no mesmo dispositivo e autenticá-la por cookie. A conta é uma entidade persistente; proteger a conta apenas preenche `Username` e `PasswordHash` na mesma linha e preserva o `Id` e os dados financeiros.
+
+O cookie `aloca.device` contém somente um token aleatório bruto no navegador; o banco guarda apenas seu hash em `devices`. O cookie `aloca.auth` é um cookie ASP.NET Core protegido por Data Protection, com validade de 14 dias e verificação de `SecurityStamp`/`SessionVersion` a cada request. As chaves de Data Protection ficam em `DataProtection:KeysPath`, que deve apontar para um volume persistente em produção.
+
+Cada registro financeiro possui `UserId`, filtro global do EF Core e FK para `accounts`. O limite de quatro contas é contado em `device_accounts` e validado no backend. Os endpoints de conta ficam em `/api/account/current`, `/api/account/local`, `/api/account/local/continue`, `/api/account/login`, `/api/account/protect`, `/api/account/rename`, `/api/account/password`, `/api/account/switch/{id}`, `/api/account/device` e `/api/account/current` (exclusão).
+
 ## Banco de dados e migrations
 
 O `AlocaDbContext` concentra o modelo do banco. A migration inicial já foi aplicada no PostgreSQL local:

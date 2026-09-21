@@ -8,6 +8,7 @@ public sealed class RecurringIncomeOccurrence
         Id = Guid.NewGuid(); RecurringIncomeId = recurringIncome.Id; ScheduledDate = scheduledDate; Amount = recurringIncome.Amount; Status = RecurringIncomeOccurrenceStatus.Planned; CreatedAt = DateTime.UtcNow;
     }
     public Guid Id { get; private set; }
+    public Guid UserId { get; private set; }
     public Guid RecurringIncomeId { get; private set; }
     public RecurringIncome RecurringIncome { get; private set; } = null!;
     public DateOnly ScheduledDate { get; private set; }
