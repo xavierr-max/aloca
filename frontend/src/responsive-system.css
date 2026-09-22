@@ -50,10 +50,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
 .recurring-tools input, .recurring-tools select {
   border-radius: var(--radius-md);
 }
-
-.hero, .metric, .commitment-card, .commitment-preview-card, .financial-guidance,
-.projection-section, .projection-guide, .month-decision, .income-list,
-.recurring-panel, .section-panel, .dashboard-panel { border-radius: var(--radius-lg); }
 .hero { padding: clamp(24px, 4vw, 40px); }
 .metric { height: auto; min-height: 0; }
 
@@ -61,14 +57,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
 .summary-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
 .monthly-financial-metrics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
 .month-summary-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
-
-/* Keep financial label/value blocks aligned without imposing fixed heights. */
-.metric, .projection-stats > *, .monthly-financial-metrics > div,
-.card-stats > div, .detail-row > div, .drawer-breakdown > div {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
 .metric small { margin-top: auto; }
 .metric strong, .card-stats strong, .detail-row strong { overflow-wrap: anywhere; }
 .income-amount { overflow-wrap: anywhere; white-space: normal; text-align: right; }
@@ -91,11 +79,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
 .recurring-status, .movement-type-label { justify-self: start; }
 .recurring-open { min-width: 24px; }
 .allocation-form button { white-space: normal; line-height: 1.2; }
-
-.filters-toolbar, .income-filters, .recurring-tools, .section-actions,
-.income-heading, .page-heading, .month-decision-heading, .projection-heading {
-  min-width: 0;
-}
 .filters-toolbar input, .income-filters input { flex: 1 1 220px; }
 .filters-toolbar select, .income-filters select { flex: 1 1 150px; min-width: 0; }
 .filters-toolbar, .income-filters, .recurring-tools { gap: var(--space-3); }
@@ -122,10 +105,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   border-radius: var(--radius-xl);
 }
 .filter-drawer, .detail-drawer { width: min(456px, 100%); max-width: 100%; }
-.projection-tooltip, .period-popover, .projection-calculation > div {
-  max-width: calc(100vw - (var(--space-4) * 2));
-}
-.projection-tooltip { overflow-wrap: anywhere; }
 
 @media (min-width: 1280px) {
   .summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
@@ -144,11 +123,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .hero { padding: var(--space-5); }
   .summary-grid, .month-summary-grid, .monthly-financial-metrics { grid-template-columns: 1fr; }
   .monthly-financial-metrics > div:last-child { grid-column: auto; }
-  .section-heading, .income-heading, .page-heading, .projection-heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
   .section-actions, .income-actions, .movement-actions { width: 100%; }
   .section-actions > *, .income-actions > *, .movement-actions > * { flex: 1 1 0; }
   .filters-toolbar, .income-filters { grid-template-columns: 1fr; display: grid; }
@@ -186,7 +160,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .modal-actions > *, .drawer-actions > *, .detail-drawer-actions > *, .app-drawer-footer > * {
     flex: 1 1 140px;
   }
-  .projection-tooltip { position: relative; inset: auto; width: 100%; margin-top: var(--space-3); }
 }
 
 @media (max-width: 430px) {
@@ -616,7 +589,7 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
 .monthly-insight-header {
   display: flex !important;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   padding: 15px 17px;
 }
@@ -641,7 +614,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   font-weight: 800;
 }
 .success-icon { color: var(--color-success); border-color: color-mix(in srgb, var(--color-success) 50%, transparent); background: var(--success-surface); }
-.monthly-insight-header > button { min-height: 36px; padding-inline: 13px; border-color: color-mix(in srgb, var(--color-warning) 34%, var(--border-default)); }
 .monthly-insight.has-alert .guidance-details {
   margin: 0;
   padding: 0;
@@ -695,7 +667,6 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .month-decision { padding: 18px 16px; }
   .month-decision-heading { align-items: stretch; }
   .monthly-insight-header { align-items: stretch; flex-direction: column; }
-  .monthly-insight-header > button { width: 100%; }
   .guidance-details > summary { align-items: flex-start; flex-direction: column; gap: 3px; }
   .coverage-detail { grid-template-columns: 1fr 1fr; gap: 9px 14px; padding-inline: 5px; }
   .coverage-detail-status { grid-column: 1 / -1; align-items: flex-start; flex-direction: row !important; gap: 7px !important; }
@@ -1016,3 +987,4 @@ input, select, textarea, .filters-toolbar input, .filters-toolbar select,
   .commitment-card .next-installment-status,
   .commitment-card .summary-action { grid-column: auto; grid-row: auto; }
 }
+.inline-error:has(button){display:flex;align-items:center;justify-content:space-between;gap:12px}.inline-error:has(button) .secondary{padding:7px 10px;font-size:11px;white-space:nowrap}

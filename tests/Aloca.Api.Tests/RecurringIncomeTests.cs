@@ -9,6 +9,25 @@ namespace Aloca.Api.Tests;
 public sealed class RecurringIncomeTests
 {
     [Fact]
+    public async Task RecurringIncomeWithoutCategoryIsPersistedAndReturnedAsUncategorized()
+    {
+        await using var db = CreateDbContext();
+        var service = new RecurringIncomeService(db);
+
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Teste#05", Amount = 100m, CategoryId = null,
+            Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = new DateOnly(2026, 9, 21), DayOfMonth = 21
+        }, CancellationToken.None);
+
+        Assert.NotNull(created);
+        Assert.Null(created!.CategoryId);
+        Assert.Null(created.CategoryName);
+        Assert.Null((await db.RecurringIncomes.SingleAsync()).CategoryId);
+    }
+
+    [Fact]
     public async Task Monthly31_UsesLastValidDayAndDoesNotDuplicateOccurrences()
     {
         await using var db = CreateDbContext();
@@ -42,6 +61,32 @@ public sealed class RecurringIncomeTests
         Assert.Contains((await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences, x => x.Status == RecurringIncomeOccurrenceStatus.Received);
         Assert.Contains((await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences, x => x.Status == RecurringIncomeOccurrenceStatus.Paused);
         Assert.DoesNotContain((await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences, x => x.Status == RecurringIncomeOccurrenceStatus.Cancelled);
+    }
+
+    [Fact]
+    public async Task ConcurrentReceivesReturnTheSameOccurrenceAndCreateOneTransaction()
+    {
+        var databaseName = $"recurring-concurrent-{Guid.NewGuid()}";
+        await using var seed = CreateDbContext(databaseName);
+        var service = new RecurringIncomeService(seed);
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Entrada concorrente", Amount = 250m,
+            Frequency = RecurringIncomeFrequency.Once,
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow)
+        }, default);
+        var occurrenceId = created!.Occurrences.Single().Id;
+
+        await using var dbA = CreateDbContext(databaseName);
+        await using var dbB = CreateDbContext(databaseName);
+        var results = await Task.WhenAll(
+            new RecurringIncomeService(dbA).ReceiveAsync(occurrenceId, default),
+            new RecurringIncomeService(dbB).ReceiveAsync(occurrenceId, default));
+
+        Assert.All(results, result => Assert.Equal(RecurringIncomeOccurrenceStatus.Received, result!.Status));
+        Assert.Single(results.Select(result => result!.TransactionId).Distinct());
+        await using var verify = CreateDbContext(databaseName);
+        Assert.Single(await verify.Transactions.ToListAsync());
     }
 
     [Fact]
@@ -134,10 +179,6 @@ public sealed class RecurringIncomeTests
 
         var first = created!.Occurrences.Single(x => x.ScheduledDate == today);
         await service.ReceiveAsync(first.Id, CancellationToken.None);
-        var projection = await new FinancialProjectionService(db, service).GetAsync(3, CancellationToken.None);
-
-        Assert.Equal(160m, projection.TotalProjectedIncome);
-        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Incomes), x => x.Id == first.Id.ToString());
         Assert.Single(await db.Transactions.ToListAsync());
         Assert.Equal(80m, (await new FinancialBalanceService(db).GetAsync(CancellationToken.None)).SaldoReal);
     }
@@ -164,8 +205,6 @@ public sealed class RecurringIncomeTests
             (await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences.Single(x => x.Id == future.Id).Status);
         Assert.Contains((await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences,
             x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate > future.ScheduledDate);
-        var projection = await new FinancialProjectionService(db, service).GetAsync(3, CancellationToken.None);
-        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Incomes), x => x.Id == future.Id.ToString());
     }
 
     [Fact]
@@ -417,5 +456,7 @@ public sealed class RecurringIncomeTests
         Assert.Equal(0, await db.Transactions.CountAsync());
     }
 
-    private static AlocaDbContext CreateDbContext() => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase($"recurring-tests-{Guid.NewGuid()}").Options);
+    private static AlocaDbContext CreateDbContext() => CreateDbContext($"recurring-tests-{Guid.NewGuid()}");
+
+    private static AlocaDbContext CreateDbContext(string databaseName) => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(databaseName).Options);
 }

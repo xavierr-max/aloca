@@ -19,6 +19,8 @@ public sealed class Category
 
     public Guid Id { get; private set; }
 
+    public Guid UserId { get; private set; }
+
     public string Name { get; private set; } = null!;
 
     public ICollection<Transaction> Transactions { get; private set; } = new List<Transaction>();

@@ -210,7 +210,7 @@
 
 .commitment-static-body {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, .8fr);
+  grid-template-columns: minmax(0, 1.85fr) minmax(300px, .95fr);
   column-gap: 24px;
   min-width: 0;
   padding-top: 14px;
@@ -307,9 +307,9 @@
 
 .commitment-static-next-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 8px 18px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -326,7 +326,7 @@
   color: var(--text-primary);
   font-size: 18px;
   line-height: 21px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .commitment-static-next-main span,
@@ -337,10 +337,10 @@
 }
 
 .commitment-static-next-status {
-  grid-column: 1;
   color: var(--commitment-static-success);
   font-size: 12px;
   line-height: 16px;
+  overflow-wrap: anywhere;
 }
 
 .commitment-static-next-status strong {
@@ -350,20 +350,20 @@
 
 .commitment-static-action {
   display: flex;
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-items: flex-end;
-  justify-content: flex-end;
-  min-width: 156px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
   gap: 6px;
 }
 
 .commitment-static-action-button {
-  width: 156px;
-  min-width: 156px;
-  height: 36px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 36px;
-  max-height: 36px;
+  height: auto;
   padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -373,7 +373,8 @@
   font: inherit;
   font-weight: 700;
   line-height: 18px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 
@@ -386,10 +387,12 @@
 .commitment-static-action-button:disabled { opacity: .55; cursor: not-allowed; }
 
 .commitment-static-action small {
-  max-width: 160px;
+  display: block;
+  max-width: 100%;
   color: var(--text-muted);
   font-size: 10px;
   line-height: 13px;
+  overflow-wrap: anywhere;
 }
 
 .commitment-static-error {
@@ -479,7 +482,7 @@
   .commitment-static-next { padding-left: 18px; }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 880px) {
   .commitment-static-card { display: block; padding: 14px; }
   .commitment-static-header { height: 50px; }
   .commitment-static-body { display: block; padding-top: 0; }
@@ -487,10 +490,6 @@
   .commitment-static-next { padding: 12px 0 0; border-right: 0; }
   .commitment-static-next { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--commitment-static-line); }
   .commitment-static-next-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .commitment-static-next-status,
-  .commitment-static-action { grid-column: auto; grid-row: auto; }
-  .commitment-static-action { display: flex; min-width: 0; align-items: stretch; justify-content: stretch; }
-  .commitment-static-action-button { width: 100%; min-width: 0; }
   .commitment-static-preview-stats { gap: 10px; }
 }
 
@@ -500,3 +499,23 @@
   .commitment-static-badge,
   .commitment-static-urgent-badge { padding-right: 6px; padding-left: 6px; }
 }
+
+/* The next action is deliberately split into a preparation state and a final state. */
+.commitment-static-action-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:8px 13px; border:1px solid transparent; border-radius:10px; font-size:12px; font-weight:750; cursor:pointer; transition:background-color .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease,opacity .2s ease!important; }
+.commitment-static-action-button.is-allocate { background:var(--neutral-surface); border-color:color-mix(in srgb,var(--color-success) 30%,var(--border-default)); color:var(--neutral-strong); }
+.commitment-static-action-button.is-allocate:hover:not(:disabled) { background:var(--success-surface); border-color:var(--color-success); color:var(--color-success); box-shadow:0 5px 14px color-mix(in srgb,var(--color-success) 14%,transparent); }
+.commitment-static-action-button.is-pay { background:var(--positive-strong); border-color:var(--positive-strong); color:#fff; box-shadow:0 5px 14px color-mix(in srgb,var(--positive-strong) 18%,transparent); }
+.commitment-static-action-button.is-pay:hover:not(:disabled) { background:var(--color-success); border-color:var(--color-success); box-shadow:0 7px 17px color-mix(in srgb,var(--color-success) 26%,transparent); }
+.commitment-static-action-button span { font-size:16px; line-height:1; }
+.commitment-static-next-badge { padding:4px 8px; border-radius:999px; background:var(--neutral-surface); color:var(--text-secondary); font-size:10px; font-weight:700; }
+.is-next-ready .commitment-static-next-badge { background:var(--success-surface); color:var(--color-success); }
+.is-next-paid .commitment-static-next-badge { background:var(--bg-subtle); color:var(--text-secondary); }
+.commitment-static-context { display:flex; flex-direction:column; gap:3px; grid-column:1/-1; padding:10px 11px; border:1px solid var(--border-default); border-radius:9px; background:var(--bg-subtle); color:var(--text-secondary); font-size:11px; line-height:1.35; }
+.commitment-static-context strong { color:var(--text-primary); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.is-next-uncovered .commitment-static-context,.is-next-partial .commitment-static-context { border-color:color-mix(in srgb,var(--color-warning) 28%,var(--border-default)); }
+.is-next-ready .commitment-static-context { border-color:color-mix(in srgb,var(--color-success) 32%,var(--border-default)); }
+.commitment-static-action small { display:block; max-width:260px; margin-top:5px; color:var(--text-muted); font-size:10px; line-height:1.3; }
+.commitment-static-success,.commitment-static-error { margin-top:12px; padding:9px 11px; border-radius:8px; font-size:11px; animation:commitment-feedback-in .2s ease both; }
+.commitment-static-success { background:var(--success-surface); color:var(--color-success); }
+@keyframes commitment-feedback-in { from { opacity:0; } to { opacity:1; } }
+@media(max-width:760px) { .commitment-static-action-button { width:100%; } .commitment-static-context { grid-column:auto; } }

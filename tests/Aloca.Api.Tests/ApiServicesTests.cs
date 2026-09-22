@@ -60,7 +60,7 @@ public sealed class ApiServicesTests
         var category = new Category("Salário");
         db.Categories.Add(category);
         await db.SaveChangesAsync();
-        var service = new TransactionService(db);
+        var service = new TransactionService(db, new FinancialAllocationReconciliationService(db, new FinancialBalanceService(db)));
 
         var income = await service.CreateAsync(
             new TransactionRequest { Description = "Salário", Amount = 2_000m, Type = TransactionType.Income, Date = new DateOnly(2026, 9, 5), CategoryId = category.Id },
@@ -115,6 +115,89 @@ public sealed class ApiServicesTests
         Assert.Equal(3, result.TotalCount);
         Assert.Equal(new[] { 2m, 5m, 5m }, result.Items.Select(x => x.Amount).OrderBy(x => x));
         Assert.All(result.Items, item => Assert.Null(item.CategoryId));
+    }
+
+    [Fact]
+    public async Task TransactionService_PaginatesFilteredTransactionsWithStableOrderAndSafePageSize()
+    {
+        await using var db = CreateDbContext();
+        db.Transactions.AddRange(
+            new Transaction("A", 10m, TransactionType.Expense, new DateOnly(2026, 9, 1), null),
+            new Transaction("B", 20m, TransactionType.Expense, new DateOnly(2026, 9, 1), null),
+            new Transaction("C", 30m, TransactionType.Expense, new DateOnly(2026, 9, 2), null));
+        await db.SaveChangesAsync();
+        var service = new TransactionService(db);
+
+        var first = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 1, PageSize = 2 }, default);
+        var next = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 2, PageSize = 2 }, default);
+        var last = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 99, PageSize = 2 }, default);
+        var capped = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, PageSize = 1000 }, default);
+        var empty = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Income, PageSize = 2 }, default);
+
+        var repeatFirst = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 1, PageSize = 2 }, default);
+        Assert.Equal(first.Items.Select(x => x.Id), repeatFirst.Items.Select(x => x.Id));
+        Assert.Equal(2, first.Items.Count);
+        Assert.Single(next.Items);
+        Assert.Empty(first.Items.Select(x => x.Id).Intersect(next.Items.Select(x => x.Id)));
+        Assert.Empty(last.Items);
+        Assert.Equal(2, first.TotalPages);
+        Assert.Equal(100, capped.PageSize);
+        Assert.Equal(0, empty.TotalItems);
+        Assert.Equal(0, empty.TotalPages);
+    }
+
+    [Fact]
+    public async Task DeletingIncomeReconcilesReservationsWithinSameOperation()
+    {
+        await using var db = CreateDbContext();
+        var settings = new FinancialSettingsService(db);
+        await settings.UpdateAsync(500m, default);
+        var transactions = new TransactionService(db);
+        var income = await transactions.CreateAsync(new TransactionRequest
+        {
+            Description = "Entrada temporária", Amount = 200m, Type = TransactionType.Income,
+            Date = DateOnly.FromDateTime(DateTime.UtcNow)
+        }, default);
+        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 0m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        await new FinancialCommitmentService(db, new FinancialBalanceService(db)).AllocateAsync(commitment.Id, 700m, default);
+
+        Assert.True(await transactions.DeleteAsync(income.Transaction!.Id, default));
+
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var saved = await db.FinancialCommitments.SingleAsync();
+        Assert.Equal(500m, summary.Balance);
+        Assert.Equal(500m, summary.TotalReservado);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(500m, saved.AllocatedAmount);
+    }
+
+    [Fact]
+    public async Task CreatingExpenseReconcilesReservationsAndDeletingItReleasesBalance()
+    {
+        await using var db = CreateDbContext();
+        await new FinancialSettingsService(db).UpdateAsync(700m, default);
+        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 700m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var transactions = new TransactionService(db);
+        var expense = await transactions.CreateAsync(new TransactionRequest
+        {
+            Description = "Saída", Amount = 200m, Type = TransactionType.Expense,
+            Date = DateOnly.FromDateTime(DateTime.UtcNow)
+        }, default);
+
+        var afterCreate = await new FinancialSummaryService(db).GetAsync(default);
+        Assert.Equal(500m, afterCreate.Balance);
+        Assert.Equal(500m, afterCreate.TotalReservado);
+        Assert.Equal(0m, afterCreate.SaldoNaoAlocado);
+
+        await transactions.DeleteAsync(expense.Transaction!.Id, default);
+        var afterDelete = await new FinancialSummaryService(db).GetAsync(default);
+        Assert.Equal(700m, afterDelete.Balance);
+        Assert.Equal(500m, afterDelete.TotalReservado);
+        Assert.Equal(200m, afterDelete.SaldoNaoAlocado);
     }
 
     [Fact]

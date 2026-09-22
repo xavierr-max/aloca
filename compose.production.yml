@@ -1,0 +1,92 @@
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-aloca}
+      POSTGRES_USER: ${POSTGRES_USER:-aloca}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - aloca_postgres_data:/var/lib/postgresql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  api:
+    image: ${ALOCA_API_IMAGE:-aloca-api:production}
+    build:
+      context: .
+      dockerfile: Aloca.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Business__TimeZone: ${BUSINESS_TIME_ZONE:-America/Sao_Paulo}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-aloca}
+      POSTGRES_USER: ${POSTGRES_USER:-aloca}
+      DataProtection__ApplicationName: ${DATA_PROTECTION_APPLICATION_NAME:-Aloca}
+      DataProtection__KeysPath: ${DATA_PROTECTION_KEYS_PATH:-/app/data-protection-keys}
+      ForwardedHeaders__TrustedProxyNetwork: 172.30.0.0/24
+    secrets:
+      - postgres_password
+    volumes:
+      - aloca_data_protection_keys:/app/data-protection-keys
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  frontend:
+    image: ${ALOCA_FRONTEND_IMAGE:-aloca-frontend:production}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ${TLS_CERTIFICATE_DIR:-./secrets/tls}:/etc/nginx/tls:ro
+    networks:
+      - edge
+      - backend
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --no-check-certificate --tries=1 --spider https://127.0.0.1/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+secrets:
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_FILE:-./secrets/postgres_password.txt}
+
+volumes:
+  aloca_postgres_data:
+  aloca_data_protection_keys:
+
+networks:
+  edge:
+  backend:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

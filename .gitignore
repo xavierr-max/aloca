@@ -1,6 +1,7 @@
 # .NET build output
 [Bb]in/
 [Oo]bj/
+Aloca.Api/data-protection-keys/
 
 # IDEs and editors
 .vs/
@@ -15,6 +16,9 @@
 appsettings.Local.json
 appsettings.*.local.json
 secrets.json
+secrets/
+.aloca-production-migration.lock
+backups/
 
 # Test output
 TestResults/

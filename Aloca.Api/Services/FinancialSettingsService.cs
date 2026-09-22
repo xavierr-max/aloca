@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aloca.Api.Services;
 
-public sealed class FinancialSettingsService(AlocaDbContext dbContext)
+public sealed class FinancialSettingsService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null)
 {
+    private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, new FinancialBalanceService(dbContext));
     public async Task<FinancialSettingsResponse> GetAsync(CancellationToken ct)
     {
         var settings = await GetOrCreateAsync(ct);
@@ -15,9 +16,12 @@ public sealed class FinancialSettingsService(AlocaDbContext dbContext)
 
     public async Task<FinancialSettingsResponse> UpdateAsync(decimal initialBalance, CancellationToken ct)
     {
+        await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct) : null;
         var settings = await GetOrCreateAsync(ct);
         settings.UpdateInitialBalance(initialBalance);
         await dbContext.SaveChangesAsync(ct);
+        await Reconciliation.ReconcileAsync(ct);
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(ct);
         return new(settings.InitialBalance);
     }
 

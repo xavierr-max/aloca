@@ -1,6 +1,66 @@
 .app-shell {
   width: 100%;
   min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--color-success) 22%, var(--border-default));
+  border-radius: var(--radius-pill);
+  background: var(--success-surface);
+  color: var(--color-success);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.app-content-layout {
+  flex: 1 0 auto;
+}
+
+.app-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  width: min(100%, var(--content-max));
+  margin: 0 auto;
+  padding: 18px var(--content-gutter) 22px;
+  border-top: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.app-footer > * { flex: 0 0 auto; }
+
+.app-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color .16s ease;
+}
+
+.app-footer a:hover,
+.app-footer a:focus-visible {
+  color: var(--color-success);
+  text-decoration: underline;
 }
 
 .app-content-layout {
@@ -172,7 +232,11 @@
     padding: 0;
   }
 
-  .app-sidebar { display: none; }
+  .app-sidebar { display: block; position: static; padding: 16px 15px 0; }
+  .sidebar-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sidebar-section-label { grid-column: 1 / -1; }
+
+  .app-footer { padding: 16px var(--content-gutter) 20px; }
 
   .app-content-layout main {
     width: 100%;
@@ -185,3 +249,12 @@
     overflow-y: auto;
   }
 }
+
+/* Unified Lucide icon rhythm */
+:where(button, a, summary, .sidebar-icon, .income-icon, .icon-button) > svg,
+:where(button, a, summary) > svg { flex: 0 0 auto; vertical-align: middle; }
+.sidebar-navigation a, .sidebar-navigation button, .global-create-trigger,
+.income-actions button, .section-actions button, .modal-actions button,
+.drawer-actions button, .account-trigger { display: inline-flex; align-items: center; gap: 8px; }
+.sidebar-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
+.icon-button > svg { display: block; }

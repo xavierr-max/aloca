@@ -2,11 +2,12 @@ using Aloca.Api.DTOs;
 using Aloca.Api.Models;
 using Aloca.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Aloca.Api.Controllers;
 
-[ApiController]
-[Route("api/categories")]
+[ApiController, Authorize]
+[Route("api/groups")]
 public sealed class CategoriesController(CategoryService categoryService) : ControllerBase
 {
     [HttpGet]
@@ -69,7 +70,6 @@ public sealed class CategoriesController(CategoryService categoryService) : Cont
         return result switch
         {
             CategoryDeleteStatus.NotFound => NotFound(),
-            CategoryDeleteStatus.InUse => Conflict(new { message = "Este grupo é usado por uma recorrência. Altere ou exclua a recorrência antes de removê-lo." }),
             _ => NoContent()
         };
     }

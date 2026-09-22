@@ -38,6 +38,8 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
 
         builder.HasIndex(transaction => new { transaction.CategoryId, transaction.Date });
         builder.HasIndex(transaction => transaction.Date);
+        builder.HasIndex(transaction => new { transaction.FinancialCommitmentId, transaction.Date });
+        builder.HasIndex(transaction => transaction.CommitmentPaymentId).IsUnique();
         builder.HasIndex(transaction => transaction.RecurringIncomeOccurrenceId)
             .IsUnique()
             .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");
@@ -45,7 +47,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.HasOne(transaction => transaction.Category)
             .WithMany(category => category.Transactions)
             .HasForeignKey(transaction => transaction.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict)
+            .OnDelete(DeleteBehavior.SetNull)
             .IsRequired(false);
     }
 }

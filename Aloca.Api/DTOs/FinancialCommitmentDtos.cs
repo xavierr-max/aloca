@@ -43,4 +43,10 @@ public sealed record FinancialCommitmentResponse(
     decimal TotalAllocatedAmount, decimal OverallRemainingAmount, decimal OverallCoveragePercentage,
     bool RequiresAttention, bool AutomaticProcessing, string? AutomaticProcessingWarning,
     RecurringIncomeFrequency Frequency = RecurringIncomeFrequency.Monthly, DateOnly? EndDate = null,
-    bool IsRecurring = false, bool IsOpenEnded = false);
+    bool IsRecurring = false, bool IsOpenEnded = false,
+    decimal AllocatedForNextInstallment = 0m, decimal RemainingForNextInstallment = 0m,
+    decimal CoveragePercentage = 0m, bool CanPay = false,
+    decimal AvailableToAllocate = 0m, bool CanAllocate = false)
+{
+    public string CoverageStatus => IsCompleted ? "full" : CoveragePercentage >= 100m ? "next" : CoveragePercentage <= 0m ? "none" : "partial";
+}

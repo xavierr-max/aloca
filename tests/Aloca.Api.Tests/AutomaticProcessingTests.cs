@@ -41,6 +41,60 @@ public sealed class AutomaticProcessingTests
         Assert.Equal(1, saved.PaidInstallments);
         Assert.Equal(1, await db.CommitmentPayments.CountAsync());
         Assert.True((await db.CommitmentPayments.SingleAsync()).WasAutomatic);
+        Assert.Equal(1, await db.Transactions.CountAsync(x => x.Type == TransactionType.Expense));
+        var movement = await db.Transactions.SingleAsync(x => x.Type == TransactionType.Expense);
+        Assert.Equal(item.Id, movement.FinancialCommitmentId);
+        Assert.True(movement.WasAutomatic);
+        Assert.Equal(today, movement.Date);
+    }
+
+    [Fact]
+    public async Task AutomaticPaymentUpdatesBalanceReservationSummaryWithoutDoubleCounting()
+    {
+        await using var db = CreateDb();
+        var today = BusinessClock.Today();
+        db.FinancialSettings.Add(new FinancialSettings(500m));
+        var item = new FinancialCommitment("Aluguel", 300m, 2, 0, 300m, null, true, today, urgent: true, automaticProcessing: true);
+        db.FinancialCommitments.Add(item);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        Assert.Equal(1, await service.ProcessDueAsync(today, default));
+        Assert.Equal(0, await service.ProcessDueAsync(today, default));
+
+        var balance = await new FinancialBalanceService(db).GetAsync(default);
+        Assert.Equal(200m, balance.SaldoReal);
+        Assert.Equal(0m, balance.TotalReservado);
+        Assert.Equal(200m, balance.SaldoNaoAlocado);
+        Assert.Equal(1, await db.Transactions.CountAsync(x => x.FinancialCommitmentId == item.Id));
+
+        var saved = await db.FinancialCommitments.SingleAsync();
+        Assert.Equal(1, saved.PaidInstallments);
+        Assert.Equal(300m, saved.OverallRemainingAmount);
+        Assert.True(saved.RequiresAttention);
+
+        var summary = await new FinancialSummaryService(db).GetMonthlyAsync(new DateOnly(today.Year, today.Month, 1), default);
+        var detail = Assert.Single(summary.Commitments);
+        Assert.True(detail.IsPaid);
+        Assert.Equal(300m, detail.DueAmount);
+        Assert.Equal(300m, detail.AllocatedAmount);
+
+    }
+
+    [Fact]
+    public async Task AutomaticPaymentDoesNotPayPartiallyCoveredInstallment()
+    {
+        await using var db = CreateDb();
+        var today = BusinessClock.Today();
+        var item = new FinancialCommitment("Parcial", 300m, 1, 0, 200m, null, true, today, automaticProcessing: true);
+        db.FinancialCommitments.Add(item);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        Assert.Equal(0, await service.ProcessDueAsync(today, default));
+        Assert.Equal(0, (await db.FinancialCommitments.SingleAsync()).PaidInstallments);
+        Assert.Empty(await db.Transactions.ToListAsync());
+        Assert.Contains("faltam", (await db.FinancialCommitments.SingleAsync()).AutomaticProcessingWarning);
     }
 
     [Fact]

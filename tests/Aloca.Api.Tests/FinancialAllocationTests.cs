@@ -18,6 +18,22 @@ public sealed class FinancialAllocationTests
         Assert.Equal(291.38m, FinancialCalculations.SaldoLivre(291.38m, 0m));
     }
 
+    [Theory]
+    [InlineData(500, 0, 500)]
+    [InlineData(500, 300, 200)]
+    [InlineData(500, 500, 0)]
+    public void UnallocatedBalanceIsCurrentBalanceMinusAllocationAndNeverNegative(decimal currentBalance, decimal allocated, decimal expected)
+    {
+        Assert.Equal(expected, FinancialCalculations.SaldoNaoAlocado(currentBalance, allocated));
+    }
+
+    [Fact]
+    public void CoverageDeficitDoesNotChangeUnallocatedBalance()
+    {
+        Assert.Equal(200m, FinancialCalculations.SaldoNaoAlocado(500m, 300m));
+        Assert.Equal(400m, FinancialCalculations.DeficitCobertura(700m, 300m));
+    }
+
     [Fact]
     public async Task DistributesByPriorityAndDoesNotExceedBalance()
     {
@@ -219,6 +235,241 @@ public sealed class FinancialAllocationTests
     }
 
     [Fact]
+    public async Task AllocationCannotCover120WithOnly100Available()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 120m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.AllocateAsync(commitment.Id, 120m, default));
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+
+        var saved = await service.GetByIdAsync(commitment.Id, default);
+        Assert.Equal(100m, saved!.AllocatedAmount);
+        Assert.Equal(20m, saved.RemainingForNextInstallment);
+        Assert.Equal(83.333333333333333333333333333m, saved.CoveragePercentage);
+        Assert.False(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task AcceptanceScenarioAllocatesOnlyRealMoneyAndBlocksPayment()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        Assert.Equal(100m, summary.CurrentBalance);
+        Assert.Equal(100m, summary.TotalReservado);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(100m, saved.AllocatedForNextInstallment);
+        Assert.Equal(100m, saved.RemainingForNextInstallment);
+        Assert.Equal(50m, saved.CoveragePercentage);
+        Assert.False(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task NewIncomeAllowsCompletingTheRemainingCoverageWithoutChangingCurrentReservationSemantics()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        Assert.Equal(200m, summary.CurrentBalance);
+        Assert.Equal(200m, summary.TotalReservado);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(200m, saved.AllocatedForNextInstallment);
+        Assert.Equal(0m, saved.RemainingForNextInstallment);
+        Assert.Equal(100m, saved.CoveragePercentage);
+        Assert.True(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task DeallocationRestoresOnlyUnallocatedBalanceAndDoesNotChangeCurrentBalance()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+        await service.DeallocateAsync(commitment.Id, 50m, default);
+
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        Assert.Equal(100m, summary.CurrentBalance);
+        Assert.Equal(50m, summary.TotalReservado);
+        Assert.Equal(50m, summary.SaldoNaoAlocado);
+        Assert.Equal(50m, saved.AllocatedForNextInstallment);
+        Assert.Equal(150m, saved.RemainingForNextInstallment);
+        Assert.Equal(25m, saved.CoveragePercentage);
+    }
+
+    [Fact]
+    public async Task DeallocationCannotWithdrawMoreThanTheCommitmentReserve()
+    {
+        await using var db = CreateDb();
+        var commitment = Commitment("Parcela", 200m, 1, true, allocatedAmount: 50m);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeallocateAsync(commitment.Id, 50.01m, default));
+
+        Assert.Equal("Deallocation amount cannot exceed the allocated amount.", error.Message);
+        Assert.Equal(50m, (await service.GetByIdAsync(commitment.Id, default))!.AllocatedAmount);
+    }
+
+    [Fact]
+    public async Task FutureIncomeIsNotAvailableForCurrentAllocation()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateNextInstallmentAsync(commitment.Id, default);
+
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        Assert.Equal(0m, summary.CurrentBalance);
+        Assert.Equal(0m, summary.TotalReservado);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(0m, saved.AllocatedForNextInstallment);
+        Assert.False(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task ConcurrentAllocationsCannotSpendTheSameUnallocatedBalanceTwice()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using var seedDb = CreateDb(databaseName);
+        await SeedTransaction(seedDb, 100m, TransactionType.Income);
+        var first = Commitment("A", 200m, 1, true);
+        var second = Commitment("B", 200m, 2, true);
+        seedDb.FinancialCommitments.AddRange(first, second);
+        await seedDb.SaveChangesAsync();
+
+        await using var dbA = CreateDb(databaseName);
+        await using var dbB = CreateDb(databaseName);
+        var taskA = new FinancialCommitmentService(dbA, new FinancialBalanceService(dbA)).AllocateAsync(first.Id, 80m, default);
+        var taskB = new FinancialCommitmentService(dbB, new FinancialBalanceService(dbB)).AllocateAsync(second.Id, 80m, default);
+        var results = await Task.WhenAll(
+            taskA.ContinueWith(task => (Success: task.Status == TaskStatus.RanToCompletion, Error: task.Exception)),
+            taskB.ContinueWith(task => (Success: task.Status == TaskStatus.RanToCompletion, Error: task.Exception)));
+
+        Assert.Equal(1, results.Count(x => x.Success));
+        Assert.Equal(1, results.Count(x => !x.Success));
+        await using var verifyDb = CreateDb(databaseName);
+        Assert.Equal(80m, await verifyDb.FinancialCommitments.SumAsync(x => x.AllocatedAmount));
+    }
+
+    [Fact]
+    public async Task ConcurrentPaymentsCreateOnlyOnePaymentAndExpense()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using var seed = CreateDb(databaseName);
+        var commitment = Commitment("Pagamento concorrente", 100m, 1, true, 100m);
+        seed.FinancialCommitments.Add(commitment);
+        await seed.SaveChangesAsync();
+
+        await using var dbA = CreateDb(databaseName);
+        await using var dbB = CreateDb(databaseName);
+        var results = await Task.WhenAll(
+            new FinancialCommitmentService(dbA, new FinancialBalanceService(dbA)).RegisterPaymentAsync(commitment.Id, default),
+            new FinancialCommitmentService(dbB, new FinancialBalanceService(dbB)).RegisterPaymentAsync(commitment.Id, default));
+
+        Assert.All(results, result => Assert.NotNull(result));
+        await using var verify = CreateDb(databaseName);
+        Assert.Single(await verify.CommitmentPayments.ToListAsync());
+        Assert.Single(await verify.Transactions.Where(x => x.CommitmentPaymentId != null).ToListAsync());
+    }
+
+    [Fact]
+    public async Task OpenEndedCommitmentDoesNotExposeFictitiousZeroOfZeroCoverage()
+    {
+        await using var db = CreateDb();
+        var commitment = new FinancialCommitment(
+            "Recorrente", 200m, RecurringIncomeFrequency.Monthly,
+            DateOnly.FromDateTime(DateTime.UtcNow), null, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+
+        var saved = (await new FinancialCommitmentService(db, new FinancialBalanceService(db)).GetByIdAsync(commitment.Id, default))!;
+
+        Assert.True(saved.IsOpenEnded);
+        Assert.Equal(0m, saved.TotalAmount);
+        Assert.Equal(0m, saved.OverallCoveragePercentage);
+        Assert.Equal(0m, saved.AllocatedForNextInstallment);
+        Assert.False(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task AllocateAvailableUsesOnlyTheAvailableBalanceWhenTheRemainingNeedIsLarger()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateAvailableAsync(commitment.Id, default);
+
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        Assert.Equal(100m, saved.AllocatedAmount);
+        Assert.Equal(100m, saved.RemainingForNextInstallment);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(100m, summary.TotalReservado);
+    }
+
+    [Fact]
+    public async Task PartialCoveragePaymentIsRejectedAndFullPaymentUsesInstallmentAmount()
+    {
+        await using var db = CreateDb();
+        var commitment = Commitment("Parcela", 120m, 1, true, allocatedAmount: 100m);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.RegisterPaymentAsync(commitment.Id, default));
+        Assert.Contains("20", error.Message);
+        Assert.Equal(0, await db.CommitmentPayments.CountAsync());
+        Assert.Equal(0, (await service.GetByIdAsync(commitment.Id, default))!.PaidInstallments);
+
+        commitment.Allocate(20m);
+        await db.SaveChangesAsync();
+        await service.RegisterPaymentAsync(commitment.Id, default);
+
+        var payment = await db.CommitmentPayments.SingleAsync();
+        Assert.Equal(120m, payment.Amount);
+        Assert.NotEqual(0m, payment.Amount);
+    }
+
+    [Fact]
     public async Task IgnoresDisabledCompletedAndManualExcessCommitments()
     {
         await using var db = CreateDb();
@@ -272,11 +523,13 @@ public sealed class FinancialAllocationTests
 
     private static AlocaDbContext CreateDb() => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 
-    private static async Task SeedTransaction(AlocaDbContext db, decimal amount, TransactionType type)
+    private static async Task SeedTransaction(AlocaDbContext db, decimal amount, TransactionType type, DateOnly? date = null)
     {
         var category = new Category("Test");
         db.Categories.Add(category);
-        db.Transactions.Add(new Transaction("Test", amount, type, DateOnly.FromDateTime(DateTime.UtcNow), category.Id));
+        db.Transactions.Add(new Transaction("Test", amount, type, date ?? DateOnly.FromDateTime(DateTime.UtcNow), category.Id));
         await db.SaveChangesAsync();
     }
+
+    private static AlocaDbContext CreateDb(string databaseName) => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(databaseName).Options);
 }

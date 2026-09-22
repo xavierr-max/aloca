@@ -1,0 +1,178 @@
+/* Product-wide UX foundation. Keep this file token-driven and free of page hacks. */
+:root {
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 32px; --space-8: 40px;
+  --control-height: 44px; --touch-target: 44px; --content-max: 1440px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-info) 28%, transparent);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scrollbar-gutter: stable; }
+body { overflow-x: hidden; }
+button, a, input, select, textarea { min-height: var(--touch-target); }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }
+main { min-width: 0; width: min(100%, var(--content-max)); }
+.topbar { min-height: 72px; padding-inline: clamp(16px, 3vw, 40px); }
+.app-content-layout { min-width: 0; width: 100%; }
+.app-sidebar { flex: 0 0 236px; }
+.sidebar-navigation a, .sidebar-navigation button { min-height: 44px; }
+.page-heading, .section-heading { min-width: 0; }
+.page-heading > div:first-child, .section-heading > div:first-child { min-width: 0; }
+.page-heading h2, .section-heading h2, .page-heading p, .section-heading p { overflow-wrap: anywhere; }
+.alert { min-height: 44px; display: flex; align-items: center; }
+.empty, .loading { min-height: 150px; display: grid; place-content: center; gap: 8px; text-align: center; }
+.mobile-menu-trigger { display: none; }
+.app-sidebar-header, .app-sidebar-close, .sidebar-theme-control, .app-sidebar-backdrop { display: none; }
+.commitment-card *, .commitment-static-card *, .income-row *, .recurring-row *, .dashboard-panel * { min-width: 0; }
+.commitment-card h3, .commitment-static-card h3, .income-info strong, .recurring-main strong { overflow-wrap: anywhere; }
+.commitment-card:hover, .commitment-static-card:hover, .metric:hover { transform: none !important; }
+.commitment-card button, .commitment-static-card button { white-space: normal; }
+
+@media (max-width: 1023px) {
+  .app-sidebar { flex-basis: 208px; }
+  .topbar { padding-inline: 24px; }
+}
+
+@media (max-width: 767px) {
+  .topbar { min-height: 64px; gap: 10px; padding: 10px 16px; }
+  .mobile-menu-trigger { display: inline-grid; place-items: center; flex: 0 0 var(--touch-target); width: var(--touch-target); border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-card); color: var(--text-primary); }
+  .brand { min-width: 0; }
+  .brand .eyebrow { display: none; }
+  .brand h1 { font-size: 22px; }
+  .topbar-actions { gap: 6px; margin-left: auto; }
+  .topbar-actions .theme-toggle, .topbar-actions .calculator-trigger { display: none; }
+  .global-create-trigger { min-width: var(--touch-target); padding-inline: 12px; }
+  .global-create-trigger span { display: none; }
+  .account-trigger { max-width: var(--touch-target); padding: 0; justify-content: center; }
+  .account-trigger-copy, .account-trigger > span:last-child { display: none; }
+  .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 810; width: min(86vw, 320px); padding: 78px 16px 24px; transform: translateX(-105%); transition: transform .2s ease; box-shadow: var(--shadow-lg); background: var(--bg-card); }
+  .app-sidebar.is-open { transform: translateX(0); }
+  .app-sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 800; border: 0; min-height: 0; padding: 0; background: var(--overlay); cursor: pointer; }
+  .app-sidebar-header { position: absolute; inset: 16px 16px auto; display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .app-sidebar-header .sidebar-section-label { margin: 0; }
+  .app-sidebar-close { display: grid; place-items: center; width: var(--touch-target); height: var(--touch-target); min-height: var(--touch-target); border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; }
+  .app-sidebar-close:hover { background: var(--bg-hover); }
+  .sidebar-theme-control { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding: 16px 4px 0; border-top: 1px solid var(--border-default); color: var(--text-secondary); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+  .sidebar-theme-control .theme-toggle { flex: 0 0 auto; }
+  .app-sidebar[aria-hidden="true"] { visibility: hidden; }
+  .app-sidebar.is-open { visibility: visible; }
+  main { width: 100%; padding-inline: 16px; }
+  .page-heading { gap: 14px; margin-block: 16px 20px; }
+  .page-heading h2 { font-size: clamp(23px, 7vw, 30px); }
+  .page-heading p { max-width: 52ch; line-height: 1.5; }
+  .section-actions, .movement-actions, .income-actions { width: 100%; }
+  .section-actions > button, .movement-actions > button, .income-actions > button { flex: 1 1 0; }
+  .modal-backdrop, .drawer-backdrop, .app-drawer-backdrop { padding: 0; align-items: end; }
+  .modal { width: min(100%, 560px); max-height: min(92dvh, 760px); border-radius: 20px 20px 0 0; overflow: auto; }
+  .app-drawer, .filter-drawer, .detail-drawer { width: 100%; max-width: none; height: min(92dvh, 820px); border-radius: 20px 20px 0 0; }
+  .app-drawer-content, .drawer-content, .detail-drawer-content { overscroll-behavior: contain; }
+  .drawer-actions, .app-drawer-footer, .detail-drawer-actions { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 480px) {
+  main { padding-inline: 12px; }
+  .topbar { padding-inline: 12px; }
+  .page-heading h2 { font-size: 24px; }
+  .page-heading .primary, .page-heading .secondary { width: 100%; }
+  .dashboard-hero, .dashboard-top, .balance-grid { grid-template-columns: 1fr !important; }
+  .modal { max-height: 96dvh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Responsive invariants. These rules sit at the end of the cascade so every
+   screen uses the same containment rules, regardless of the page stylesheet. */
+html, body, #root, .app-shell { min-width: 0; max-width: 100%; }
+html { overflow-x: clip; }
+body { overflow-x: clip; }
+
+main, main > *, .app-content-layout > *, .page-heading > *, .section-heading > *,
+.income-heading > *, .month-decision-heading > *, .dashboard-panel > *,
+.card-main > *, .card-title > *, .card-heading > *, .income-row > *,
+.recurring-row > *, .drawer-head > *, .modal-head > * { min-width: 0; max-width: 100%; }
+
+h1, h2, h3, h4, h5, h6, p, strong, small, label, legend, span, a, button,
+input, select, textarea { overflow-wrap: anywhere; }
+h1, h2, h3, h4, h5, h6, p { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea { width: 100%; min-width: 0; }
+button { flex-shrink: 1; line-height: 1.25; }
+
+.topbar, .app-content-layout, .page-heading, .section-heading, .income-heading,
+.month-decision-heading, .modal-head, .drawer-head, .modal-actions, .drawer-actions,
+.section-actions, .income-actions, .movement-actions { min-width: 0; }
+.topbar-actions, .account-menu, .account-trigger, .account-trigger-copy,
+.sidebar-navigation a, .sidebar-navigation button { min-width: 0; }
+.sidebar-navigation a, .sidebar-navigation button { max-width: 100%; }
+.sidebar-navigation a > span:not(.sidebar-icon), .sidebar-navigation button > span:not(.sidebar-icon) { min-width: 0; overflow-wrap: anywhere; }
+
+.metric strong, .monthly-financial-metrics strong, .income-amount,
+.drawer-summary-main strong, .drawer-installment strong, .preview-total strong { overflow-wrap: anywhere; word-break: normal; white-space: normal; }
+.income-info, .income-info strong, .recurring-main, .recurring-next,
+.card-title, .card-heading, .card-name-row, .command-balance-head > div,
+.coverage-detail-name, .coverage-detail-value, .coverage-detail-status { min-width: 0; }
+.income-info strong, .recurring-main strong { white-space: normal; overflow: hidden; text-overflow: ellipsis; }
+.category-badge, .recurring-badge, .priority-badge, .urgent-badge { max-width: 100%; white-space: normal; }
+
+.form-grid, .income-form-grid, .recurring-form-grid,
+.checkbox-options-grid, .drawer-summary-grid { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.form-grid > *, .income-form-grid > *, .recurring-form-grid > *,
+.checkbox-options-grid > * { min-width: 0; }
+.modal, .filter-drawer, .detail-drawer, .app-drawer { min-width: 0; max-width: 100%; }
+.modal { width: min(100%, 560px); }
+.modal-actions > *, .drawer-actions > *, .commitment-drawer-action-buttons > * { min-width: 0; max-width: 100%; }
+.modal-actions button, .drawer-actions button { white-space: normal; }
+
+.commitment-card .next-installment-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, auto); }
+.commitment-card .card-name-row h3 { max-width: 100%; }
+.summary-action button, .commitment-drawer-action-buttons button { white-space: normal; }
+.group-header > span { min-width: 0; max-width: 100%; }
+.group-header > span:last-child { flex: 0 0 auto; }
+
+@media (max-width: 900px) {
+  .commitment-card, .commitment-card.commitment-card:hover { grid-template-columns: minmax(0, 1fr); }
+  .commitment-card .commitment-overall { border-right: 0; padding-right: 0; }
+  .commitment-card .next-installment-grid { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
+  .commitment-card .next-installment-status { grid-column: 1; }
+  .commitment-card .summary-action { grid-column: 2; grid-row: 1 / span 2; }
+  .monthly-financial-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 639px) {
+  .topbar { gap: 8px; }
+  .topbar-actions { gap: 4px; }
+  .page-heading, .section-heading, .income-heading, .month-decision-heading { align-items: stretch; }
+  .section-actions, .income-actions, .movement-actions, .modal-actions, .drawer-actions { flex-wrap: wrap; }
+  .section-actions > *, .income-actions > *, .movement-actions > * { flex: 1 1 100%; width: 100%; }
+  .modal-actions > *, .drawer-actions > * { flex: 1 1 0; }
+  .monthly-financial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .commitment-card .next-installment-grid { grid-template-columns: minmax(0, 1fr); }
+  .commitment-card .next-installment-status, .commitment-card .summary-action { grid-column: auto; grid-row: auto; }
+  .commitment-card .summary-action button { width: 100%; }
+  .drawer-installment { flex-wrap: wrap; }
+  .drawer-installment > div { flex: 1 1 140px; }
+  .drawer-installment > div:last-child { text-align: left; }
+  .account-popover { max-width: calc(100vw - 24px); }
+}
+
+@media (max-width: 430px) {
+  main { padding-inline: 12px; }
+  .monthly-financial-metrics, .closed-card-summary, .drawer-summary-grid { grid-template-columns: 1fr; }
+  .monthly-financial-metrics > .monthly-metric:last-child { grid-column: auto; }
+  .modal { padding: 20px 16px; }
+  .modal-actions, .drawer-actions { flex-direction: column; }
+  .modal-actions > *, .drawer-actions > * { width: 100%; flex-basis: auto; }
+  .app-sidebar { width: min(88vw, 320px); padding-inline: 14px; }
+  .card-menu-popover { max-width: calc(100vw - 32px); min-width: 0; }
+}
+
+@media (max-width: 360px) {
+  .topbar { padding-inline: 10px; }
+  main { padding-inline: 10px; }
+  .topbar .brand h1 { font-size: 20px; }
+  .global-create-trigger { padding-inline: 9px; }
+  .account-trigger { min-width: 40px; }
+}

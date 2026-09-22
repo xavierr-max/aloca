@@ -205,6 +205,31 @@ public sealed class FinancialCommitmentTests
         Assert.Throws<InvalidOperationException>(() => commitment.Deallocate(101m));
     }
 
+    [Fact]
+    public void ReleasingAllAllocationLeavesPaidInstallmentsAndCommitmentIntact()
+    {
+        var commitment = CreateCommitment(allocatedAmount: 400m);
+        commitment.RegisterPayment();
+
+        var released = commitment.ReleaseAllAllocation();
+
+        Assert.Equal(210.10m, released);
+        Assert.Equal(0m, commitment.AllocatedAmount);
+        Assert.Equal(1, commitment.PaidInstallments);
+        Assert.Equal(2, commitment.RemainingInstallments);
+        Assert.False(commitment.IsCompleted);
+        Assert.Equal(33.3m, Math.Round(commitment.OverallCoveragePercentage, 1));
+    }
+
+    [Fact]
+    public void ReleasingWithoutAllocationIsAValidNoOp()
+    {
+        var commitment = CreateCommitment();
+
+        Assert.Equal(0m, commitment.ReleaseAllAllocation());
+        Assert.Equal(0m, commitment.AllocatedAmount);
+    }
+
     private static FinancialCommitment CreateCommitment(
         decimal installmentAmount = 189.90m,
         int totalInstallments = 3,

@@ -2,10 +2,11 @@ using Aloca.Api.DTOs;
 using Aloca.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Aloca.Api.Controllers;
 
-[ApiController, Route("api/recurring-incomes")]
+[ApiController, Route("api/recurring-incomes"), Authorize]
 public sealed class RecurringIncomesController(RecurringIncomeService service) : ControllerBase
 {
     [HttpGet] public async Task<ActionResult<IReadOnlyCollection<RecurringIncomeResponse>>> GetAll(CancellationToken ct) => Ok(await service.GetAllAsync(ct));

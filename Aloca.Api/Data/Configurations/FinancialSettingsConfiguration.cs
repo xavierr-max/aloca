@@ -12,5 +12,6 @@ public sealed class FinancialSettingsConfiguration : IEntityTypeConfiguration<Fi
             table.HasCheckConstraint("ck_financial_settings_initial_balance_non_negative", "\"InitialBalance\" >= 0"));
         builder.HasKey(x => x.Id);
         builder.Property(x => x.InitialBalance).HasPrecision(18, 2).IsRequired();
+        builder.HasIndex(x => x.UserId).IsUnique();
     }
 }
