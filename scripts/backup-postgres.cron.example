@@ -1,0 +1,2 @@
+# Run daily at 02:15 UTC from the repository directory.
+15 2 * * * cd /opt/aloca && /opt/aloca/scripts/backup-postgres.sh

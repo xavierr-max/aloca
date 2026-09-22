@@ -1,17 +1,17 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import React, { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
+import ErrorBoundary from './ErrorBoundary.jsx'
 import {
-  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BadgeCheck, Bell, BookOpen, Calculator, Calendar,
-  ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, CircleHelp, Eye, Filter, Folder,
-  LayoutDashboard, List, Menu, Moon, Pencil, Plus, RotateCw, Search, Settings, ShieldCheck, Sun,
-  Target, Trash2, TriangleAlert, Undo2, UserCircle, Wallet, X, ArrowDownToLine, ArrowUpFromLine,
+  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, BadgeCheck, Bell, Calculator,
+  CalendarDays, ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye, Filter,
+  Folder, LayoutDashboard, List, Pencil, Plus, RotateCw, Settings, ShieldCheck,
+  Search, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, ArrowDownToLine, ArrowUpFromLine, Mail, LifeBuoy,
 } from 'lucide-react'
-import { api, apiAvailabilityEvents, markAccountContextChanged } from './services/api'
-import { TutorialProvider, useTutorial } from './tutorials'
+import { api, apiAvailabilityEvents } from './services/api'
 import { CheckboxOption } from './components/CheckboxOption'
+import FinancialForecastPage from './pages/FinancialForecastPage.jsx'
 import './styles.css'
-import './projection.css'
 import './balance.css'
 import './payment.css'
 import './transactions.css'
@@ -21,14 +21,63 @@ import './dashboard-compact.css'
 import './theme.css'
 import './calculator.css'
 import './responsive-system.css'
-import './tutorial.css'
 import './commitment-static-card.css'
 import './account.css'
+import './profile-page.css'
 import './navigation.css'
 import './ux-overhaul.css'
 
 const iconProps = { size: 18, strokeWidth: 1.8, 'aria-hidden': true, focusable: false }
 const Icon = ({ icon: Glyph, size, className = '' }) => <Glyph {...iconProps} size={size ?? iconProps.size} className={className} />
+
+function InfoTooltip({ title, description, placement = 'top' }) {
+  const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState(null)
+  const tooltipId = useId()
+  const triggerRef = useRef(null)
+  const popoverRef = useRef(null)
+  const closeTimer = useRef(null)
+  const setOpenFromPointer = value => {
+    window.clearTimeout(closeTimer.current)
+    if (value) setOpen(true)
+    else closeTimer.current = window.setTimeout(() => setOpen(false), 120)
+  }
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current || !popoverRef.current) return undefined
+    const updatePosition = () => {
+      const trigger = triggerRef.current.getBoundingClientRect()
+      const popover = popoverRef.current.getBoundingClientRect()
+      const gap = 8
+      const edge = 16
+      const placements = placement === 'top' ? ['top', 'bottom', 'right', 'left'] : [placement, 'top', 'bottom', 'right', 'left']
+      const fits = (side, width, height) => side === 'top' ? trigger.top >= height + gap : side === 'bottom' ? window.innerHeight - trigger.bottom >= height + gap : side === 'left' ? trigger.left >= width + gap : window.innerWidth - trigger.right >= width + gap
+      const side = placements.find(candidate => fits(candidate, popover.width, popover.height)) || placements[0]
+      let top = side === 'top' ? trigger.top - popover.height - gap : side === 'bottom' ? trigger.bottom + gap : trigger.top + (trigger.height - popover.height) / 2
+      let left = side === 'left' ? trigger.left - popover.width - gap : side === 'right' ? trigger.right + gap : trigger.left + (trigger.width - popover.width) / 2
+      left = Math.max(edge, Math.min(left, window.innerWidth - popover.width - edge))
+      top = Math.max(edge, Math.min(top, window.innerHeight - popover.height - edge))
+      setPosition({ top, left, side })
+    }
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+    return () => { window.removeEventListener('resize', updatePosition); window.removeEventListener('scroll', updatePosition, true) }
+  }, [open, placement, title, description])
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), [])
+
+  const tooltip = open && typeof document !== 'undefined' ? createPortal(<span ref={popoverRef} id={tooltipId} className={`info-tooltip-popover ${position ? `is-positioned info-tooltip-${position.side}` : ''}`} role="tooltip" style={position ? { top: position.top, left: position.left } : undefined} onMouseEnter={() => setOpenFromPointer(true)} onMouseLeave={() => setOpenFromPointer(false)}>
+    <strong>{title}</strong><span>{description}</span>
+  </span>, document.body) : null
+
+  return <span className={`info-tooltip${open ? ' is-open' : ''}`} onMouseEnter={() => setOpenFromPointer(true)} onMouseLeave={() => setOpenFromPointer(false)}>
+    <button ref={triggerRef} type="button" className="info-tooltip-trigger" aria-label={`Informações: ${title}`} aria-describedby={open ? tooltipId : undefined} aria-expanded={open} onClick={() => { window.clearTimeout(closeTimer.current); setOpen(value => !value) }} onFocus={() => setOpen(true)} onBlur={() => setOpenFromPointer(false)} onKeyDown={event => { if (event.key === 'Escape') setOpen(false) }}>
+      <span aria-hidden="true">i</span>
+    </button>
+    {tooltip}
+  </span>
+}
 
 const formatCurrency = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0)
 const money = formatCurrency
@@ -109,32 +158,47 @@ function ModalLayer({ children, onClose }) {
   )
 }
 
-function AccountMenu({ accountState, open, disabled = false, onToggle, onClose, onAction, onSwitch }) {
-  const current = accountState?.current
-  if (!current) return null
-  const protectionAction = current.isLocal ? 'protect' : 'password'
-  return <div className="account-menu"><button type="button" className="account-trigger" aria-haspopup="menu" aria-expanded={open} onClick={onToggle}><span className="account-avatar">{current.displayName.slice(0, 1).toUpperCase()}</span><span className="account-trigger-copy"><strong>{current.displayName}</strong><small>{current.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><span aria-hidden="true">⌄</span></button>{open && <div className="account-popover" role="menu"><div className={`account-protection-card ${current.isLocal ? 'is-unprotected' : 'is-protected'}`}><div className="account-protection-copy"><span className="account-protection-icon" aria-hidden="true">{current.isLocal ? '↗' : '✓'}</span><div><div className="account-protection-title-row"><strong>{current.isLocal ? 'Proteja sua conta' : 'Conta protegida'}</strong>{!current.isLocal && <span className="account-protection-badge">Protegida</span>}</div><p>{current.isLocal ? 'Crie usuário e senha para recuperar seus dados em outros dispositivos.' : 'Seus dados estão protegidos e podem ser recuperados em outros dispositivos.'}</p></div></div><button type="button" className="account-protection-cta" onClick={() => { onClose(); onAction(protectionAction) }}>{current.isLocal ? 'Proteger conta' : 'Segurança / Alterar senha'}</button></div><div className="account-popover-section"><div className="account-popover-heading"><span>Contas neste dispositivo</span><b>{accountState.accounts.length}/{accountState.limit}</b></div><div className="account-list">{accountState.accounts.map(account => <button type="button" role="menuitem" className={`account-list-item ${account.id === current.id ? 'active' : ''}`} key={account.id} onClick={() => { onClose(); onSwitch(account) }}><span className="account-avatar small">{account.displayName.slice(0, 1).toUpperCase()}</span><span><strong>{account.displayName}</strong><small>{account.isLocal ? 'Conta local' : 'Conta protegida'}</small></span>{account.id === current.id && <b>Atual</b>}</button>)}</div></div><div className="account-management"><div className="account-section-label">Gerenciar</div><div className="account-actions"><button type="button" onClick={() => { onClose(); onAction('add') }} disabled={accountState.accounts.length >= accountState.limit}>Adicionar conta</button><button type="button" onClick={() => { onClose(); onAction('rename') }}>Renomear conta</button>{!current.isLocal && <button type="button" onClick={() => { onClose(); onAction('remove') }}>Remover deste dispositivo</button>}<button type="button" className="danger" onClick={() => { onClose(); onAction('delete') }}>Excluir conta</button></div>{accountState.accounts.length >= accountState.limit && <p className="account-limit-message">Você já possui o limite de 4 contas neste dispositivo. Remova uma conta para adicionar outra.</p>}</div></div>}</div>
-}
-
-function AccountDialog({ mode, initialUsername = '', initialDisplayName = '', onClose, onSubmit }) {
+function AccountDialog({ mode, initialUsername = '', initialDisplayName = '', initialEmail = '', onClose, onSubmit }) {
   const [displayName, setDisplayName] = useState(initialDisplayName)
   const [username, setUsername] = useState(initialUsername)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
+  const [email, setEmail] = useState(initialEmail)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const title = mode === 'protect' ? 'Proteger conta' : mode === 'login' ? 'Entrar em conta protegida' : mode === 'password' ? 'Alterar senha' : mode === 'rename' ? 'Renomear conta' : 'Adicionar conta'
-  const submit = async event => { event.preventDefault(); setError(''); if ((mode === 'protect' || mode === 'login' || mode === 'password') && !password.trim()) return setError('Informe a senha.'); if (mode === 'protect' && password !== confirmPassword) return setError('As senhas não conferem.'); if (mode === 'password' && password !== confirmPassword) return setError('As senhas não conferem.'); if ((mode === 'protect' || mode === 'rename') && !displayName.trim()) return setError('Informe o nome visual da conta.'); if ((mode === 'login' || mode === 'protect') && !username.trim()) return setError('Informe o username.'); setBusy(true); try { await onSubmit(mode, { displayName, username, password, confirmPassword, currentPassword }); } catch (e) { setError(errorText(e)) } finally { setBusy(false) } }
-  if (mode === 'add') return <ModalLayer onClose={onClose}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>Adicionar conta</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div><p className="modal-copy">Crie uma nova conta local para começar um contexto vazio ou entre em uma conta protegida existente.</p><div className="account-add-options"><button type="button" className="secondary" onClick={() => { setBusy(true); setError(''); onSubmit('create-local', {}).catch(e => setError(errorText(e))).finally(() => setBusy(false))} } disabled={busy}>Criar nova conta local</button><button type="button" className="primary" onClick={() => onSubmit('login-form', {})} disabled={busy}>Entrar em conta protegida</button></div>{error && <div className="alert error">{error}</div>}</ModalLayer>
-  return <ModalLayer onClose={onClose}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>{title}</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div>{mode === 'login' && <p className="modal-copy">Use o username e a senha da conta. Seus dados serão carregados no contexto correto.</p>}{error && <div className="alert error">{error}</div>}{(mode === 'protect' || mode === 'rename') && <label>Nome da conta<input autoFocus value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>}{(mode === 'protect' || mode === 'login') && <label>Username<input autoFocus={mode === 'login'} autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} maxLength="64" /></label>}{mode === 'password' && <label>Senha atual<input autoFocus type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'login' || mode === 'password') && <label>{mode === 'password' ? 'Nova senha' : 'Senha'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'password') && <label>Confirmar senha<input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label>}{mode === 'protect' && <small className="field-hint">A senha precisa ter 8 caracteres, letra maiúscula, minúscula e número.</small>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="primary" disabled={busy}>{busy ? 'Processando…' : mode === 'login' ? 'Entrar' : mode === 'protect' ? 'Proteger conta' : mode === 'password' ? 'Alterar senha' : 'Salvar nome'}</button></div></form></ModalLayer>
+  const submit = async event => { event.preventDefault(); setError(''); if (mode === 'create-local' && !email.trim()) return setError('Informe o e-mail.'); if ((mode === 'protect' || mode === 'login' || mode === 'password') && !password.trim()) return setError('Informe a senha.'); if ((mode === 'protect' || mode === 'password') && password !== confirmPassword) return setError('As senhas não conferem.'); if ((mode === 'protect' || mode === 'rename' || mode === 'create-local') && !displayName.trim()) return setError('Informe o nome visual da conta.'); if ((mode === 'login' || mode === 'protect') && !username.trim()) return setError('Informe o username.'); if ((mode === 'protect' || mode === 'create-local') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setError('Informe um e-mail válido.'); setBusy(true); try { await onSubmit(mode, { displayName, username, email, password, confirmPassword, currentPassword }); } catch (e) { setError(errorText(e)) } finally { setBusy(false) } }
+  if (mode === 'add') return <ModalLayer onClose={onClose}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>Adicionar conta</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div><p className="modal-copy">Crie uma nova conta local ou entre em uma conta protegida existente.</p><div className="account-add-options"><button type="button" className="secondary" onClick={() => onSubmit('create-local-form', {})} disabled={busy}>Criar nova conta local</button><button type="button" className="primary" onClick={() => onSubmit('login-form', {})} disabled={busy}>Entrar em conta protegida</button></div>{error && <div className="alert error">{error}</div>}</ModalLayer>
+  return <ModalLayer onClose={onClose}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>{mode === 'create-local' ? 'Criar conta local' : title}</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div>{mode === 'login' && <p className="modal-copy">Use o username e a senha da conta. Seus dados serão carregados no contexto correto.</p>}{mode === 'create-local' && <p className="modal-copy">O e-mail será usado para identificar sua conta e não fica visível para outros usuários.</p>}{error && <div className="alert error">{error}</div>}{(mode === 'protect' || mode === 'rename' || mode === 'create-local') && <label>Nome da conta<input autoFocus value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>}{(mode === 'protect' || mode === 'create-local') && <label>E-mail<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /></label>}{(mode === 'protect' || mode === 'login') && <label>Username<input autoFocus={mode === 'login'} autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} maxLength="64" /></label>}{mode === 'password' && <label>Senha atual<input autoFocus type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'login' || mode === 'password') && <label>{mode === 'password' ? 'Nova senha' : 'Senha'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'password') && <label>Confirmar senha<input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'create-local') && <small className="field-hint">O e-mail deve ser válido. A senha precisa ter 8 caracteres, letra maiúscula, minúscula e número.</small>}{mode === 'login' && <small className="field-hint">Use o username e a senha da conta protegida.</small>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="primary" disabled={busy}>{busy ? 'Processando…' : mode === 'login' ? 'Entrar' : mode === 'protect' ? 'Proteger conta' : mode === 'password' ? 'Alterar senha' : 'Criar conta'}</button></div></form></ModalLayer>
 }
 
-function AccountDeleteModal({ displayName, onClose, onConfirm }) {
+function AccountDeleteModal({ displayName, isLocal, onClose, onConfirm }) {
   const [confirmation, setConfirmation] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const submit = async event => { event.preventDefault(); setError(''); if (confirmation.trim() !== displayName) return setError('Digite exatamente o nome da conta para confirmar.'); try { await onConfirm(confirmation) } catch (e) { setError(errorText(e)) } }
-  return <ModalLayer onClose={onClose}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">AÇÃO DESTRUTIVA</span><h2>Excluir conta</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div><p className="modal-copy">Excluir esta conta apagará seus dados financeiros associados. Esta ação não pode ser desfeita.</p>{error && <div className="alert error">{error}</div>}<label>Digite “{displayName}” para confirmar<input autoFocus value={confirmation} onChange={e => setConfirmation(e.target.value)} /></label><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button type="submit" className="danger-button">Excluir conta</button></div></form></ModalLayer>
+  const [busy, setBusy] = useState(false)
+  const expected = isLocal ? 'APAGAR MINHA CONTA' : displayName
+  const submit = async event => { event.preventDefault(); if (busy) return; setError(''); if (confirmation.trim() !== expected) return setError(`Digite exatamente ${expected} para confirmar.`); if (!isLocal && !password) return setError('Informe a senha atual da conta.'); setBusy(true); try { await onConfirm({ confirmation, password: isLocal ? undefined : password }) } catch (e) { setError(errorText(e)); setBusy(false) } }
+  return <ModalLayer onClose={() => { if (!busy) onClose() }}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">AÇÃO DESTRUTIVA</span><h2>Excluir conta</h2></div><button type="button" className="icon-button" onClick={onClose} disabled={busy}>×</button></div><p className="modal-copy">Excluir esta conta apagará todos os dados financeiros associados. Esta ação não pode ser desfeita.</p>{!isLocal && <p className="modal-copy">Por segurança, confirme o nome da conta e informe a senha atual.</p>}{error && <div className="alert error">{error}</div>}<label>Digite “{expected}” para confirmar<input autoFocus value={confirmation} onChange={e => setConfirmation(e.target.value)} disabled={busy} /></label>{!isLocal && <label>Senha atual<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} disabled={busy} /></label>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="danger-button" disabled={busy}>{busy ? 'Excluindo…' : 'Excluir conta'}</button></div></form></ModalLayer>
+}
+
+
+function SupportPage({ account }) {
+  return <section className="account-page support-page"><div className="page-heading"><div><span className="eyebrow">AJUDA</span><h2>Suporte</h2><p>Entre em contato para tirar dúvidas, relatar problemas ou enviar sugestões.</p></div><LifeBuoy size={34} aria-hidden="true" /></div><article className="account-card support-card"><div className="account-card-icon"><Mail size={20} /></div><div><span className="eyebrow">CANAL DE CONTATO</span><h3>alocafinance.app@gmail.com</h3><p>Responderemos pelo e-mail informado assim que possível.</p><a className="primary support-contact-button" href="mailto:alocafinance.app@gmail.com"><Mail size={17} />Entrar em contato</a></div></article></section>
+}
+
+function ProfileSecurityPage({ account, onUpdateProfile, onSecurity, onDelete }) {
+  const [displayName, setDisplayName] = useState(account.displayName || '')
+  const [email, setEmail] = useState(account.email || '')
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  useEffect(() => { setDisplayName(account.displayName || ''); setEmail(account.email || '') }, [account.id, account.displayName, account.email])
+  const save = async event => { event.preventDefault(); setError(''); setSaved(false); if (!displayName.trim()) return setError('Informe o nome da conta.'); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setError('Informe um e-mail válido.'); setSaving(true); try { await onUpdateProfile({ displayName, email }); setSaved(true) } catch (e) { setError(errorText(e)) } finally { setSaving(false) } }
+  const accountType = account.isLocal ? 'Local neste dispositivo' : 'Protegida por senha'
+  const securityLabel = account.isLocal ? 'Ainda não protegida' : 'Protegida'
+  return <section className="account-page profile-page"><div className="page-heading"><div><span className="eyebrow">MINHA CONTA</span><h2>Perfil e Segurança</h2><p>Atualize seus dados e mantenha sua conta protegida.</p></div><UserCircle size={34} aria-hidden="true" /></div><header className="profile-hero"><div className="profile-hero-banner" aria-hidden="true"><span>ALOCA</span></div><div className="profile-hero-content"><span className="account-identity-avatar" aria-hidden="true">{(account.displayName || 'A').slice(0, 1).toUpperCase()}</span><div className="profile-hero-copy"><h3>{account.displayName || 'Sua conta'}</h3><p>{account.isLocal ? 'Conta local' : 'Conta protegida'}</p><span className={`account-status ${account.isLocal ? 'is-local' : ''}`}><ShieldCheck size={15} />{securityLabel}</span></div><button type="button" className="profile-edit-link" onClick={() => document.querySelector('.account-form input')?.focus()}><Pencil size={15} />Editar perfil</button></div></header><div className="account-summary" aria-label="Resumo da conta"><div><span>Conta</span><strong>{accountType}</strong></div><div><span>Segurança</span><strong className={account.isLocal ? 'summary-muted' : ''}>{securityLabel}</strong></div><div><span>Username</span><strong>{account.username || 'Ainda não definido'}</strong></div><div><span>E-mail</span><strong>{account.email || 'Não informado'}</strong></div></div><div className="account-page-grid"><section className="account-card account-profile-card"><div className="account-card-heading"><div><span className="eyebrow">PERFIL</span><h3>Informações pessoais</h3></div><Pencil size={18} aria-hidden="true" /></div><form onSubmit={save} className="account-form">{error && <div className="alert error">{error}</div>}<label>Nome da conta<input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label><label>E-mail<input type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /><small className="field-hint">Seu e-mail é privado e usado apenas para identificar sua conta.</small></label><div className="account-form-actions"><button className="primary" type="submit" disabled={saving}>{saving ? 'Salvando…' : 'Salvar alterações'}</button>{saved && <span className="form-success" role="status">Alterações salvas</span>}</div></form></section><section className={`account-card account-security-card ${account.isLocal ? 'is-unprotected' : 'is-protected'}`}><div className="account-card-heading"><div><span className="eyebrow">SEGURANÇA</span><h3>Segurança da conta</h3></div><ShieldCheck size={18} aria-hidden="true" /></div><div className="security-state"><span className="security-state-icon" aria-hidden="true">{account.isLocal ? '○' : '✓'}</span><strong>{account.isLocal ? 'Conta ainda não protegida' : 'Conta protegida'}</strong></div><p>{account.isLocal ? 'Esta conta existe somente neste dispositivo. Proteja-a para acessar seus dados em outro dispositivo.' : 'Sua conta usa senha para proteger o acesso.'}</p>{!account.isLocal && <dl className="security-details"><div><dt>Usuário</dt><dd>{account.username || 'Ainda não definido'}</dd></div><div><dt>E-mail</dt><dd>{account.email || 'Não informado'}</dd></div></dl>}<button className="secondary" type="button" onClick={() => onSecurity(account.isLocal ? 'protect' : 'password')}>{account.isLocal ? 'Proteger minha conta' : 'Alterar senha'}</button></section><section className="account-card danger-zone"><div className="danger-copy"><div className="account-card-heading"><div><span className="eyebrow">ZONA DE PERIGO</span><h3>Excluir conta</h3></div><TriangleAlert size={18} aria-hidden="true" /></div><p>Exclui permanentemente a conta e seus dados.</p></div><button className="danger-button" type="button" onClick={onDelete}>Excluir conta</button></section></div></section>
 }
 
 const calculatorNumber = value => Math.round((value + Number.EPSILON) * 1e10) / 1e10
@@ -306,10 +370,51 @@ function ApiAvailabilityBoundary({ children }) {
   return <>{availability === 'online' && children}{availability === 'offline' && <ApiUnavailableScreen checking={checking} retrying={retrying} onRetry={() => check(true)} status={status} />}</>
 }
 
+function NavItem({ href, label, icon: Glyph, active }) {
+  return <a className={`app-nav-item${active ? ' is-active' : ''}`} href={href} aria-label={label} aria-current={active ? 'page' : undefined} data-tooltip={label}>
+    <Icon icon={Glyph} size={22} />
+  </a>
+}
+
+function AppSidebar({ view }) {
+  const primaryItems = [
+    ['#dashboard', 'Visão geral', LayoutDashboard, view === 'dashboard'],
+    ['#movimentacoes', 'Movimentações', ArrowLeftRight, view === 'incomes'],
+    ['#compromissos', 'Compromissos', CalendarDays, view === 'commitments'],
+    ['#previsoes', 'Previsões e Dados', BarChart3, view === 'forecast'],
+    ['#grupos', 'Grupos', Folder, view === 'groups'],
+  ]
+  const secondaryItems = [
+    ['#perfil', 'Perfil e configurações', Settings, view === 'profile'],
+    ['#suporte', 'Suporte', LifeBuoy, view === 'support'],
+  ]
+  return <aside className="app-sidebar" aria-label="Navegação principal">
+    <nav className="app-sidebar-primary">
+      {primaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+    </nav>
+    <nav className="app-sidebar-secondary" aria-label="Navegação secundária">
+      {secondaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+    </nav>
+  </aside>
+}
+
+function AppTopbar({ account, createMenuOpen, onToggleCreate, onNewIncome, onNewRecurring, onNewCommitment, theme, onToggleTheme, onAccount }) {
+  return <header className="app-topbar">
+    <label className="app-search"><Icon icon={Search} size={22} /><input type="search" placeholder="Buscar algo..." aria-label="Buscar algo" /></label>
+    <div className="app-topbar-actions">
+      <div className="app-create-wrap">
+        <button type="button" className="app-create-button" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={onToggleCreate}><Icon icon={Plus} size={19} /> Novo</button>
+        {createMenuOpen && <div className="app-create-menu" role="menu"><button type="button" role="menuitem" onClick={onNewIncome}>Nova entrada</button><button type="button" role="menuitem" onClick={onNewRecurring}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={onNewCommitment}>Novo compromisso</button></div>}
+      </div>
+      <button type="button" className="app-theme-toggle" onClick={onToggleTheme} aria-label="Alternar tema" title="Alternar tema"><Sun size={16} /><span><i /></span><Moon size={16} /></button>
+      <button type="button" className="app-account-button" onClick={onAccount} aria-label="Abrir perfil e configurações"><span className="app-account-avatar">{(account?.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>Minha conta</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>
+    </div>
+  </header>
+}
+
 function App() {
   const [accountState, setAccountState] = useState(null)
   const [accountReady, setAccountReady] = useState(false)
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [accountDialog, setAccountDialog] = useState(null)
   const [accountDeleteOpen, setAccountDeleteOpen] = useState(false)
   const [accountMutationBusy, setAccountMutationBusy] = useState(false)
@@ -318,8 +423,6 @@ function App() {
   const [monthlySummary, setMonthlySummary] = useState(null)
   const [monthlySummaryLoading, setMonthlySummaryLoading] = useState(true)
   const [monthlySummaryError, setMonthlySummaryError] = useState('')
-  const [projectionLoading, setProjectionLoading] = useState(true)
-  const [projectionError, setProjectionError] = useState('')
   const [commitments, setCommitments] = useState([])
   const [categories, setCategories] = useState([])
   const [searchInput, setSearchInput] = useState('')
@@ -332,8 +435,6 @@ function App() {
    const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [preview, setPreview] = useState(null)
-  const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [balanceModal, setBalanceModal] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -345,39 +446,31 @@ function App() {
   const [expenseDialog, setExpenseDialog] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
   const [incomeDelete, setIncomeDelete] = useState(null)
-  const [projection, setProjection] = useState(null)
   const currentMonth = new Date().toISOString().slice(0, 7)
   const [selectedMonth, setSelectedMonth] = useState(() => sessionStorage.getItem('aloca-selected-month') || currentMonth)
-  const [projectionMonths, setProjectionMonths] = useState(Number(localStorage.getItem('aloca-projection-months') || 12))
   const [commitmentObjective, setCommitmentObjective] = useState(() => localStorage.getItem('aloca-commitment-objective') || '')
-  const { theme, toggleTheme } = useTheme()
-  const { start: startTutorial } = useTutorial()
-  const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#grupos' ? 'groups' : 'dashboard'
+  const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#previsoes' ? 'forecast' : window.location.hash === '#grupos' ? 'groups' : window.location.hash === '#suporte' ? 'support' : window.location.hash === '#perfil' ? 'profile' : 'dashboard'
   const [view, setView] = useState(getView())
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
-  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
   const refreshVersionRef = useRef(0)
   const accountTransitionRef = useRef(0)
-  const closeMobileNavigation = () => setMobileNavigationOpen(false)
-
-  const projectionHorizon = Math.max(3, projectionMonths, monthDistance(currentMonth, selectedMonth))
+  useEffect(() => { if (!notice) return undefined; const timer = window.setTimeout(() => setNotice(''), 3500); return () => window.clearTimeout(timer) }, [notice])
 
   const refresh = async (expectedAccountId = accountState?.current?.id, transitionToken = accountTransitionRef.current) => {
     const refreshVersion = ++refreshVersionRef.current
     const isCurrent = () => transitionToken === accountTransitionRef.current
-    setLoading(true); setMonthlySummaryLoading(true); setProjectionLoading(true); setError(''); setProjectionError('')
+    setLoading(true); setMonthlySummaryLoading(true); setError('')
     try {
-      const [core, projectionResult, monthlyResult] = await Promise.allSettled([
+      const [core, monthlyResult] = await Promise.allSettled([
         Promise.all([api.summary(), api.commitments(filters.status), api.categories(), api.incomes(), api.expenses(), api.recurringIncomes()]),
-        api.projection(projectionHorizon),
         api.monthlySummary(selectedMonth)
       ])
       if (core.status === 'rejected') throw core.reason
       const [nextSummary, nextCommitments, nextCategories, nextIncomes, nextExpenses, nextRecurring] = core.value
       if (refreshVersion !== refreshVersionRef.current || !isCurrent()) return
       setSummary(nextSummary); setCommitments(nextCommitments); setCategories(nextCategories); setIncomes(nextIncomes.items || []); setExpenses(nextExpenses.items || []); setRecurringIncomes(nextRecurring || [])
-      if (projectionResult.status === 'fulfilled') { setProjection(projectionResult.value); setProjectionError('') } else { setProjectionError(errorText(projectionResult.reason)) }
       if (monthlyResult.status === 'fulfilled') {
         setMonthlySummary(monthlyResult.value)
         setMonthlySummaryError('')
@@ -386,14 +479,7 @@ function App() {
         // response visible while the selected month is retried.
         setMonthlySummaryError(errorText(monthlyResult.reason))
       }
-    } catch (e) { if (isCurrent()) setError(errorText(e)) } finally { if (isCurrent()) { setLoading(false); setMonthlySummaryLoading(false); setProjectionLoading(false); setInitialLoadComplete(true) } }
-  }
-  const retryProjection = async () => {
-    const version = ++refreshVersionRef.current
-    setProjectionLoading(true); setProjectionError('')
-    try { setProjection(await api.projection(projectionHorizon)); if (version === refreshVersionRef.current) setProjectionError('') }
-    catch (e) { if (version === refreshVersionRef.current) setProjectionError(errorText(e)) }
-    finally { if (version === refreshVersionRef.current) setProjectionLoading(false) }
+    } catch (e) { if (isCurrent()) setError(errorText(e)) } finally { if (isCurrent()) { setLoading(false); setMonthlySummaryLoading(false); setInitialLoadComplete(true) } }
   }
   const retryMonthlySummary = async () => {
     const version = ++refreshVersionRef.current
@@ -424,17 +510,17 @@ function App() {
     bootstrapAccount()
     return () => { cancelled = true }
   }, [])
-  useEffect(() => { if (accountReady && accountState?.current && !isSwitchingAccount) refresh(accountState.current.id) }, [accountReady, accountState?.current?.id, projectionHorizon, selectedMonth, filters.status, isSwitchingAccount])
+  useEffect(() => { if (accountReady && accountState?.current && !isSwitchingAccount) refresh(accountState.current.id) }, [accountReady, accountState?.current?.id, selectedMonth, filters.status, isSwitchingAccount])
   useEffect(() => { const onRecovered = () => { if (accountReady && accountState?.current) refresh() }; window.addEventListener(apiAvailabilityEvents.recovered, onRecovered); return () => window.removeEventListener(apiAvailabilityEvents.recovered, onRecovered) }, [accountReady, accountState?.current?.id])
   useEffect(() => { sessionStorage.setItem('aloca-selected-month', selectedMonth) }, [selectedMonth])
-  useEffect(() => { const onHash = () => { setView(getView()); setMobileNavigationOpen(false) }; window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash) }, [])
-  useEffect(() => {
-    if (!mobileNavigationOpen) return undefined
-    const closeOnEscape = event => { if (event.key === 'Escape') closeMobileNavigation() }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [mobileNavigationOpen])
+  useEffect(() => { const onHash = () => setView(getView()); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash) }, [])
   useEffect(() => { const timer = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 250); return () => clearTimeout(timer) }, [searchInput])
+  useEffect(() => {
+    if (!createMenuOpen) return undefined
+    const close = event => { if (event.key === 'Escape' || !event.target.closest('.app-create-wrap')) setCreateMenuOpen(false) }
+    document.addEventListener('keydown', close); document.addEventListener('mousedown', close)
+    return () => { document.removeEventListener('keydown', close); document.removeEventListener('mousedown', close) }
+  }, [createMenuOpen])
   useEffect(() => {
     if (!filtersOpen) return undefined
     const closeOnEscape = event => { if (event.key === 'Escape') setFiltersOpen(false) }
@@ -442,24 +528,6 @@ function App() {
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', closeOnEscape); document.body.style.overflow = '' }
   }, [filtersOpen])
-  useEffect(() => {
-    if (!createMenuOpen) return undefined
-    const closeOnEscape = event => { if (event.key === 'Escape') setCreateMenuOpen(false) }
-    const closeOnOutsideClick = event => { if (!event.target.closest('.global-create')) setCreateMenuOpen(false) }
-    document.addEventListener('keydown', closeOnEscape)
-    document.addEventListener('mousedown', closeOnOutsideClick)
-    return () => { document.removeEventListener('keydown', closeOnEscape); document.removeEventListener('mousedown', closeOnOutsideClick) }
-  }, [createMenuOpen])
-  useEffect(() => {
-    if (loading) return
-    const markers = view === 'incomes'
-      ? [['.income-management .page-heading', 'movements-page'], ['.movement-actions', 'movement-create'], '.management-tabs', '.income-filters-disclosure', '.all-movements-section', '.management-tabs button:last-child'].map(item => Array.isArray(item) ? item : [item, item === '.management-tabs' ? 'movement-tabs' : item === '.income-filters-disclosure' ? 'movement-filters' : item === '.all-movements-section' ? 'movement-results' : 'recurring-tab'])
-      : view === 'commitments'
-        ? [['.commitments-page .page-heading', 'commitments-page'], ['.commitments-page .section-actions .primary', 'create-commitment'], ['.commitments-page .filters-toolbar input', 'commitment-search'], ['.commitments-page .section-actions .secondary', 'commitment-filters'], ['.commitments-page .category-chips', 'commitment-groups']]
-        : []
-    markers.forEach(([selector, marker]) => document.querySelector(selector)?.setAttribute('data-tour', marker))
-  }, [commitments.length, expenses.length, incomes.length, loading, view])
-
   const filtered = commitments.filter(item => {
     const coverage = item.coverageStatus
     const payment = item.paidInstallments === 0 ? 'none' : item.isCompleted ? 'done' : 'progress'
@@ -474,13 +542,12 @@ function App() {
   const run = async action => { setError(''); setNotice(''); try { await action(); await refresh(); setNotice('Alterações salvas com sucesso.') } catch (e) { setError(errorText(e)) } }
   const syncAccount = async () => { const next = await api.account(); setAccountState(next); return next }
   const reloadAfterAccountEntry = () => {
-    setAccountMenuOpen(false)
     setAccountDialog(null)
     setIsSwitchingAccount(false)
     setAccountMutationBusy(false)
     window.location.reload()
   }
-  const clearAccountData = () => { setSummary(null); setMonthlySummary(null); setMonthlySummaryError(''); setCommitments([]); setCategories([]); setIncomes([]); setExpenses([]); setRecurringIncomes([]); setProjection(null) }
+  const clearAccountData = () => { setSummary(null); setMonthlySummary(null); setMonthlySummaryError(''); setCommitments([]); setCategories([]); setIncomes([]); setExpenses([]); setRecurringIncomes([]) }
   const runAccountMutation = async mutation => {
     setAccountMutationBusy(true)
     setError('')
@@ -499,76 +566,57 @@ function App() {
       // Every account mutation owns the layer it opened. This also runs when
       // the API rejects, so a failed request can never leave a backdrop or
       // body scroll lock behind.
-      setAccountMenuOpen(false)
       setAccountDialog(null)
       setAccountDeleteOpen(false)
       setAccountMutationBusy(false)
     }
   }
-  const handleAccountSwitch = async account => {
-    if (account.id === accountState?.current?.id || isSwitchingAccount) return
-    const transitionToken = ++accountTransitionRef.current
-    setError(''); setAccountMenuOpen(false); setIsSwitchingAccount(true); setAccountMutationBusy(true); clearAccountData()
-    try {
-      await api.switchAccount(account.id)
-      markAccountContextChanged()
-      const next = await api.account()
-      if (!next.current || next.current.id !== account.id) throw new Error('A sessão retornou uma conta diferente da selecionada.')
-      reloadAfterAccountEntry()
-    } catch (e) {
-      setError(errorText(e))
-      const rollback = await syncAccount().catch(() => null)
-      if (rollback?.current) await refresh(rollback.current.id, transitionToken)
-      else clearAccountData()
-    } finally {
-      if (transitionToken === accountTransitionRef.current) { setAccountMenuOpen(false); setIsSwitchingAccount(false); setAccountMutationBusy(false) }
-    }
-  }
-  const handleAccountAction = action => { if (action === 'remove') { setAccountDialog({ mode: 'remove' }); return } if (action === 'delete') { setAccountDeleteOpen(true); return } setAccountDialog({ mode: action, username: accountState?.current?.username || '' }) }
-  const handleAccountSubmit = async (mode, data) => { if (mode === 'create-local') { await api.createLocal(); reloadAfterAccountEntry(); return } if (mode === 'login-form') { setAccountDialog({ mode: 'login' }); return } if (mode === 'login') { await api.login(data.username, data.password); reloadAfterAccountEntry(); return } if (mode === 'rename') { await runAccountMutation(() => api.renameAccount(data.displayName)); return } if (mode === 'protect') { await runAccountMutation(() => api.protectAccount(data)); return } if (mode === 'password') { await runAccountMutation(() => api.changePassword(data)) } }
+  const handleAccountSubmit = async (mode, data) => { if (mode === 'create-local-form') { setAccountDialog({ mode: 'create-local' }); return } if (mode === 'create-local') { await api.createLocal(data.displayName, data.email); reloadAfterAccountEntry(); return } if (mode === 'login-form') { setAccountDialog({ mode: 'login' }); return } if (mode === 'login') { await api.login(data.username, data.password); reloadAfterAccountEntry(); return } if (mode === 'rename') { await runAccountMutation(() => api.renameAccount(data.displayName)); return } if (mode === 'protect') { await runAccountMutation(() => api.protectAccount(data)); return } if (mode === 'password') { await runAccountMutation(() => api.changePassword(data)) } }
+  const updateProfile = data => runAccountMutation(() => api.updateProfile(data))
   const removeAccount = async () => runAccountMutation(() => api.removeAccountFromDevice())
-  const deleteAccount = async confirmation => runAccountMutation(() => api.deleteAccount(confirmation))
-  const openDistribution = async () => { setError(''); try { setPreview(await api.preview()); setModal(true) } catch (e) { setError(errorText(e)) } }
-  const distribute = () => run(async () => { await api.distribute(); setModal(false); setPreview(null) })
-
+  const deleteAccount = async request => runAccountMutation(() => api.deleteAccount(request))
   const goToCommitments = () => { window.location.hash = 'compromissos' }
   const priorityItems = [...commitments].sort((a, b) => (a.priority ?? Number.MAX_SAFE_INTEGER) - (b.priority ?? Number.MAX_SAFE_INTEGER) || (a.nextDueDate || a.dueDate || '').localeCompare(b.nextDueDate || b.dueDate || '')).slice(0, 3)
+  const urgentItems = commitments.filter(item => item.urgent && item.requiresAttention).map(item => ({ ...item, allocatedAmount: item.overallAllocatedAmount ?? item.allocatedAmount, totalAmount: item.overallTotalAmount ?? item.totalAmount, remainingAmount: item.overallRemainingAmount ?? item.remainingAmount, overallCoverage: item.overallCoverage ?? item.coveragePercentage }))
   const saveCommitmentObjective = objective => { setCommitmentObjective(objective); localStorage.setItem('aloca-commitment-objective', objective) }
   if (!accountReady) return <div className="app-shell"><div className="loading">Preparando sua conta local…</div></div>
   if (!accountState?.current) return <div className="app-shell"><div className="loading account-recovery"><strong>Não foi possível abrir uma conta local</strong><span>Gerencie as contas deste dispositivo para liberar espaço e entrar no Aloca.</span></div></div>
   return <div className="app-shell">
-    <header className="topbar"><button type="button" className="mobile-menu-trigger" aria-label="Abrir navegação" aria-expanded={mobileNavigationOpen} onClick={() => setMobileNavigationOpen(value => !value)}><Icon icon={Menu} size={22} /></button><div className="brand"><span className="eyebrow">CONTROLE FINANCEIRO</span><h1>Aloca</h1></div><div className="topbar-actions"><div className="global-create"><button type="button" className="primary global-create-trigger" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={() => setCreateMenuOpen(value => !value)}><Icon icon={Plus} size={17} /> <span>Novo</span></button>{createMenuOpen && <div className="global-create-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setIncomeDialog(true) }}>Nova entrada</button><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setRecurringDialog(true) }}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setEditing({}) }}>Novo compromisso</button></div>}</div><button className={`calculator-trigger ${calculatorOpen ? 'active' : ''}`} type="button" onClick={() => setCalculatorOpen(value => !value)} aria-label="Calculadora" aria-expanded={calculatorOpen} title="Calculadora"><Icon icon={Calculator} size={20} /></button><button type="button" className="theme-toggle" onClick={toggleTheme} aria-pressed={theme === 'dark'} aria-label={theme === 'dark' ? 'Tema escuro. Alternar para tema claro' : 'Tema claro. Alternar para tema escuro'} title={theme === 'dark' ? 'Tema escuro' : 'Tema claro'}><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Sun} size={15} /></span><span className="theme-toggle-track" aria-hidden="true"><span /></span><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Moon} size={15} /></span></button><AccountMenu accountState={accountState} open={accountMenuOpen} disabled={isSwitchingAccount} onToggle={() => setAccountMenuOpen(value => !value)} onClose={() => setAccountMenuOpen(false)} onAction={handleAccountAction} onSwitch={handleAccountSwitch} /></div></header>
+    <div className="app-logo-slot" aria-hidden="true"><img src={theme === 'dark' ? '/aloca-logo-dark.png' : '/aloca-logo.png'} alt="" /></div>
+    <AppTopbar account={accountState.current} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setIncomeDialog(true) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} onAccount={() => { window.location.hash = 'perfil' }} />
+    <AppSidebar view={view} />
     <CalculatorPopover open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
-    <div className="app-content-layout">{mobileNavigationOpen && <button type="button" className="app-sidebar-backdrop" aria-label="Fechar navegação" onClick={closeMobileNavigation} /> }<aside className={`app-sidebar ${mobileNavigationOpen ? 'is-open' : ''}`}><div className="app-sidebar-header"><span className="sidebar-section-label">MENU</span><button type="button" className="app-sidebar-close" aria-label="Fechar navegação" onClick={closeMobileNavigation}><Icon icon={X} size={21} /></button></div><nav className="sidebar-navigation" aria-label="Navegação principal"><span className="sidebar-section-label">NAVEGAÇÃO</span><a onClick={closeMobileNavigation} className={view === 'dashboard' ? 'active' : ''} href="#dashboard"><span className="sidebar-icon"><Icon icon={LayoutDashboard} size={18} /></span>Visão geral</a><a onClick={closeMobileNavigation} className={view === 'incomes' ? 'active' : ''} href="#movimentacoes"><span className="sidebar-icon"><Icon icon={ArrowLeftRight} size={18} /></span>Movimentações</a><a onClick={closeMobileNavigation} className={view === 'commitments' ? 'active' : ''} href="#compromissos"><span className="sidebar-icon"><Icon icon={Calendar} size={18} /></span>Compromissos</a><span className="sidebar-section-label">ORGANIZAÇÃO</span><a onClick={closeMobileNavigation} className={view === 'groups' ? 'active' : ''} href="#grupos"><span className="sidebar-icon"><Icon icon={Folder} size={18} /></span>Grupos</a><span className="sidebar-section-label">FERRAMENTAS</span><button type="button" onClick={() => { setCalculatorOpen(true); closeMobileNavigation() }}><span className="sidebar-icon"><Icon icon={Calculator} size={18} /></span>Calculadora</button><button type="button" onClick={() => { startTutorial(); closeMobileNavigation() }}><span className="sidebar-icon sidebar-help-icon"><Icon icon={CircleHelp} size={18} /></span>Ajuda e tutorial</button></nav><div className="sidebar-theme-control"><span>APARÊNCIA</span><button type="button" className="theme-toggle" onClick={toggleTheme} aria-pressed={theme === 'dark'} aria-label={theme === 'dark' ? 'Tema escuro. Alternar para tema claro' : 'Tema claro. Alternar para tema escuro'} title={theme === 'dark' ? 'Tema escuro' : 'Tema claro'}><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Sun} size={15} /></span><span className="theme-toggle-track" aria-hidden="true"><span /></span><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Moon} size={15} /></span></button></div></aside><main>
-      {error && <div className="alert error">{error}</div>}{notice && <div className="alert success">{notice}</div>}
+    <main className="app-main">
+      <div className="page-content">
+      {error && <div className="alert error">{error}</div>}
 
-       {loading && !initialLoadComplete ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <IncomeManagement incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} categories={categories} onCreate={() => setIncomeDialog(true)} onCreateRecurring={() => setRecurringDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onDelete={income => setIncomeDelete(income)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onRefresh={refresh} onRecurringDeleted={() => setNotice('Entrada recorrente excluída com sucesso.')} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} groups={groups} categories={categories} summary={summary} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen} activeFilterCount={activeFilterCount} setEditing={setEditing} setCollapsed={setCollapsed} collapsed={collapsed} run={run} refresh={refresh} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <>
-        <BalanceCommandCenter summary={summary} commitments={commitments} projection={projection} selectedObjective={commitmentObjective} onObjectiveChange={saveCommitmentObjective} onBalance={() => setBalanceModal(true)} onDistribute={openDistribution} />
-        <details className="dashboard-secondary" data-tour="dashboard-details">
-          <summary>Explorar detalhes do mês</summary>
-          <div className="dashboard-secondary-content">
-            <details className="dashboard-panel" data-tour="dashboard-summary"><summary>Resumo financeiro do mês <span>Entradas, saídas e projeção do mês selecionado.</span></summary><div className="dashboard-panel-content"><MonthlyFinancialSummary summary={monthlySummary} loading={monthlySummaryLoading} error={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetry={retryMonthlySummary} onView={goToCommitments} /></div></details>
-            <UrgentCommitmentsSection items={projection?.urgentCommitments || []} onOpen={id => { const item = commitments.find(commitment => commitment.id === id); if (item) setEditing(item) }} />
-            <details className="dashboard-panel" data-tour="dashboard-projection"><summary>Projeção de saldo <span>Visão dos próximos meses</span></summary><div className="dashboard-panel-content"><FinancialProjectionChart data={projection} loading={projectionLoading} error={projectionError} period={projectionMonths} onRetry={retryProjection} onPeriodChange={value => { localStorage.setItem('aloca-projection-months', value); setProjectionMonths(value) }} onMonthChange={setSelectedMonth} selectedMonth={selectedMonth} /></div></details>
-            <details className="dashboard-panel" id="movimentacoes" data-tour="dashboard-movements"><summary>Movimentações recentes <span>{incomes.length + expenses.length} registradas</span></summary><div className="dashboard-panel-content"><RecentIncomeSection incomes={incomes} expenses={expenses} onCreate={() => setIncomeDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onViewAll={() => { window.location.hash = 'movimentacoes' }} /></div></details>
-             <details className="dashboard-panel"><summary>Próximos compromissos <span>Itens que merecem atenção</span></summary><div className="dashboard-panel-content"><section className="section-heading commitments-preview-heading"><div><span className="eyebrow">COMPROMISSOS FINANCEIROS</span><h2>Próximos compromissos</h2></div><button type="button" className="secondary" onClick={goToCommitments}>Ver todos</button></section>{priorityItems.length ? <div className="commitment-preview-list">{priorityItems.map(item => <CommitmentPreviewCard key={item.id} item={item} />)}</div> : <div className="empty"><strong>Nenhum compromisso ainda</strong><span>Crie um compromisso para começar a organizar seu saldo.</span></div>}</div></details>
+       {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSecurity={mode => setAccountDialog({ mode, username: accountState.current.username || '' })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <IncomeManagement incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} categories={categories} onCreate={() => setIncomeDialog(true)} onCreateRecurring={() => setRecurringDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onDelete={income => setIncomeDelete(income)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onRefresh={refresh} onRecurringDeleted={() => setNotice('Entrada recorrente excluída com sucesso.')} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} groups={groups} categories={categories} summary={summary} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen} activeFilterCount={activeFilterCount} setEditing={setEditing} setCollapsed={setCollapsed} collapsed={collapsed} run={run} refresh={refresh} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <>
+        <BalanceCommandCenter summary={summary} monthlySummary={monthlySummary} onBalance={() => setBalanceModal(true)} onViewCommitments={goToCommitments} />
+        <div className="dashboard-grid">
+          <div className="dashboard-main-column">
+            <section className="dashboard-card dashboard-objective-card"><CommitmentObjective summary={summary} commitments={commitments} selectedObjective={commitmentObjective} onChange={saveCommitmentObjective} /></section>
+            <section className="dashboard-card dashboard-summary-card"><MonthlyFinancialSummary summary={monthlySummary} loading={monthlySummaryLoading} error={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetry={retryMonthlySummary} onView={goToCommitments} /></section>
           </div>
-        </details>
+          <aside className="dashboard-card dashboard-commitments-card"><UrgentCommitmentsSection items={urgentItems} onOpen={id => { const item = commitments.find(commitment => commitment.id === id); if (item) setEditing(item) }} /><section className="section-heading commitments-preview-heading"><div><span className="eyebrow">COMPROMISSOS FINANCEIROS</span><h2>Próximos compromissos</h2></div><button type="button" className="secondary" onClick={goToCommitments}>Ver todos</button></section>{priorityItems.length ? <div className="commitment-preview-list">{priorityItems.map(item => <CommitmentPreviewCard key={item.id} item={item} />)}</div> : <div className="empty"><strong>Nenhum compromisso ainda</strong><span>Crie um compromisso para começar a organizar seu saldo.</span></div>}</aside>
+          <section className="dashboard-card dashboard-movements-card" id="movimentacoes"><RecentIncomeSection incomes={incomes} expenses={expenses} onCreate={() => setIncomeDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onViewAll={() => { window.location.hash = 'movimentacoes' }} /></section>
+        </div>
       </>}
-    </main></div>
+      </div>
+    </main>
+    <footer className="app-footer"><span>© 2026 Aloca. Todos os direitos reservados.</span><span>Desenvolvido por Maxwell Xavier.</span><a href="https://github.com/xavierr-max" target="_blank" rel="noopener noreferrer">GitHub: github.com/xavierr-max</a></footer>
     {editing && <CommitmentModal item={editing} categories={categories} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); run(async () => {}) }} />}
     {balanceModal && <InitialBalanceModal value={summary?.initialBalance ?? 0} onClose={() => setBalanceModal(false)} onSaved={() => { setBalanceModal(false); refresh(); setNotice('Saldo inicial atualizado.') }} />}
     {incomeDialog && <IncomeModal categories={categories} onClose={() => setIncomeDialog(false)} onSaved={() => { setIncomeDialog(false); run(async () => {}) }} />}
     {recurringDialog && <RecurringIncomeModal categories={categories} onClose={() => setRecurringDialog(false)} onSaved={() => { setRecurringDialog(false); run(async () => {}) }} />}
     {(expenseDialog || editingExpense) && <ExpenseModal item={editingExpense} categories={categories} currentBalance={summary?.saldoReal ?? 0} onClose={() => { setExpenseDialog(false); setEditingExpense(null) }} onSaved={() => { setExpenseDialog(false); setEditingExpense(null); run(async () => {}) }} />}
     {incomeDelete && <ConfirmModal title="Excluir entrada?" message={`Esta ação não poderá ser desfeita. A entrada “${incomeDelete.description}” de ${money(incomeDelete.amount)} será removida do saldo real.`} onClose={() => setIncomeDelete(null)} onConfirm={() => run(async () => { await api.deleteIncome(incomeDelete.id); setIncomeDelete(null) })} />}
-    {modal && <DistributionModal preview={preview} onClose={() => setModal(false)} onConfirm={distribute} />}
     {filtersOpen && <FilterDrawer filters={filters} setFilters={setFilters} categories={categories} onClear={clearFilters} onClose={() => setFiltersOpen(false)} />}
     {categoryDialog && <CategoryModal category={categoryDialog} onClose={() => setCategoryDialog(null)} onSaved={() => { setCategoryDialog(null); run(async () => {}) }} />}
     {deleteDialog && <ConfirmModal title={deleteDialog.transaction ? 'Excluir saída?' : `Excluir o grupo “${deleteDialog.name}”?`} message={deleteDialog.transaction ? `A saída “${deleteDialog.description}” de ${money(deleteDialog.amount)} será removida do saldo real.` : `Os registros associados não serão excluídos e passarão para “Sem grupo”.`} confirmLabel={deleteDialog.transaction ? 'Excluir' : 'Excluir grupo'} onClose={() => setDeleteDialog(null)} onConfirm={() => run(async () => { if (deleteDialog.transaction) await api.deleteExpense(deleteDialog.id); else { await api.deleteCategory(deleteDialog.id); if (filters.category === deleteDialog.id) setFilters(current => ({ ...current, category: '' })) } setDeleteDialog(null) })} />}
-    {accountDialog?.mode !== 'remove' && accountDialog && <AccountDialog mode={accountDialog.mode} initialUsername={accountDialog.username} initialDisplayName={accountState?.current?.displayName || ''} onClose={() => setAccountDialog(null)} onSubmit={handleAccountSubmit} />}
+    {accountDialog?.mode !== 'remove' && accountDialog && <AccountDialog mode={accountDialog.mode} initialUsername={accountDialog.username} initialDisplayName={accountState?.current?.displayName || ''} initialEmail={accountState?.current?.email || ''} onClose={() => setAccountDialog(null)} onSubmit={handleAccountSubmit} />}
     {accountDialog?.mode === 'remove' && <ConfirmModal title="Remover conta deste dispositivo?" message="A conta será desvinculada deste dispositivo e liberará um espaço na lista de contas. Os dados da conta não serão excluídos." confirmLabel="Remover" busy={accountMutationBusy} onClose={() => { if (!accountMutationBusy) setAccountDialog(null) }} onConfirm={removeAccount} />}
-    {accountDeleteOpen && <AccountDeleteModal displayName={accountState?.current?.displayName || ''} onClose={() => setAccountDeleteOpen(false)} onConfirm={deleteAccount} />}
+    {accountDeleteOpen && <AccountDeleteModal displayName={accountState?.current?.displayName || ''} isLocal={accountState?.current?.isLocal} onClose={() => setAccountDeleteOpen(false)} onConfirm={deleteAccount} />}
+    {notice && <div className="app-toast success" role="status" aria-live="polite">✓ {notice.replace(' com sucesso', '')}</div>}
   </div>
 }
 
@@ -585,7 +633,7 @@ const COMMITMENT_OBJECTIVES = [
   { id: 'uncovered-values', label: 'Reduzir valores ainda descobertos' },
 ]
 
-function CommitmentObjective({ summary, commitments, projection, selectedObjective, onChange }) {
+function CommitmentObjective({ summary, commitments, selectedObjective, onChange }) {
   const editorRef = useRef(null)
   const feedbackTimerRef = useRef(null)
   const [suggestionStart, setSuggestionStart] = useState(() => {
@@ -593,7 +641,6 @@ function CommitmentObjective({ summary, commitments, projection, selectedObjecti
     return Number.isFinite(previous) ? previous : 0
   })
   const [objectiveEditing, setObjectiveEditing] = useState(false)
-  const [objectiveEdited, setObjectiveEdited] = useState(Boolean(selectedObjective))
   const [savedFeedback, setSavedFeedback] = useState(false)
   const selectedText = selectedObjective?.startsWith('custom:')
     ? selectedObjective.slice(7)
@@ -603,13 +650,16 @@ function CommitmentObjective({ summary, commitments, projection, selectedObjecti
   const visibleSuggestions = useMemo(() => Array.from({ length: 3 }, (_, index) => suggestions[(suggestionStart + index) % suggestions.length]), [suggestionStart, suggestions])
 
   useEffect(() => {
-    if (selectedObjective == null) return
+    if (selectedObjective == null) {
+      setDraft('')
+      setObjectiveEditing(false)
+      return
+    }
     const nextText = selectedObjective.startsWith('custom:') ? selectedObjective.slice(7) : COMMITMENT_OBJECTIVES.find(item => item.id === selectedObjective)?.label || ''
     if (nextText === draft) return
     setDraft(nextText)
-    setObjectiveEdited(Boolean(nextText))
     setObjectiveEditing(false)
-  }, [draft, selectedObjective])
+  }, [selectedObjective])
   useEffect(() => {
     if (!editorRef.current) return
     editorRef.current.style.height = '72px'
@@ -628,66 +678,72 @@ function CommitmentObjective({ summary, commitments, projection, selectedObjecti
   }
   const beginEditing = () => {
     setObjectiveEditing(true)
-    setObjectiveEdited(true)
     focusEditor()
   }
   const saveDraft = value => {
     setDraft(value)
-    setObjectiveEdited(true)
-    onChange(value.trim() ? `custom:${value}` : '')
   }
   const chooseSuggestion = suggestion => {
     setDraft(suggestion.label)
     setObjectiveEditing(true)
-    setObjectiveEdited(true)
-    onChange(`custom:${suggestion.label}`)
     focusEditor()
   }
-  const handleBlur = () => {
-    if (draft.trim()) {
-      setSavedFeedback(true)
-      window.clearTimeout(feedbackTimerRef.current)
-      feedbackTimerRef.current = window.setTimeout(() => setSavedFeedback(false), 1600)
-    } else {
-      setObjectiveEditing(false)
-      setObjectiveEdited(false)
-    }
+  const saveObjective = () => {
+    const nextObjective = draft.trim()
+    onChange(nextObjective ? `custom:${nextObjective}` : '')
+    setObjectiveEditing(false)
+    setSavedFeedback(true)
+    window.clearTimeout(feedbackTimerRef.current)
+    feedbackTimerRef.current = window.setTimeout(() => setSavedFeedback(false), 1600)
+  }
+  const cancelEditing = () => {
+    setDraft(selectedText)
+    setObjectiveEditing(false)
   }
   const rotateSuggestions = event => {
     event.stopPropagation()
     setSuggestionStart(currentStart => (currentStart + 3) % suggestions.length)
   }
-  const showSuggestions = !objectiveEditing && !objectiveEdited && !draft.trim()
-  return <div className="command-objective" data-tour="dashboard-objective" aria-label="Objetivo do comprometimento">
-    <div className="objective-heading"><div><span className="eyebrow">DIREÇÃO DO SALDO</span><h3>Objetivo do comprometimento</h3></div><span className="objective-icon" aria-hidden="true">✦</span></div>
-    <div className={`objective-composer${objectiveEditing ? ' is-editing' : ''}`} onClick={beginEditing}>
-      {showSuggestions ? <div className="objective-suggestions" aria-live="polite">
-        <span className="objective-suggestions-label">Escolha uma sugestão ou clique para escrever</span>
-        <div className="objective-suggestion-list">{visibleSuggestions.map((suggestion, index) => <button className={`objective-suggestion ${index === 0 ? 'is-primary' : ''}`} type="button" key={suggestion.id} onClick={event => { event.stopPropagation(); chooseSuggestion(suggestion) }}><span aria-hidden="true">{index === 0 ? '✦' : '•'}</span>{suggestion.label}</button>)}<button className="objective-suggestions-refresh" type="button" onClick={rotateSuggestions} aria-label="Mostrar outras sugestões" title="Mostrar outras sugestões"><span aria-hidden="true">↻</span></button></div>
-      </div> : <textarea ref={editorRef} className="objective-editor" aria-label="Objetivo do comprometimento" value={draft} placeholder="Descreva como deseja direcionar o saldo comprometido..." rows="2" onFocus={() => { setObjectiveEditing(true); setObjectiveEdited(true) }} onClick={event => event.stopPropagation()} onChange={event => saveDraft(event.target.value)} onBlur={handleBlur} />}
+  const currentObjective = selectedText || draft.trim()
+  const hasSavedObjective = Boolean(currentObjective)
+  return <div className="command-objective" aria-label="Objetivo da reserva">
+    <div className="objective-heading"><div><span className="eyebrow">DIREÇÃO DO SALDO</span><h3>Objetivo da reserva <InfoTooltip title="Objetivo da reserva" description="Representa a prioridade financeira que você definiu para orientar suas decisões e reservas." /></h3></div><span className="objective-icon" aria-hidden="true">✦</span></div>
+    <div className={`objective-composer has-suggestions${objectiveEditing ? ' is-editing' : ''}`}>
+      {objectiveEditing ? <div className="objective-editing">
+        <span className="objective-mobile-help">Escreva aqui seu objetivo financeiro</span>
+        <textarea ref={editorRef} className="objective-editor" aria-label="Objetivo da reserva" value={draft} placeholder="Ex.: quitar dívidas, montar reserva, organizar o próximo mês" rows="2" onClick={event => event.stopPropagation()} onChange={event => saveDraft(event.target.value)} />
+        <div className="objective-edit-actions"><button type="button" className="secondary" onClick={cancelEditing}>Cancelar</button><button type="button" className="primary" onClick={saveObjective}>Salvar</button></div>
+      </div> : <>
+        {hasSavedObjective ? <div className="objective-current"><div><span className="objective-current-label">Objetivo atual</span><p>{currentObjective}</p></div><button type="button" className="objective-edit-button" onClick={beginEditing}>✎ <span>Editar</span></button></div> : <button type="button" className="objective-empty" onClick={beginEditing}><span className="objective-current-label">Objetivo atual</span><span className="objective-empty-copy">Ex.: quitar dívidas, montar reserva, organizar o próximo mês</span><span className="objective-empty-action">Escrever objetivo</span></button>}
+      </>}
+      <div className="objective-suggestions" aria-live="polite">
+        <div className="objective-suggestions-header"><span className="objective-suggestions-label">{hasSavedObjective ? 'Sugestões' : 'Sugestões para começar'}</span><button className="objective-suggestions-refresh" type="button" onClick={rotateSuggestions} aria-label="Mostrar outras sugestões" title="Mostrar outras sugestões"><span aria-hidden="true"><Icon icon={RotateCw} size={15} /></span></button></div>
+        <div className="objective-suggestion-list">{visibleSuggestions.map((suggestion, index) => <button className={`objective-suggestion ${index === 0 ? 'is-primary' : ''}`} type="button" key={suggestion.id} onClick={event => { event.stopPropagation(); chooseSuggestion(suggestion) }}><span aria-hidden="true">{index === 0 ? '✦' : '•'}</span>{suggestion.label}</button>)}</div>
+      </div>
     </div>
-    <small className={`objective-saved-feedback${savedFeedback ? ' is-visible' : ''}`} role="status" aria-live="polite">Objetivo salvo</small>
+    <small className={`objective-saved-feedback${savedFeedback ? ' is-visible' : ''}`} role="status" aria-live="polite">Objetivo atualizado</small>
   </div>
 }
 
-function BalanceCommandCenter({ summary, commitments, projection, selectedObjective, onObjectiveChange, onBalance, onDistribute }) {
+function BalanceCommandCenter({ summary, monthlySummary, onBalance, onViewCommitments }) {
   const real = Number(summary?.currentBalance ?? summary?.saldoReal) || 0
   const committed = Number(summary?.allocatedBalance ?? summary?.totalReservado) || 0
   const unallocated = Number(summary?.unallocatedBalance ?? summary?.saldoNaoAlocado) || 0
   const free = Number(summary?.freeBalance ?? summary?.saldoLivre) || 0
   const deficit = Number(summary?.coverageDeficit ?? summary?.deficitCobertura) || 0
-  return <section className="command-center" data-tour="dashboard-command" aria-label="Situação financeira atual">
-    <div className="command-balance" data-tour="dashboard-balance">
-      <div className="command-balance-head"><div><span className="eyebrow">SALDO ATUAL</span><h2>{money(real)}</h2><span className="command-status">Disponível hoje</span></div><button className="secondary command-balance-action" data-tour="initial-balance" onClick={onBalance}>{summary?.initialBalance > 0 ? 'Editar saldo inicial' : 'Informar saldo inicial'}</button></div>
+  const estimatedFinal = Number(monthlySummary?.estimatedFinalBalance) || 0
+  return <section className="command-center" aria-label="Situação financeira atual">
+    <div className="command-balance">
+      <div className="command-balance-head"><div><span className="eyebrow">SALDO ATUAL <InfoTooltip title="Saldo atual" description="Valor disponível atualmente na conta, considerando as movimentações já confirmadas." /></span><h2>{money(real)}</h2><span className="command-status">Disponível hoje</span></div><button className="secondary command-balance-action" onClick={onBalance}>{summary?.initialBalance > 0 ? 'Editar saldo inicial' : 'Informar saldo inicial'}</button></div>
     </div>
-    <div className="command-allocation"><Metric label="SALDO COMPROMETIDO" value={money(committed)} />{unallocated > 0 && <button className="metric-action command-secondary-action" data-tour="allocation-action" onClick={onDistribute}>Alocar saldo não distribuído</button>}</div>
-    <CommitmentObjective summary={summary} commitments={commitments} projection={projection} selectedObjective={selectedObjective} onChange={onObjectiveChange} />
-    <div className={`command-free ${unallocated > 0 ? 'is-positive' : ''}`}><span className="eyebrow">SALDO NÃO ALOCADO</span><strong>{money(unallocated)}</strong><small>Disponível para novas alocações</small>{deficit > 0 && <small className="command-deficit-inline">Déficit de cobertura: {money(deficit)}</small>}</div>
-    <details className="calculation-details"><summary>Ver cálculo</summary><div className="calculation-content"><p>Saldo não alocado = saldo atual − valor comprometido, limitado a zero.</p><div className="calculation-breakdown"><div><span>Saldo atual</span><strong>{money(real)}</strong></div><div><span>Comprometido / reservado</span><strong>{money(committed)}</strong></div><div><span>Saldo não alocado</span><strong>{money(unallocated)}</strong></div><div><span>Saldo livre</span><strong>{money(free)}</strong></div>{deficit > 0 && <div><span>Déficit de cobertura</span><strong className="danger-text">{money(deficit)}</strong></div>}</div><p className="calculation-note">Reservas continuam no saldo atual, mas já têm destino definido. O déficit compara o necessário para cobrir compromissos com o que já está reservado.</p></div></details>
+    <div className="command-allocation"><Metric label="SALDO RESERVADO" value={money(committed)} tooltip={{ title: 'Saldo reservado', description: 'Parte do seu saldo que já foi reservada para compromissos, parcelas ou outras obrigações futuras.' }} />{unallocated > 0 && <button className="metric-action command-secondary-action" onClick={onViewCommitments}>Alocar saldo não distribuído</button>}</div>
+    <div className={`command-free ${unallocated > 0 ? 'is-positive' : ''}`}><span className="eyebrow">SALDO NÃO ALOCADO <InfoTooltip title="Saldo não alocado" description="Valor que ainda não foi reservado para nenhum compromisso e continua disponível para novas alocações." /></span><strong>{money(unallocated)}</strong><small>Disponível para novas alocações</small>{deficit > 0 && <small className="command-deficit-inline">Déficit de cobertura: {money(deficit)} <InfoTooltip title="Déficit de cobertura" description="Valor que ainda falta reservar para cobrir compromissos previstos no período." /></small>}</div>
+    <div className="command-estimated"><span className="eyebrow">SALDO FINAL ESTIMADO <InfoTooltip title="Saldo final estimado" description="Estimativa do saldo ao final do mês considerando os dados do resumo mensal." /></span><strong>{money(estimatedFinal)}</strong><small>Previsão ao final do mês</small></div>
+    <details className="calculation-details"><summary>Ver cálculo</summary><div className="calculation-content"><p>Saldo não alocado = saldo atual − valor reservado, limitado a zero.</p><div className="calculation-breakdown"><div><span>Saldo atual</span><strong>{money(real)}</strong></div><div><span>Saldo reservado</span><strong>{money(committed)}</strong></div><div><span>Saldo não alocado</span><strong>{money(unallocated)}</strong></div><div><span>Saldo livre</span><strong>{money(free)}</strong></div>{deficit > 0 && <div><span>Déficit de cobertura</span><strong className="danger-text">{money(deficit)}</strong></div>}</div><p className="calculation-note">Reservas continuam no saldo atual, mas já têm destino definido. O déficit compara o necessário para cobrir compromissos com o que já está reservado.</p></div></details>
   </section>
 }
 
-function Metric({ label, value, tone = '', action }) { return <article className={`metric ${tone}`}><div className="metric-label"><span>{label}</span></div><strong>{value}</strong>{action}</article> }
+function Metric({ label, value, tone = '', action, tooltip }) { return <article className={`metric ${tone}`}><div className="metric-label"><span>{label} {tooltip && <InfoTooltip {...tooltip} />}</span></div><strong>{value}</strong>{action}</article> }
 
 function SectionError({ message, onRetry, loading = false }) { return <div className="inline-error" role="alert"><span>{message}</span>{onRetry && <button type="button" className="secondary" onClick={onRetry} disabled={loading}>{loading ? 'Carregando…' : 'Tentar novamente'}</button>}</div> }
 
@@ -709,56 +765,13 @@ function MonthlyFinancialSummary({ summary, loading, error, selectedMonth, onMon
     ? `Faltam ${money(coverageDeficit)} para cobrir ${uncoveredCommitments.length} compromissos de ${formatMonthYear(selectedMonth)}.`
     : `Faltam ${money(coverageDeficit)} para cobrir os compromissos de ${formatMonthYear(selectedMonth)}.`
   const monthPicker = <label className="month-picker">Mês selecionado<input type="month" value={selectedMonth} onChange={event => onMonthChange(event.target.value)} /></label>
-  return <section className="month-decision"><div className="month-decision-heading"><div><span className="eyebrow">CONTEXTO TEMPORAL</span><h2>Resumo financeiro do mês</h2><p>Entradas recorrentes, compromissos e projeção do mês selecionado.</p></div><div className="month-heading-actions">{monthPicker}<button className="secondary" onClick={onView}>Ver compromissos</button></div></div><div className="monthly-financial-metrics"><div className="monthly-metric income-metric"><span>Entradas recorrentes</span><strong className="positive">{money(month.totalIncome)}</strong><small>Recebimentos previstos</small></div><div className="monthly-metric expense-metric"><span>Compromissos do mês</span><strong className="negative">{money(commitmentTotal)}</strong><small>Cobranças previstas</small></div><div className="monthly-metric result-metric"><span>Resultado do mês</span><strong className={month.result < 0 ? 'negative' : 'positive'}>{signedMoney(month.result)}</strong><small>Entradas menos compromissos</small></div><div className="monthly-metric monthly-coverage-metric"><span>Comprometido / alocado</span><strong className="positive">{money(commitmentReserved)} de {money(commitmentTotal)}</strong><small>{coveragePercentage.toFixed(1).replace('.', ',')}% coberto</small></div><div className="monthly-metric balance-metric"><span>Saldo estimado final</span><strong className={month.projectedBalance < 0 ? 'negative' : 'positive'}>{money(month.projectedBalance)}</strong><small>Retornado pelo resumo mensal</small></div></div>{hasContextualAlert ? <div className="monthly-insight has-alert"><div className="monthly-insight-header"><div className="monthly-insight-copy"><strong><span className="attention-icon" aria-hidden="true">!</span>Cobertura do mês pendente</strong><span>{insight}</span></div></div><details className="guidance-details"><summary><span>Ver detalhes</span><small>Veja as cobranças do mês</small></summary><div className="coverage-detail-list">{commitmentExpenses.map(item => <div className={`coverage-detail ${item.coverageStatus || ''}`} key={item.id}><span className="coverage-detail-name"><strong>{item.description}</strong><small>{item.installment != null && item.totalInstallments != null ? `Parcela ${item.installment}/${item.totalInstallments}` : 'Parcela prevista'}</small></span><span className="coverage-detail-value"><b>{money(item.amount)}</b><small>Reservado {money(item.reservedAmount || 0)} · Faltante {money(item.remainingAmount || 0)}</small></span><span className="coverage-detail-status"><b>{Number(item.coveragePercentage ?? 0).toFixed(1).replace('.', ',')}%</b><small>{commitmentStatus(item)}</small></span></div>)}</div></details></div> : commitmentExpenses.length > 0 && <p className="monthly-insight"><strong><span className="attention-icon success-icon" aria-hidden="true">✓</span>Cobertura completa</strong><span>Todos os compromissos de {formatMonthYear(selectedMonth)} estão cobertos.</span></p>}<div className="month-details"><details open><summary>Detalhes dos compromissos <span>{expenses.length ? `${expenses.length} cobranças` : 'Nenhuma cobrança'}</span></summary><div className="month-detail-content">{expenses.length ? expenses.map(item => <div className="decision-row" key={item.id}><span><strong>{item.description}</strong><small>{formatDate(item.date)}{item.installment != null && item.totalInstallments != null ? ` · parcela ${item.installment}/${item.totalInstallments}` : ''} · {commitmentStatus(item)}</small></span><b className="negative">{money(item.amount)}</b></div>) : <span className="decision-empty">Nenhum compromisso previsto para este mês.</span>}</div></details></div></section>
+  return <section className="month-decision"><div className="month-decision-heading"><div><span className="eyebrow">CONTEXTO TEMPORAL</span><h2>Resumo financeiro do mês</h2><p>Entradas recorrentes, compromissos e projeção do mês selecionado.</p></div><div className="month-heading-actions">{monthPicker}<button className="secondary" onClick={onView}>Ver compromissos</button></div></div><div className="monthly-financial-metrics"><div className="monthly-metric income-metric"><span>Entradas recorrentes</span><strong className="positive">{money(month.totalIncome)}</strong><small>Recebimentos previstos</small></div><div className="monthly-metric expense-metric"><span>Compromissos do mês</span><strong className="negative">{money(commitmentTotal)}</strong><small>Cobranças previstas</small></div><div className="monthly-metric result-metric"><span>Resultado do mês</span><strong className={month.result < 0 ? 'negative' : 'positive'}>{signedMoney(month.result)}</strong><small>Entradas menos compromissos</small></div><div className="monthly-metric monthly-coverage-metric"><span>Reservado / alocado</span><strong className="positive">{money(commitmentReserved)} de {money(commitmentTotal)}</strong><small>{coveragePercentage.toFixed(1).replace('.', ',')}% coberto</small></div><div className="monthly-metric balance-metric"><span>Saldo estimado final</span><strong className={month.projectedBalance < 0 ? 'negative' : 'positive'}>{money(month.projectedBalance)}</strong><small>Retornado pelo resumo mensal</small></div></div>{hasContextualAlert ? <div className="monthly-insight has-alert"><div className="monthly-insight-header"><div className="monthly-insight-copy"><strong><span className="attention-icon" aria-hidden="true">!</span>Cobertura do mês pendente</strong><span>{insight}</span></div></div><details className="guidance-details"><summary><span>Ver detalhes</span><small>Veja as cobranças do mês</small></summary><div className="coverage-detail-list">{commitmentExpenses.map(item => <div className={`coverage-detail ${item.coverageStatus || ''}`} key={item.id}><span className="coverage-detail-name"><strong>{item.description}</strong><small>{item.installment != null && item.totalInstallments != null ? `Parcela ${item.installment}/${item.totalInstallments}` : 'Parcela prevista'}</small></span><span className="coverage-detail-value"><b>{money(item.amount)}</b><small>Reservado {money(item.reservedAmount || 0)} · Faltante {money(item.remainingAmount || 0)}</small></span><span className="coverage-detail-status"><b>{Number(item.coveragePercentage ?? 0).toFixed(1).replace('.', ',')}%</b><small>{commitmentStatus(item)}</small></span></div>)}</div></details></div> : commitmentExpenses.length > 0 && <p className="monthly-insight"><strong><span className="attention-icon success-icon" aria-hidden="true">✓</span>Cobertura completa</strong><span>Todos os compromissos de {formatMonthYear(selectedMonth)} estão cobertos.</span></p>}<div className="month-details"><details open><summary>Detalhes dos compromissos <span>{expenses.length ? `${expenses.length} cobranças` : 'Nenhuma cobrança'}</span></summary><div className="month-detail-content">{expenses.length ? expenses.map(item => <div className="decision-row" key={item.id}><span><strong>{item.description}</strong><small>{formatDate(item.date)}{item.installment != null && item.totalInstallments != null ? ` · parcela ${item.installment}/${item.totalInstallments}` : ''} · {commitmentStatus(item)}</small></span><b className="negative">{money(item.amount)}</b></div>) : <span className="decision-empty">Nenhum compromisso previsto para este mês.</span>}</div></details></div></section>
 }
 
 function UrgentCommitmentsSection({ items, onOpen }) {
   if (!items.length) return null
   return <section className="urgent-global-section" aria-labelledby="urgent-global-title"><div className="urgent-global-heading"><div><span className="eyebrow">COBERTURA GLOBAL</span><h2 id="urgent-global-title">Urgentes</h2><p>{items.length === 1 ? '1 compromisso ainda precisa de cobertura.' : `${items.length} compromissos ainda precisam de cobertura.`}</p></div></div><div className="urgent-global-list">{items.map(item => <button type="button" className="urgent-global-item" key={item.id} onClick={() => onOpen(item.id)}><span className="urgent-global-name"><strong><span className="urgent-badge">⚠ Urgente</span><span className="urgent-global-commitment">{item.name}</span></strong><small>{money(item.allocatedAmount)} reservados de {money(item.totalAmount)}</small></span><span className="urgent-global-status"><strong>Faltam {money(item.remainingAmount)}</strong><small><b>{Number(item.overallCoverage ?? 0).toFixed(1).replace('.', ',')}%</b> coberto</small></span></button>)}</div></section>
 }
-
-function FinancialProjectionChart({ data, loading, error, period, onPeriodChange, onMonthChange, selectedMonth, onRetry }) {
-  const [selected, setSelected] = useState(null)
-  const [viewportWidth, setViewportWidth] = useState(0)
-  const [hasNavigated, setHasNavigated] = useState(false)
-  const scrollRef = useRef(null)
-  const monthRefs = useRef([])
-  if (loading && !data) return <section className="projection-section"><div className="loading">Carregando a projeção de saldo…</div></section>
-  if (error && !data) return <section className="projection-section"><SectionError message="Não foi possível carregar a projeção de saldo." onRetry={onRetry} loading={loading} /></section>
-  if (!data) return null
-  const projectionData = (data.months || []).slice(0, period).map(month => ({ ...month, income: Number(month.totalIncome), expenses: Number(month.totalExpense), projectedBalance: Number(month.projectedBalance) }))
-  if (!projectionData.length) return <section className="projection-section"><div className="projection-empty">Ainda não há meses para projetar.</div></section>
-  const monthWidth = 82, chartWidth = Math.max(viewportWidth, projectionData.length * monthWidth + 48), width = Math.max(320, chartWidth), balanceHeight = 190, flowHeight = 158, left = 66, right = 18, top = 20, bottom = 34
-  useEffect(() => {
-    const element = scrollRef.current
-    if (!element) return undefined
-    const updateWidth = () => setViewportWidth(element.clientWidth)
-    updateWidth()
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateWidth)
-    observer?.observe(element)
-    window.addEventListener('resize', updateWidth)
-    return () => { observer?.disconnect(); window.removeEventListener('resize', updateWidth) }
-  }, [])
-  useEffect(() => {
-    const index = projectionData.findIndex(item => String(item.month).slice(0, 7) === String(selectedMonth).slice(0, 7))
-    if (index < 0 || !monthRefs.current[index]) return
-    const frame = window.requestAnimationFrame(() => monthRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }))
-    return () => window.cancelAnimationFrame(frame)
-  }, [selectedMonth, projectionData.length])
-  const moneyShort = v => formatCurrency(v).replace(/,00$/, ''), label = v => { const date = new Date(`${v}T12:00:00`); const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''); return date.getFullYear() !== new Date().getFullYear() ? `${month} ${String(date.getFullYear()).slice(-2)}` : month }
-  const scale = (values, count = 5) => { const rawMin = Math.min(...values), rawMax = Math.max(...values), range = rawMax - rawMin || 1; const magnitude = 10 ** Math.floor(Math.log10(range / count)), normalized = (range / count) / magnitude; const step = magnitude * (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10); const min = Math.floor(rawMin / step) * step, max = Math.ceil(rawMax / step) * step; return { min, max, step, ticks: Array.from({ length: Math.max(1, Math.round((max - min) / step)) + 1 }, (_, i) => max - i * step) } }
-  const balanceScale = scale(projectionData.map(item => item.projectedBalance)), flowScale = scale(projectionData.flatMap(item => [item.income, -item.expenses, 0]), 4)
-  const x = i => left + (width - left - right) * (projectionData.length <= 1 ? 0.5 : i / (projectionData.length - 1))
-  const yFor = (value, currentScale, height) => top + (currentScale.max - value) / (currentScale.max - currentScale.min || 1) * (height - top - bottom)
-  const balanceY = value => yFor(value, balanceScale, balanceHeight), flowY = value => yFor(value, flowScale, flowHeight), balancePoints = projectionData.map((item, i) => `${x(i)},${balanceY(item.projectedBalance)}`).join(' ')
-  const selectedMonthClass = i => `projection-month ${selected === i ? 'is-selected' : ''} ${String(projectionData[i].month).slice(0, 7) === String(selectedMonth).slice(0, 7) ? 'is-dashboard-month' : ''}`
-  const selectMonth = (i, event) => { event?.stopPropagation(); const isSelected = selected === i; setSelected(isSelected ? null : i); if (!isSelected) onMonthChange?.(String(projectionData[i].month).slice(0, 7)) }
-  const monthInteraction = (item, i, content) => <g ref={node => { monthRefs.current[i] = node }} className={selectedMonthClass(i)} key={item.month} tabIndex="0" role="button" aria-pressed={selected === i} aria-label={`Abrir detalhes de ${label(item.month)}`} onMouseEnter={() => setSelected(i)} onFocus={() => setSelected(i)} onClick={event => selectMonth(i, event)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectMonth(i, event) } }}>{content}</g>
-  const balanceDelta = Number(data.finalProjectedBalance) - Number(data.currentBalance), incomeOccurrences = projectionData.reduce((sum, month) => sum + (month.incomes?.length || 0), 0), activeMonth = selected == null ? null : projectionData[selected]
-  return <section className="projection-section"><div className="projection-heading"><div><span className="eyebrow">PROJEÇÃO FINANCEIRA</span><h2>Projeção de saldo</h2><p>Entradas, saídas e saldo esperado mês a mês.</p></div><div className="projection-controls"><details className="projection-calculation"><summary aria-label="Como calculamos a projeção">ⓘ Como calculamos</summary><div><p><strong>Saldo projetado = saldo atual + entradas previstas − saídas previstas.</strong></p><p>Consideramos movimentações confirmadas e previstas, entradas recorrentes, saídas, parcelas e compromissos futuros. Reservas não reduzem o saldo até o pagamento acontecer.</p></div></details><label>Período<select aria-label="Período da projeção" value={period} onChange={event => { setSelected(null); onPeriodChange(Number(event.target.value)) }}><option value="3">3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option><option value="24">24 meses</option></select></label></div></div><div className="projection-stats"><span>Saídas previstas<strong className="negative">{signedMoney(data.totalProjectedExpense, '-')}</strong></span><span title="Cada ocorrência de entrada prevista no período selecionado">Entradas previstas<strong className="positive">{signedMoney(data.totalProjectedIncome)}</strong><small>{incomeOccurrences} {incomeOccurrences === 1 ? 'lançamento previsto no período' : 'lançamentos previstos no período'}</small></span><span>Saldo projetado<strong className={data.finalProjectedBalance < 0 ? 'negative' : ''}>{money(data.finalProjectedBalance)}</strong><small className={balanceDelta < 0 ? 'negative' : 'positive'}>{balanceDelta < 0 ? '↓' : '↑'} {money(Math.abs(balanceDelta))} no período</small></span></div><div className="projection-layout"><div className="projection-main"><div className="projection-chart-wrap" onClick={() => setSelected(null)}><div ref={scrollRef} className="projection-scroll projection-chart-scroll" onScroll={() => setHasNavigated(true)}><div className="projection-plot projection-balance-plot"><div className="projection-plot-title">Saldo projetado</div><svg style={{ width }} className="projection-chart projection-balance-chart" role="img" aria-label={`Saldo projetado em ${projectionData.length} meses`} viewBox={`0 0 ${width} ${balanceHeight}`}><defs><clipPath id="projection-balance-clip"><rect x={left} y={top} width={width - left - right} height={balanceHeight - top - bottom} /></clipPath></defs><g clipPath="url(#projection-balance-clip)"><line className="projection-selected-guide" x1={selected == null ? 0 : x(selected)} x2={selected == null ? 0 : x(selected)} y1={top} y2={balanceHeight - bottom} />{balanceScale.ticks.map(tick => <g key={tick}><line className="projection-grid" x1={left} x2={width - right} y1={balanceY(tick)} y2={balanceY(tick)} /><text className="projection-axis" x="4" y={balanceY(tick) + 4}>{moneyShort(tick)}</text></g>)}<polyline className="projection-line" points={balancePoints} />{projectionData.map((item, i) => monthInteraction(item, i, <><circle className="projection-hit" cx={x(i)} cy={balanceY(item.projectedBalance)} r="18" /><circle className="projection-point" cx={x(i)} cy={balanceY(item.projectedBalance)} r={selected === i ? 5 : 3} /></>) )}</g></svg></div><div className="projection-plot-divider" /><div className="projection-plot projection-flow-plot"><div className="projection-plot-title">Entradas e saídas</div><svg style={{ width }} className="projection-chart projection-flow-chart" role="img" aria-label={`Entradas e saídas em ${projectionData.length} meses`} viewBox={`0 0 ${width} ${flowHeight}`}><defs><clipPath id="projection-flow-clip"><rect x={left} y={top} width={width - left - right} height={flowHeight - top - bottom} /></clipPath></defs><g clipPath="url(#projection-flow-clip)"><line className="projection-selected-guide" x1={selected == null ? 0 : x(selected)} x2={selected == null ? 0 : x(selected)} y1={top} y2={flowHeight - bottom} />{flowScale.ticks.map(tick => <g key={tick}><line className="projection-grid" x1={left} x2={width - right} y1={flowY(tick)} y2={flowY(tick)} /><text className="projection-axis" x="4" y={flowY(tick) + 4}>{moneyShort(tick)}</text></g>)}<line className="projection-zero" x1={left} x2={width - right} y1={flowY(0)} y2={flowY(0)} />{projectionData.map((item, i) => monthInteraction(item, i, <><rect className="projection-income-bar" x={x(i) - 17} y={flowY(item.income)} width="14" height={Math.max(0, flowY(0) - flowY(item.income))} /><rect className="projection-expense-bar" x={x(i) + 3} y={flowY(-item.expenses)} width="14" height={Math.max(0, flowY(-item.expenses) - flowY(0))} /><text className="projection-label" x={x(i)} y={flowHeight - 9} textAnchor="middle">{label(item.month)}</text></>) )}</g></svg></div></div></div>{selected == null && <span className="projection-interaction-hint">Passe o cursor ou clique em um mês para explorar sua composição</span>}<div className="projection-legend"><span><i className="legend-income" />Entradas</span><span><i className="legend-expense" />Saídas</span><span><i className="legend-balance" />Saldo projetado</span><span className="legend-selected"><i />Mês selecionado</span></div></div><aside className="projection-details-panel" aria-live="polite">{selected != null ? <ProjectionTooltip item={activeMonth} onClose={() => setSelected(null)} onUseMonth={() => onMonthChange?.(String(activeMonth.month).slice(0, 7))} /> : <div className="projection-details-empty"><span aria-hidden="true">↗</span><strong>Explore sua projeção</strong><p>Selecione um mês no gráfico para ver a composição do saldo.</p></div>}</aside></div></section>
-}
-
-function ProjectionTooltip({ item, onClose, onUseMonth }) { const title = new Date(`${item.month}T12:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase(); const result = Number(item.totalIncome) - Number(item.totalExpense); const rows = (items, negative) => items?.length ? items.map(x => <div className="tooltip-row" key={x.id}><span>{x.description}<small>{x.date ? formatDate(x.date) : ''}{x.installment ? ` · Parcela prevista ${x.installment}/${x.totalInstallments}` : x.recurring ? ' · Recorrente' : x.category ? ` · ${x.category}` : ' · Saída realizada'}{x.source ? ` · ${x.source === 'commitment' ? 'compromisso' : x.source === 'transaction' ? 'movimentação' : 'recorrente'}` : ''}</small></span><b className={negative ? 'negative' : 'positive'}>{signedMoney(negative ? -Number(x.amount) : Number(x.amount))}</b></div>) : <small>Nenhuma movimentação prevista.</small>; return <div className="projection-tooltip" role="dialog" aria-label={`Detalhes de ${title}`}><button type="button" className="projection-close" aria-label="Fechar detalhes" onClick={onClose}>×</button><strong>{title}</strong><div className="tooltip-summary"><span>Saldo inicial <b>{money(item.openingBalance)}</b></span><span>Entradas <b className="positive">{signedMoney(item.totalIncome)}</b></span><span>Saídas e parcelas <b className="negative">{signedMoney(-Number(item.totalExpense))}</b></span><span>Resultado do mês <b className={result < 0 ? 'negative' : 'positive'}>{signedMoney(result)}</b></span><span>Saldo projetado <b className={item.projectedBalance < 0 ? 'negative' : ''}>{money(item.projectedBalance)}</b></span></div><div className="tooltip-group"><em>ENTRADAS</em>{rows(item.incomes, false)}</div><div className="tooltip-group"><em>SAÍDAS REALIZADAS E PARCELAS PREVISTAS</em>{rows(item.expenses, true)}</div><button type="button" className="tooltip-use-month" onClick={onUseMonth}>Usar {title.toLowerCase()} no Dashboard</button></div> }
 
 function InitialBalanceModal({ value, onClose, onSaved }) {
   const [amount, setAmount] = useState(formatDecimalInput(value ?? 0)); const [error, setError] = useState(''); const [saving, setSaving] = useState(false)
@@ -986,28 +999,70 @@ function CommitmentCard({ item, availableBalance, categories, onChange, onEdit, 
   const runPrimaryAction = async event => { event.stopPropagation(); if (item.isCompleted || busy || (needsAllocation && !item.canAllocate)) return; setBusy(true); setActionError(''); setActionMessage(''); try { if (needsAllocation) { await api.allocateNextInstallment(item.id); setActionMessage(`Cobertura atualizada: ${money(item.missingForNextInstallment ?? item.installmentAmount)} reservados para a próxima cobrança.`) } else { await api.payInstallment(item.id); setActionMessage('Cobrança marcada como paga com sucesso.') } await onChange() } catch (error) { setActionError(errorText(error)) } finally { setBusy(false) } }
   const contextCopy = nextActionState === 'paid' ? 'Cobrança já registrada como paga.' : nextActionState === 'ready' ? 'Cobertura concluída. Agora você pode confirmar o pagamento.' : nextActionState === 'partial' ? `Ainda faltam ${money(item.missingForNextInstallment ?? Math.max(0, item.installmentAmount - item.allocatedAmount))} para cobrir totalmente a próxima cobrança.` : 'Primeiro reserve o valor necessário. Depois confirme o pagamento.'
   const actionHint = nextActionState === 'paid' ? 'Esta cobrança não precisa de outra ação.' : nextActionState === 'ready' ? 'A confirmação registra o pagamento; ela não cria uma reserva.' : 'Reservar separa o saldo; ainda não registra a cobrança como paga.'
-  return <article className={`commitment-static-card ${actionableUrgent ? 'is-urgent' : ''} is-next-${nextActionState}`} data-tour="commitment-card" data-commitment-part="card"><header className="commitment-static-header" data-commitment-part="header"><button type="button" className="commitment-static-summary-trigger" title="Abrir detalhes do compromisso" onClick={() => setDetailsOpen(true)} aria-expanded={detailsOpen}><span className="commitment-static-title"><span className="commitment-static-avatar" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span><span className="commitment-static-heading"><span className="commitment-static-name-row"><h3 title={item.name}>{item.name}</h3>{item.categoryName && <span className="commitment-static-badge">{item.categoryName}</span>}{priority && <span className={`commitment-static-badge commitment-static-priority-${item.priority}`}>{priority}</span>}{item.urgent && <span className="commitment-static-urgent-badge">⚠ Urgente</span>}</span></span></span><span className="commitment-static-chevron" aria-hidden="true">›</span></button><span data-tour="commitment-card-menu"><CommitmentMenu item={item} onDetails={() => setDetailsOpen(true)} onEdit={onEdit} onDelete={onDelete} /></span></header><div className="commitment-static-body"><section className={`commitment-static-overall ${actionableUrgent ? 'is-urgent' : ''} ${overallCoverage >= 100 ? 'is-complete' : ''}`} data-commitment-part="overall" aria-label="Progresso geral do compromisso"><div className="commitment-static-section-heading"><h4>{overallHeading}</h4><strong>{Math.round(overallCoverage)}%</strong></div><div className="commitment-static-reserved"><strong>{money(overallReserved)}</strong><span>reservados de</span><strong>{money(item.totalAmount)}</strong></div><div className="commitment-static-remaining"><span>Faltam</span><strong>{money(overallRemaining)}</strong></div><div className="commitment-static-progress" role="progressbar" aria-label={`Cobertura geral: ${Math.round(overallCoverage)}%`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(overallCoverage)}><span style={{ width: `${Math.min(100, Math.max(0, overallCoverage))}%` }} /></div></section><section className="commitment-static-next" data-commitment-part="next" aria-label="Próxima parcela"><div className="commitment-static-section-heading"><h4>Próxima parcela</h4><span className="commitment-static-next-badge">{nextActionState === 'paid' ? '✓ Paga' : nextActionState === 'ready' ? '✓ Pronta para confirmar' : installmentCoverage > 0 ? 'Cobertura parcial' : 'Sem cobertura'}</span></div><div className="commitment-static-next-grid"><div className="commitment-static-next-main"><strong>{money(item.installmentAmount)}</strong><span>Vence em {formatDate(nextDueDate)}</span></div><div className="commitment-static-next-status"><strong>{Number(installmentCoverage).toFixed(1).replace('.', ',')}% coberta</strong>{installmentCoverage < 100 && <span> · faltam {money(item.missingForNextInstallment ?? Math.max(0, item.installmentAmount - item.allocatedAmount))}</span>}</div><div className="commitment-static-context"><strong>{nextActionState === 'paid' ? 'Status da cobrança' : 'Próxima ação'}</strong><span>{contextCopy}</span></div><span className="commitment-static-action"><button type="button" data-tour="commitment-primary-action" data-tour-action={item.isCompleted ? 'completed' : needsAllocation ? 'complete' : 'pay'} className={`commitment-static-action-button ${needsAllocation ? 'is-allocate' : 'is-pay'}`} disabled={item.isCompleted || busy || (needsAllocation && availableBalance <= 0)} onClick={runPrimaryAction}><span aria-hidden="true">{needsAllocation ? '↗' : item.isCompleted ? '✓' : '✓'}</span>{busy ? 'Processando…' : primaryLabel}</button><small>{actionHint}</small>{needsAllocation && availableBalance <= 0 && <small>Abra os detalhes para ajustar a reserva.</small>}</span></div></section>{actionMessage && <div className="commitment-static-success" role="status">✓ {actionMessage}</div>}{actionError && <div className="commitment-static-error" role="status">{actionError}</div>}</div>{detailsOpen && <CommitmentDetailsDrawer item={item} availableBalance={availableBalance} priority={priority} onClose={() => setDetailsOpen(false)} onEdit={onEdit} onDelete={onDelete} onChange={onChange} />}</article>
+  return <article className={`commitment-static-card ${actionableUrgent ? 'is-urgent' : ''} is-next-${nextActionState}`} data-commitment-part="card"><header className="commitment-static-header" data-commitment-part="header"><button type="button" className="commitment-static-summary-trigger" title="Abrir detalhes do compromisso" onClick={() => setDetailsOpen(true)} aria-expanded={detailsOpen}><span className="commitment-static-title"><span className="commitment-static-avatar" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span><span className="commitment-static-heading"><span className="commitment-static-name-row"><h3 title={item.name}>{item.name}</h3>{item.categoryName && <span className="commitment-static-badge">{item.categoryName}</span>}{priority && <span className={`commitment-static-badge commitment-static-priority-${item.priority}`}>{priority}</span>}{item.urgent && <span className="commitment-static-urgent-badge">⚠ Urgente</span>}</span></span></span><span className="commitment-static-chevron" aria-hidden="true">›</span></button><span><CommitmentMenu item={item} onDetails={() => setDetailsOpen(true)} onEdit={onEdit} onDelete={onDelete} /></span></header><div className="commitment-static-body"><section className={`commitment-static-overall ${actionableUrgent ? 'is-urgent' : ''} ${overallCoverage >= 100 ? 'is-complete' : ''}`} data-commitment-part="overall" aria-label="Progresso geral do compromisso"><div className="commitment-static-section-heading"><h4>{overallHeading}</h4><strong>{Math.round(overallCoverage)}%</strong></div><div className="commitment-static-reserved"><strong>{money(overallReserved)}</strong><span>reservados de</span><strong>{money(item.totalAmount)}</strong></div><div className="commitment-static-remaining"><span>Faltam</span><strong>{money(overallRemaining)}</strong></div><div className="commitment-static-progress" role="progressbar" aria-label={`Cobertura geral: ${Math.round(overallCoverage)}%`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(overallCoverage)}><span style={{ width: `${Math.min(100, Math.max(0, overallCoverage))}%` }} /></div></section><section className="commitment-static-next" data-commitment-part="next" aria-label="Próxima parcela"><div className="commitment-static-section-heading"><h4>Próxima parcela</h4><span className="commitment-static-next-badge">{nextActionState === 'paid' ? '✓ Paga' : nextActionState === 'ready' ? '✓ Pronta para confirmar' : installmentCoverage > 0 ? 'Cobertura parcial' : 'Sem cobertura'}</span></div><div className="commitment-static-next-grid"><div className="commitment-static-next-main"><strong>{money(item.installmentAmount)}</strong><span>Vence em {formatDate(nextDueDate)}</span></div><div className="commitment-static-next-status"><strong>{Number(installmentCoverage).toFixed(1).replace('.', ',')}% coberta</strong>{installmentCoverage < 100 && <span> · faltam {money(item.missingForNextInstallment ?? Math.max(0, item.installmentAmount - item.allocatedAmount))}</span>}</div><div className="commitment-static-context"><strong>{nextActionState === 'paid' ? 'Status da cobrança' : 'Próxima ação'}</strong><span>{contextCopy}</span></div><span className="commitment-static-action"><button type="button" className={`commitment-static-action-button ${needsAllocation ? 'is-allocate' : 'is-pay'}`} disabled={item.isCompleted || busy || (needsAllocation && availableBalance <= 0)} onClick={runPrimaryAction}><span aria-hidden="true">{needsAllocation ? '↗' : item.isCompleted ? '✓' : '✓'}</span>{busy ? 'Processando…' : primaryLabel}</button><small>{actionHint}</small>{needsAllocation && availableBalance <= 0 && <small>Abra os detalhes para ajustar a reserva.</small>}</span></div></section>{actionMessage && <div className="commitment-static-success" role="status">✓ {actionMessage}</div>}{actionError && <div className="commitment-static-error" role="status">{actionError}</div>}</div>{detailsOpen && <CommitmentDetailsDrawer item={item} availableBalance={availableBalance} priority={priority} onClose={() => setDetailsOpen(false)} onEdit={onEdit} onDelete={onDelete} onChange={onChange} />}</article>
 }
 
 function CommitmentDetailsDrawer({ item, availableBalance, priority, onClose, onEdit, onDelete, onChange }) {
-  const [amount, setAmount] = useState(''); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(item.automaticProcessingWarning || ''); const [confirmRelease, setConfirmRelease] = useState(false); const [confirmDelete, setConfirmDelete] = useState(false); const [deleteError, setDeleteError] = useState(''); const [invalidAllocation, setInvalidAllocation] = useState(null); const [deleting, setDeleting] = useState(false)
-  useEffect(() => { const value = parseAmount(amount); const allowed = Math.max(0, Math.min(Number(availableBalance) || 0, Number(item.missingForFullCoverage) || 0)); if (Number.isFinite(value) && value > allowed) setInvalidAllocation({ value, allowed }) }, [amount, availableBalance, item.missingForFullCoverage])
-  const coverage = Number(item.coveragePercentage)
+  const [amount, setAmount] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState(item.automaticProcessingWarning || '')
+  const [confirmRelease, setConfirmRelease] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [invalidAllocation, setInvalidAllocation] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const available = Math.max(0, Number(availableBalance) || 0)
+  const missingFull = Math.max(0, Number(item.missingForFullCoverage) || 0)
+  const reserved = Math.max(0, Number(item.allocatedAmount) || 0)
+
+  const showInvalid = (operation, value, allowed, reason) => setInvalidAllocation({ operation, value: Number.isFinite(value) ? value : 0, allowed, reason })
+  const mutate = async (action, operation = null) => {
+    setBusy(true)
+    setMessage('')
+    try {
+      await action()
+      setAmount('')
+      await onChange()
+    } catch (e) {
+      if (operation) showInvalid(operation.type, operation.value, operation.allowed, errorText(e))
+      else setMessage(errorText(e))
+    } finally { setBusy(false) }
+  }
+  const submitAllocation = () => {
+    const value = parseAmount(amount)
+    const allowed = Math.min(available, missingFull)
+    if (!Number.isFinite(value) || value <= 0) return showInvalid('allocation', Number.isFinite(value) ? value : 0, allowed, 'Informe um valor de reserva maior que zero.')
+    if (value > allowed) return showInvalid('allocation', value, allowed)
+    mutate(() => api.allocate(item.id, value), { type: 'allocation', value, allowed })
+  }
+  const submitWithdrawal = () => {
+    const value = parseAmount(amount)
+    if (!Number.isFinite(value) || value <= 0) return showInvalid('withdrawal', Number.isFinite(value) ? value : 0, reserved, 'Informe um valor para retirar maior que zero.')
+    if (value > reserved) return showInvalid('withdrawal', value, reserved, `A retirada não pode exceder a reserva atual de ${money(reserved)}.`)
+    mutate(() => api.deallocate(item.id, value), { type: 'withdrawal', value, allowed: reserved })
+  }
+  const allocateNext = () => {
+    const needed = Math.max(0, Number(item.missingForNextInstallment) || 0)
+    if (needed <= 0) return
+    if (available <= 0) return showInvalid('allocation', needed, available, 'Não há saldo não alocado disponível para esta operação.')
+    mutate(() => api.allocateNextInstallment(item.id), { type: 'allocation', value: needed, allowed: available })
+  }
+  const allocateRemaining = () => {
+    if (missingFull <= 0) return
+    if (available <= 0) return showInvalid('allocation', missingFull, available, 'Não há saldo não alocado disponível para esta operação.')
+    mutate(() => api.allocateAvailable(item.id), { type: 'allocation', value: missingFull, allowed: available })
+  }
+  const deleteCommitment = async () => { setDeleting(true); setDeleteError(''); try { await onDelete(); setConfirmDelete(false); onClose() } catch (e) { setDeleteError(errorText(e)) } finally { setDeleting(false) } }
+  const history = Array.from({ length: item.isOpenEnded ? Math.min(item.paidInstallments + 1, 24) : item.totalInstallments }, (_, index) => { const paid = index < item.paidInstallments; const current = index === item.paidInstallments; const reservedAmount = paid ? item.installmentAmount : current ? Math.min(item.allocatedForNextInstallment, item.installmentAmount) : 0; return { number: index + 1, paid, current, reserved: reservedAmount, missing: Math.max(0, item.installmentAmount - reservedAmount), dueDate: addMonths(item.dueDate, index) } })
+  const releaseAll = async () => { setConfirmRelease(false); await mutate(() => api.releaseAllAllocation(item.id)) }
   const overallCoverage = Number(item.overallCoveragePercentage)
   const urgentUncovered = Boolean(item.requiresAttention)
-  const paymentProgress = Number(item.overallCoveragePercentage)
   const nextDueDate = item.nextDueDate || addMonths(item.dueDate, item.paidInstallments)
   const missingForNext = Number(item.remainingForNextInstallment)
   const status = item.isCompleted ? ['Concluído', 'complete'] : ['Ativo', 'active']
-  const mutate = async action => { const value = parseAmount(amount); const allowed = Math.max(0, Math.min(Number(availableBalance) || 0, Number(item.missingForFullCoverage) || 0)); if (amount && (!Number.isFinite(value) || value <= 0 || value > allowed)) { setInvalidAllocation({ value: Number.isFinite(value) ? value : 0, allowed, reason: !Number.isFinite(value) || value <= 0 ? 'Informe um valor de reserva maior que zero.' : undefined }); return } setBusy(true); setMessage(''); try { await action(); setAmount(''); await onChange() } catch (e) { setMessage(errorText(e)) } finally { setBusy(false) } }
-  const submitAllocation = () => { const value = parseAmount(amount); const allowed = Math.max(0, Math.min(Number(availableBalance) || 0, Number(item.missingForFullCoverage) || 0)); if (!Number.isFinite(value) || value <= 0) return setInvalidAllocation({ value: Number.isFinite(value) ? value : 0, allowed, reason: 'Informe um valor maior que zero.' }); if (value > allowed) return setInvalidAllocation({ value, allowed }); mutate(() => api.allocate(item.id, value)) }
-  const deleteCommitment = async () => { setDeleting(true); setDeleteError(''); try { await onDelete(); setConfirmDelete(false); onClose() } catch (e) { setDeleteError(errorText(e)) } finally { setDeleting(false) } }
-  const history = Array.from({ length: item.isOpenEnded ? Math.min(item.paidInstallments + 1, 24) : item.totalInstallments }, (_, index) => { const paid = index < item.paidInstallments; const current = index === item.paidInstallments; const reserved = paid ? item.installmentAmount : current ? Math.min(item.allocatedForNextInstallment, item.installmentAmount) : 0; return { number: index + 1, paid, current, reserved, missing: Math.max(0, item.installmentAmount - reserved), dueDate: addMonths(item.dueDate, index) } })
-  const occurrenceLabel = item.isRecurring ? 'cobrança' : 'vencimento'
-  const releaseAll = async () => { setConfirmRelease(false); await mutate(async () => { await api.releaseAllAllocation(item.id); setMessage('Toda a reserva foi retirada. O compromisso continua ativo.') }) }
-  const footer = <><div className="commitment-drawer-actions"><div className="commitment-drawer-action-copy">{urgentUncovered && <span className="urgent-critical-message" role="alert">⚠ Faltam <strong>{money(item.overallRemainingAmount ?? item.remainingAmount)}</strong></span>}<small>Ações do compromisso</small></div><div className="commitment-drawer-action-buttons"><button className="secondary" onClick={onEdit} disabled={busy || deleting}>Editar</button><button className="danger-button" onClick={() => setConfirmDelete(true)} disabled={busy || deleting}>Excluir compromisso</button></div></div>{confirmDelete && <ConfirmModal title="Excluir compromisso?" message={`“${item.name}” será excluído permanentemente. As reservas e alocações vinculadas também serão removidas.`} confirmLabel="Excluir compromisso" busy={deleting} busyLabel="Excluindo…" error={deleteError} tone="danger" onClose={() => { if (!deleting) setConfirmDelete(false) }} onConfirm={deleteCommitment} />}{invalidAllocation && <AlertModal title="Valor de reserva inválido" message={invalidAllocation.reason || `Você está tentando alocar um valor maior do que o disponível no momento. Disponível para alocar: ${money(invalidAllocation.allowed)}. Valor informado: ${money(invalidAllocation.value)}.`} onClose={() => setInvalidAllocation(null)} />}</>
+  const footer = <><div className="commitment-drawer-actions"><div className="commitment-drawer-action-copy">{urgentUncovered && <span className="urgent-critical-message" role="alert">⚠ Faltam <strong>{money(item.overallRemainingAmount ?? item.remainingAmount)}</strong></span>}<small>Ações do compromisso</small></div><div className="commitment-drawer-action-buttons"><button className="secondary" onClick={onEdit} disabled={busy || deleting}>Editar</button><button className="danger-button" onClick={() => setConfirmDelete(true)} disabled={busy || deleting}>Excluir compromisso</button></div></div>{confirmDelete && <ConfirmModal title="Excluir compromisso?" message={`“${item.name}” será excluído permanentemente. As reservas e alocações vinculadas também serão removidas.`} confirmLabel="Excluir compromisso" busy={deleting} busyLabel="Excluindo…" error={deleteError} tone="danger" onClose={() => { if (!deleting) setConfirmDelete(false) }} onConfirm={deleteCommitment} />}{invalidAllocation && <AlertModal title={invalidAllocation.operation === 'withdrawal' ? 'Valor para retirar inválido' : 'Valor de reserva inválido'} message={invalidAllocation.reason || `Disponível: ${money(invalidAllocation.allowed)}. Valor solicitado: ${money(invalidAllocation.value)}.`} onClose={() => setInvalidAllocation(null)} />}</>
   const badges = <>{item.urgent && <span className="urgent-badge">⚠ Urgente</span>}<span className={`status-badge ${status[1] === 'complete' ? 'complete' : ''}`}>{status[0]}</span>{item.automaticProcessing && <span className="status-badge">Automático</span>}{item.isOpenEnded && <span className="status-badge">Sem término</span>}{priority && <span className={`priority-badge priority-${item.priority}`}>{priority}</span>}</>
-  return <AppDrawer className="commitment-detail-drawer" eyebrow="COMPROMISSO" title={item.name} titleId="commitment-drawer-title" badges={badges} footer={footer} onClose={onClose}><section className="drawer-panel drawer-summary"><div className="drawer-section-heading"><h3>Resumo</h3><span>{Math.round(overallCoverage)}% coberto</span></div><div className="drawer-summary-main"><strong>{money(item.allocatedAmount)} <small>reservados de</small> {money(item.totalAmount)}</strong><b>Faltam {money(item.overallRemainingAmount ?? item.remainingAmount)}</b></div><div className="progress-track"><div style={{ width: `${Math.min(100, overallCoverage)}%` }} /></div><div className="drawer-summary-grid"><span>Valor total<strong>{money(item.totalAmount)}</strong></span><span>Reservado<strong>{money(item.allocatedAmount)}</strong></span><span>Parcelas<strong>{item.isOpenEnded ? 'Sem término' : `${item.paidInstallments}/${item.totalInstallments}`}</strong></span></div></section><section className="drawer-panel"><div className="drawer-section-heading"><h3>Parcelas</h3><span>{item.paidInstallments} pagas</span></div><div className="drawer-installments">{history.map(row => <div className={`drawer-installment ${row.paid ? 'is-paid' : row.current ? 'is-current' : ''}`} key={row.number}><div><strong>Parcela {row.number}</strong><small>{formatDate(row.dueDate)} · {row.paid ? 'Paga' : row.current ? 'Próxima' : 'Pendente'}</small></div><div><strong>{money(item.installmentAmount)}</strong><small>Reservado {money(row.reserved)} · Faltam {money(row.missing)}</small></div></div>)}</div></section><section className="drawer-panel drawer-control-section"><div className="drawer-section-heading"><h3>Reserva</h3><span>Disponível {money(availableBalance)}</span></div><label className="drawer-field">Valor<input inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} /></label><div className="drawer-button-row"><button disabled={busy || !amount || item.missingForFullCoverage <= 0} onClick={() => mutate(() => api.allocate(item.id, amount))}>Alocar</button><button className="secondary" disabled={busy || !item.canAllocate} onClick={() => mutate(() => api.allocateNextInstallment(item.id))}>Alocar próxima parcela</button></div><p className="drawer-reserve-total">Reserva atual <strong>{money(item.allocatedAmount)}</strong></p>{item.allocatedAmount > 0 && <button className="release-reserve-button" disabled={busy} onClick={() => setConfirmRelease(true)}>↶ Retirar toda a reserva</button>}</section><section className="drawer-panel drawer-control-section"><div className="drawer-section-heading"><h3>Pagamento</h3><span>{item.canPay ? 'Cobertura suficiente' : `Faltam ${money(missingForNext)}`}</span></div>{item.isCompleted ? <span className="payment-status">Compromisso concluído</span> : <button className="pay-button" disabled={busy || !item.canPay} onClick={() => mutate(() => api.payInstallment(item.id))}>Marcar parcela como paga</button>}{item.paidInstallments > 0 && <button className="tertiary undo-payment" disabled={busy} onClick={() => mutate(async () => { await api.reversePayment(item.id); setMessage('Pagamento desfeito. Reserva e saldo restaurados.') })}>Desfazer último pagamento</button>}</section>{message && <div className="inline-error" role="status">{message}</div>}{item.objective && <p className="drawer-note"><strong>Objetivo</strong>{item.objective}</p>}{confirmRelease && <div className="release-confirmation" role="alert"><strong>Retirar toda a reserva?</strong><p>{money(item.allocatedAmount)} voltarão a ficar disponíveis para novas alocações. O compromisso continuará ativo.</p><div><button className="secondary" onClick={() => setConfirmRelease(false)}>Cancelar</button><button className="release-confirm-button" onClick={releaseAll}>Retirar reserva</button></div></div>}</AppDrawer>
+  return <AppDrawer className="commitment-detail-drawer" eyebrow="COMPROMISSO" title={item.name} titleId="commitment-drawer-title" badges={badges} footer={footer} onClose={onClose}><section className="drawer-panel drawer-summary"><div className="drawer-section-heading"><h3>Resumo</h3><span>{Math.round(overallCoverage)}% coberto</span></div><div className="drawer-summary-main"><strong>{money(item.allocatedAmount)} <small>reservados de</small> {money(item.totalAmount)}</strong><b>Faltam {money(item.overallRemainingAmount ?? item.remainingAmount)}</b></div><div className="progress-track"><div style={{ width: `${Math.min(100, overallCoverage)}%` }} /></div><div className="drawer-summary-grid"><span>Valor total<strong>{money(item.totalAmount)}</strong></span><span>Reservado<strong>{money(item.allocatedAmount)}</strong></span><span>Parcelas<strong>{item.isOpenEnded ? 'Sem término' : `${item.paidInstallments}/${item.totalInstallments}`}</strong></span></div></section><section className="drawer-panel"><div className="drawer-section-heading"><h3>Parcelas</h3><span>{item.paidInstallments} pagas</span></div><div className="drawer-installments">{history.map(row => <div className={`drawer-installment ${row.paid ? 'is-paid' : row.current ? 'is-current' : ''}`} key={row.number}><div><strong>Parcela {row.number}</strong><small>{formatDate(row.dueDate)} · {row.paid ? 'Paga' : row.current ? 'Próxima' : 'Pendente'}</small></div><div><strong>{money(item.installmentAmount)}</strong><small>Reservado {money(row.reserved)} · Faltam {money(row.missing)}</small></div></div>)}</div></section><section className="drawer-panel drawer-control-section"><div className="drawer-section-heading"><h3>Reserva</h3><span>Disponível {money(available)}</span></div><label className="drawer-field">Valor<input inputMode="decimal" placeholder="0,00" value={amount} onChange={e => setAmount(e.target.value)} /></label><div className="drawer-button-row"><button className="primary" disabled={busy || missingFull <= 0} onClick={submitAllocation}>Alocar</button><button className="secondary" disabled={busy || reserved <= 0} onClick={submitWithdrawal}>Retirar</button><button className="secondary" disabled={busy || Number(item.missingForNextInstallment) <= 0} onClick={allocateNext}>Alocar próxima parcela</button><button className="secondary" disabled={busy || missingFull <= 0} onClick={allocateRemaining}>Alocar valor restante</button></div><p className="drawer-reserve-total">Reserva atual <strong>{money(item.allocatedAmount)}</strong></p>{item.allocatedAmount > 0 && <button className="release-reserve-button" disabled={busy} onClick={() => setConfirmRelease(true)}>↶ Retirar toda a reserva</button>}</section><section className="drawer-panel drawer-control-section"><div className="drawer-section-heading"><h3>Pagamento</h3><span>{item.canPay ? 'Cobertura suficiente' : `Faltam ${money(missingForNext)}`}</span></div>{item.isCompleted ? <span className="payment-status">Compromisso concluído</span> : <button className="pay-button" disabled={busy || !item.canPay} onClick={() => mutate(() => api.payInstallment(item.id))}>Marcar parcela como paga</button>}{item.paidInstallments > 0 && <button className="tertiary undo-payment" disabled={busy} onClick={() => mutate(async () => { await api.reversePayment(item.id); setMessage('Pagamento desfeito. Reserva e saldo restaurados.') })}>Desfazer último pagamento</button>}</section>{message && <div className="inline-error" role="status">{message}</div>}{item.objective && <p className="drawer-note"><strong>Objetivo</strong>{item.objective}</p>}{confirmRelease && <div className="release-confirmation" role="alert"><strong>Retirar toda a reserva?</strong><p>{money(item.allocatedAmount)} voltarão a ficar disponíveis para novas alocações. O compromisso continuará ativo.</p><div><button className="secondary" onClick={() => setConfirmRelease(false)}>Cancelar</button><button className="release-confirm-button" onClick={releaseAll}>Retirar reserva</button></div></div>}</AppDrawer>
 }
 
 function CommitmentModal({ item, categories, onClose, onSaved }) {
@@ -1022,6 +1077,5 @@ function CommitmentModal({ item, categories, onClose, onSaved }) {
   return <div className="modal-backdrop"><form className="modal" onSubmit={save}><div className="modal-head"><div><span className="eyebrow">COMPROMISSO</span><h2>{item.id ? 'Editar compromisso' : 'Novo compromisso'}</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div>{error && <div className="alert error">{error}</div>}<label>Nome<input required value={form.name} onChange={e => update('name', e.target.value)} /></label><div className="form-grid"><label>Valor<input required inputMode="decimal" placeholder="0,00" value={form.installmentAmount} onChange={e => update('installmentAmount', e.target.value)} /></label><label>Grupo<select value={form.categoryId || ''} onChange={e => update('categoryId', e.target.value || null)}><option value="">Sem grupo</option>{categories.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select></label><label>Prioridade<select value={form.priority} onChange={e => update('priority', e.target.value || null)}><option value="">Sem prioridade</option><option value="1">Alta</option><option value="2">Média</option><option value="3">Baixa</option></select></label></div><div className="form-grid recurring-form-grid"><label>Primeiro vencimento<input required type="date" value={form.dueDate} onChange={e => update('dueDate', e.target.value)} /></label><label>Frequência<select value={form.frequency} onChange={e => update('frequency', e.target.value)}>{Object.entries(frequencyLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Data de término <span className="field-hint">(opcional)</span><input type="date" disabled={form.frequency === 'Once'} value={form.frequency === 'Once' ? '' : form.endDate} onChange={e => update('endDate', e.target.value)} aria-invalid={recurrencePreview.kind === 'invalid'} /></label></div>{form.frequency === 'Once' ? <div className="preview-list"><strong>Vencimento</strong><span>{form.dueDate ? formatDate(form.dueDate) : 'Informe a data'}</span></div> : recurrencePreviewBlock}<div className="checkbox-options-grid"><CheckboxOption checked={form.automaticProcessing} onChange={e => update('automaticProcessing', e.target.checked)} title="Pagar automaticamente no vencimento" description="A cobrança será processada automaticamente quando chegar a data de vencimento, respeitando as regras de saldo e cobertura." /><CheckboxOption checked={form.urgent} onChange={e => update('urgent', e.target.checked)} title="Marcar como urgente" description="Mantém este compromisso em destaque até que esteja totalmente coberto." variant="urgent" /></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button type="submit" className="primary">Salvar compromisso</button></div></form></div>
 }
 
-function DistributionModal({ preview, onClose, onConfirm }) { return <div className="modal-backdrop"><div className="modal"><div className="modal-head"><div><span className="eyebrow">SIMULAÇÃO</span><h2>Distribuir saldo?</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div><p className="modal-copy">O Aloca vai reservar <strong>{money(preview?.wouldAllocate)}</strong> seguindo a prioridade dos compromissos ativos.</p><div className="preview-list">{preview?.allocations?.length ? preview.allocations.map(x => <div key={x.financialCommitmentId}><span>{x.name}</span><strong>{money(x.amount)}</strong></div>) : <div className="empty small">Nenhuma nova alocação necessária.</div>}</div><div className="preview-total"><span>Saldo não alocado após</span><strong>{money(preview?.remainingUnallocatedBalance)}</strong></div><div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Cancelar</button><button type="button" className="primary" onClick={onConfirm} disabled={!preview?.wouldAllocate}>Confirmar distribuição</button></div></div></div> }
 
-createRoot(document.getElementById('root')).render(<ThemeProvider><TutorialProvider><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></TutorialProvider></ThemeProvider>)
+createRoot(document.getElementById('root')).render(<ThemeProvider><ErrorBoundary><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></ErrorBoundary></ThemeProvider>)

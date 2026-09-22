@@ -9,12 +9,13 @@ public sealed class FinancialSummaryService
 {
     private readonly AlocaDbContext db;
     private readonly FinancialBalanceService balanceService;
+    private readonly IBusinessClock clock;
 
-    public FinancialSummaryService(AlocaDbContext dbContext, FinancialBalanceService balanceService)
-    { db = dbContext; this.balanceService = balanceService; }
+    public FinancialSummaryService(AlocaDbContext dbContext, FinancialBalanceService balanceService, IBusinessClock? businessClock = null)
+    { db = dbContext; this.balanceService = balanceService; clock = businessClock ?? new SystemBusinessClock(new ConfigurationBuilder().Build()); }
 
     public FinancialSummaryService(FinancialBalanceService balanceService)
-    { this.balanceService = balanceService; db = balanceService.DbContext; }
+    { this.balanceService = balanceService; db = balanceService.DbContext; clock = new SystemBusinessClock(new ConfigurationBuilder().Build()); }
 
     public FinancialSummaryService(AlocaDbContext dbContext) : this(dbContext, new FinancialBalanceService(dbContext)) { }
 
@@ -30,8 +31,8 @@ public sealed class FinancialSummaryService
         // and never derive the month from a local/UTC DateTime conversion.
         period = new DateOnly(period.Year, period.Month, 1);
         var nextPeriod = period.AddMonths(1);
-        var today = BusinessClock.Today();
-        await new RecurringIncomeService(db).EnsureOccurrencesAsync(nextPeriod.AddDays(-1), ct);
+        var today = clock.Today;
+        await new RecurringIncomeService(db, clock: clock).EnsureOccurrencesAsync(nextPeriod.AddDays(-1), ct);
         var incomes = await db.RecurringIncomeOccurrences.AsNoTracking()
             .Include(x => x.RecurringIncome)
             .Where(x => x.ScheduledDate >= period && x.ScheduledDate < nextPeriod &&
@@ -43,7 +44,11 @@ public sealed class FinancialSummaryService
                         ((x.EndDate == null && x.Frequency != RecurringIncomeFrequency.Once) ||
                          (x.EndDate != null && x.EndDate >= period)))
             .ToListAsync(ct);
-        var payments = await db.CommitmentPayments.AsNoTracking().ToListAsync(ct);
+        var commitmentIds = commitments.Select(x => x.Id).ToArray();
+        var payments = await db.CommitmentPayments.AsNoTracking()
+            .Where(x => commitmentIds.Contains(x.FinancialCommitmentId))
+            .Select(x => new { x.FinancialCommitmentId, x.InstallmentNumber })
+            .ToListAsync(ct);
 
         var details = new List<MonthlyCommitmentResponse>();
         foreach (var commitment in commitments)

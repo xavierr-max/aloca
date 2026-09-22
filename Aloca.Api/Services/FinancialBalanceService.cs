@@ -44,12 +44,13 @@ public static class FinancialCalculations
         Math.Max(0m, saldoNaoAlocado - deficitCobertura);
 }
 
-public sealed class FinancialBalanceService(AlocaDbContext dbContext)
+public sealed class FinancialBalanceService(AlocaDbContext dbContext, IBusinessClock? clock = null)
 {
+    private IBusinessClock Clock => clock ?? new SystemBusinessClock(new ConfigurationBuilder().Build());
     public AlocaDbContext DbContext => dbContext;
     public async Task<FinancialBalanceSnapshot> GetAsync(CancellationToken cancellationToken)
     {
-        var today = BusinessClock.Today();
+        var today = Clock.Today;
         var totalIncome = await dbContext.Transactions.Where(x => x.Type == TransactionType.Income && x.Date <= today).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0m;
         var totalExpense = await dbContext.Transactions.Where(x => x.Type == TransactionType.Expense && x.Date <= today).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0m;
         var activeCommitments = await dbContext.FinancialCommitments

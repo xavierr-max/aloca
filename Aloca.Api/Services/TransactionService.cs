@@ -14,13 +14,17 @@ public enum TransactionWriteStatus
 
 public sealed record TransactionWriteResult(TransactionWriteStatus Status, Transaction? Transaction);
 
-public sealed class TransactionService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null)
+public sealed class TransactionService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null, ILogger<TransactionService>? logger = null)
 {
+    private const int DefaultPageSize = 50;
+    private const int MaxPageSize = 100;
     private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, new FinancialBalanceService(dbContext));
     public async Task<PagedResponse<TransactionResponse>> GetAllAsync(
         TransactionQueryParameters queryParameters,
         CancellationToken cancellationToken)
     {
+        var page = Math.Max(1, queryParameters.Page);
+        var pageSize = Math.Clamp(queryParameters.PageSize <= 0 ? DefaultPageSize : queryParameters.PageSize, 1, MaxPageSize);
         var query = dbContext.Transactions.AsNoTracking().AsQueryable();
 
         if (queryParameters.Type.HasValue)
@@ -52,12 +56,16 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         var totalCount = await query.CountAsync(cancellationToken);
         query = queryParameters.Sort.ToLowerInvariant() switch
         {
-            "amount" => queryParameters.Descending ? query.OrderByDescending(x => x.Amount) : query.OrderBy(x => x.Amount),
-            _ => queryParameters.Descending ? query.OrderByDescending(x => x.Date).ThenByDescending(x => x.Id) : query.OrderBy(x => x.Date).ThenBy(x => x.Id)
+            "amount" => queryParameters.Descending
+                ? query.OrderByDescending(x => x.Amount).ThenByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+                : query.OrderBy(x => x.Amount).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id),
+            _ => queryParameters.Descending
+                ? query.OrderByDescending(x => x.Date).ThenByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+                : query.OrderBy(x => x.Date).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id)
         };
         var items = await query
-            .Skip((queryParameters.Page - 1) * queryParameters.PageSize)
-            .Take(queryParameters.PageSize)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(transaction => new TransactionResponse(
                 transaction.Id,
                 transaction.Description,
@@ -72,7 +80,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
                 transaction.WasAutomatic))
             .ToListAsync(cancellationToken);
 
-        return new PagedResponse<TransactionResponse>(items, queryParameters.Page, queryParameters.PageSize, totalCount);
+        return new PagedResponse<TransactionResponse>(items, page, pageSize, totalCount);
     }
 
     public Task<TransactionResponse?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
@@ -110,6 +118,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         await dbContext.SaveChangesAsync(cancellationToken);
         await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
+        logger?.LogInformation("Transaction created transaction_id={TransactionId} type={TransactionType}", transaction.Id, transaction.Type);
         return new TransactionWriteResult(TransactionWriteStatus.Success, transaction);
     }
 
@@ -135,6 +144,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         await dbContext.SaveChangesAsync(cancellationToken);
         await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
+        logger?.LogInformation("Transaction deleted transaction_id={TransactionId}", id);
         return true;
     }
 
@@ -150,6 +160,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         await dbContext.SaveChangesAsync(cancellationToken);
         await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
+        logger?.LogInformation("Transaction changed transaction_id={TransactionId} type={TransactionType}", transaction.Id, transaction.Type);
         return new(TransactionWriteStatus.Success, transaction);
     }
 }

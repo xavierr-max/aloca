@@ -7,7 +7,7 @@ namespace Aloca.Api.Controllers;
 
 [ApiController, Authorize]
 [Route("api/financial-summary")]
-public sealed class FinancialSummaryController(FinancialSummaryService financialSummaryService) : ControllerBase
+public sealed class FinancialSummaryController(FinancialSummaryService financialSummaryService, IBusinessClock clock) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType<FinancialSummaryResponse>(StatusCodes.Status200OK)]
@@ -16,5 +16,5 @@ public sealed class FinancialSummaryController(FinancialSummaryService financial
 
     [HttpGet("monthly")]
     public async Task<ActionResult<MonthlyFinancialSummaryResponse>> Monthly([FromQuery] DateOnly? period, CancellationToken cancellationToken) =>
-        Ok(await financialSummaryService.GetMonthlyAsync(period ?? new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1), cancellationToken));
+        Ok(await financialSummaryService.GetMonthlyAsync(period ?? new DateOnly(clock.Today.Year, clock.Today.Month, 1), cancellationToken));
 }

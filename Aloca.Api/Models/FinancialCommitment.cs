@@ -56,7 +56,7 @@ public sealed class FinancialCommitment
         AllocatedAmount = allocatedAmount;
         Priority = priority;
         IsFullyCommitted = isFullyCommitted;
-        DueDate = dueDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        DueDate = dueDate ?? BusinessClock.Today();
         Objective = objective?.Trim();
         Urgent = urgent;
         AutomaticProcessing = automaticProcessing;

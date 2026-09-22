@@ -29,10 +29,19 @@ async function performRequest(path, options = {}) {
   const timeout = setTimeout(() => controller.abort(), options.timeout ?? 12000)
   try {
     const { timeout: _timeout, signal, suppressAvailabilityEvent, ...fetchOptions } = options
-    const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Request-Id': requestId, ...fetchOptions.headers }, ...fetchOptions, signal: signal || controller.signal })
+    const headers = { 'Content-Type': 'application/json', 'X-Request-Id': requestId, ...fetchOptions.headers }
+    const response = await fetch(`${API_URL}${path}`, { credentials: 'include', headers, ...fetchOptions, signal: signal || controller.signal })
     const durationMs = Math.round(performance.now() - startedAt)
     if (import.meta.env.DEV) console.info('[aloca request]', { requestId, endpoint: path, method, durationMs, status: response.status })
-    if (!response.ok) { let body = {}; try { body = await response.json() } catch {} const validation = body.errors ? Object.values(body.errors).flat().join(' ') : ''; const error = new Error(body.message || validation || `Erro ${response.status} ao acessar a API.`); error.status = response.status; error.validation = body.errors || {}; throw error }
+    if (!response.ok) {
+      let body = {}
+      try { body = await response.json() } catch {}
+      const validation = body.errors ? Object.values(body.errors).flat().join(' ') : ''
+      const error = new Error(body.message || validation || body.detail || `Erro ${response.status} ao acessar a API.`)
+      error.status = response.status
+      error.validation = body.errors || {}
+      throw error
+    }
     if (response.status === 204) return null
     const contentType = response.headers.get('content-type') || ''
     return contentType.includes('json') ? response.json() : response.text()
@@ -67,9 +76,9 @@ export const api = {
     const normalizedMonth = `${match[1]}-${match[2]}`
     return request(`/api/financial-summary/monthly?period=${encodeURIComponent(`${normalizedMonth}-01`)}`)
   },
-  account: () => request('/api/account/current'), continueLocal: () => request('/api/account/local/continue', { method: 'POST' }), createLocal: displayName => request('/api/account/local', { method: 'POST', body: JSON.stringify({ displayName: displayName || null }) }), login: (username, password) => request('/api/account/login', { method: 'POST', body: JSON.stringify({ username, password }) }), renameAccount: displayName => request('/api/account/rename', { method: 'PATCH', body: JSON.stringify({ displayName }) }), protectAccount: body => request('/api/account/protect', { method: 'POST', body: JSON.stringify(body) }), changePassword: body => request('/api/account/password', { method: 'POST', body: JSON.stringify(body) }), switchAccount: id => request(`/api/account/switch/${id}`, { method: 'POST' }), removeAccountFromDevice: () => request('/api/account/device', { method: 'DELETE' }), deleteAccount: confirmation => request('/api/account/current', { method: 'DELETE', body: JSON.stringify({ confirmation }) }),
-  summary: () => request('/api/financial-summary'), updateSettings: initialBalance => request('/api/financial-settings', { method: 'PUT', body: JSON.stringify({ initialBalance: amountValue(initialBalance) }) }), commitments: (status = 'active') => { const query = status === 'active' ? '?isCompleted=false' : status === 'completed' ? '?isCompleted=true' : ''; return request(`/api/financial-commitments${query}`) }, categories: () => request('/api/groups'), createCategory: name => request('/api/groups', { method: 'POST', body: JSON.stringify({ name }) }), updateCategory: (id, name) => request(`/api/groups/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }), deleteCategory: id => request(`/api/groups/${id}`, { method: 'DELETE' }), preview: () => request('/api/allocations/preview'), distribute: () => request('/api/allocations/distribute'),
-  projection: (months = 12, startMonth = '') => request('/api/dashboard/projecao?meses=' + months + (startMonth ? '&mesInicial=' + startMonth + '-01' : '')),
+  account: () => request('/api/account/current'), continueLocal: () => request('/api/account/local/continue', { method: 'POST' }), createLocal: (displayName, email) => request('/api/account/local', { method: 'POST', body: JSON.stringify({ displayName: displayName || null, email }) }), login: (username, password) => request('/api/account/login', { method: 'POST', body: JSON.stringify({ username, password }) }), renameAccount: displayName => request('/api/account/rename', { method: 'PATCH', body: JSON.stringify({ displayName }) }), updateProfile: body => request('/api/account/profile', { method: 'PATCH', body: JSON.stringify(body) }), protectAccount: body => request('/api/account/protect', { method: 'POST', body: JSON.stringify(body) }), changePassword: body => request('/api/account/password', { method: 'POST', body: JSON.stringify(body) }), switchAccount: id => request(`/api/account/switch/${id}`, { method: 'POST' }), removeAccountFromDevice: () => request('/api/account/device', { method: 'DELETE' }), deleteAccount: body => request('/api/account/current', { method: 'DELETE', body: JSON.stringify(body) }),
+  summary: () => request('/api/financial-summary'), updateSettings: initialBalance => request('/api/financial-settings', { method: 'PUT', body: JSON.stringify({ initialBalance: amountValue(initialBalance) }) }), commitments: (status = 'active') => { const query = status === 'active' ? '?isCompleted=false' : status === 'completed' ? '?isCompleted=true' : ''; return request(`/api/financial-commitments${query}`) }, categories: () => request('/api/groups'), createCategory: name => request('/api/groups', { method: 'POST', body: JSON.stringify({ name }) }), updateCategory: (id, name) => request(`/api/groups/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }), deleteCategory: id => request(`/api/groups/${id}`, { method: 'DELETE' }),
+  financialForecast: (from, months = 6) => { const params = new URLSearchParams({ months: String(months) }); if (from) params.set('from', `${String(from).slice(0, 7)}-01`); return request(`/api/financial-forecast?${params}`) },
   incomes: (params = {}) => request(`/api/transactions?Type=Income&PageSize=100&${new URLSearchParams(params)}`),
   expenses: (params = {}) => request(`/api/transactions?Type=Expense&PageSize=100&${new URLSearchParams(params)}`),
   recurringIncomes: () => request('/api/recurring-incomes'), recurringProjection: () => request('/api/recurring-incomes/projection'),

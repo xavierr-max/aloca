@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+secrets/
+**/data-protection-keys/
+**/bin/
+**/obj/
+frontend/node_modules/
+frontend/dist/
+TestResults/
+README.md

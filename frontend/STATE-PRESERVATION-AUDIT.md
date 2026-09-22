@@ -19,7 +19,7 @@
 | Modais e drawers globais | Estados de `App` e componentes de camada | Estado React | Fecham somente quando a ação fecha aquela camada |
 | Tema | `ThemeProvider.theme` | `localStorage` (`theme`) | Mantém o tema |
 | Paginação | Não existe no frontend atual | — | Não há reset para auditar |
-| Scroll | Posição do documento/navegador | Não persistido | O refetch não desmonta mais a página; não há `reload`, `scrollTo` ou `scrollIntoView` da aplicação fora do tutorial |
+| Scroll | Posição do documento/navegador | Não persistido | O refetch não desmonta mais a página; não há `reload`, `scrollTo` ou `scrollIntoView` da aplicação |
 
 ## Resets encontrados
 

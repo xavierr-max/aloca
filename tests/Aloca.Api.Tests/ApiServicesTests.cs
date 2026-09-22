@@ -118,6 +118,35 @@ public sealed class ApiServicesTests
     }
 
     [Fact]
+    public async Task TransactionService_PaginatesFilteredTransactionsWithStableOrderAndSafePageSize()
+    {
+        await using var db = CreateDbContext();
+        db.Transactions.AddRange(
+            new Transaction("A", 10m, TransactionType.Expense, new DateOnly(2026, 9, 1), null),
+            new Transaction("B", 20m, TransactionType.Expense, new DateOnly(2026, 9, 1), null),
+            new Transaction("C", 30m, TransactionType.Expense, new DateOnly(2026, 9, 2), null));
+        await db.SaveChangesAsync();
+        var service = new TransactionService(db);
+
+        var first = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 1, PageSize = 2 }, default);
+        var next = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 2, PageSize = 2 }, default);
+        var last = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 99, PageSize = 2 }, default);
+        var capped = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, PageSize = 1000 }, default);
+        var empty = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Income, PageSize = 2 }, default);
+
+        var repeatFirst = await service.GetAllAsync(new TransactionQueryParameters { Type = TransactionType.Expense, Page = 1, PageSize = 2 }, default);
+        Assert.Equal(first.Items.Select(x => x.Id), repeatFirst.Items.Select(x => x.Id));
+        Assert.Equal(2, first.Items.Count);
+        Assert.Single(next.Items);
+        Assert.Empty(first.Items.Select(x => x.Id).Intersect(next.Items.Select(x => x.Id)));
+        Assert.Empty(last.Items);
+        Assert.Equal(2, first.TotalPages);
+        Assert.Equal(100, capped.PageSize);
+        Assert.Equal(0, empty.TotalItems);
+        Assert.Equal(0, empty.TotalPages);
+    }
+
+    [Fact]
     public async Task DeletingIncomeReconcilesReservationsWithinSameOperation()
     {
         await using var db = CreateDbContext();
