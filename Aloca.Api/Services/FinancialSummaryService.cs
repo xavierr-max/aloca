@@ -76,12 +76,14 @@ public sealed class FinancialSummaryService
                 if (!paid) pendingIndex++;
                 var remaining = Math.Max(0m, commitment.InstallmentAmount - occurrenceAllocated);
                 details.Add(new(
-                    $"{commitment.Id}:{occurrence.Number}", commitment.Name,
+                    commitment.Id, $"{commitment.Id}:{occurrence.Number}", commitment.Name,
                     commitment.IsRecurring || commitment.TotalInstallments > 1 ? occurrence.Number : null,
                     commitment.IsOpenEnded ? null : commitment.TotalInstallments,
                     occurrence.Date, commitment.InstallmentAmount, occurrenceAllocated, remaining,
                     commitment.InstallmentAmount == 0 ? 100m : Math.Min(100m, occurrenceAllocated / commitment.InstallmentAmount * 100m),
-                    paid, remaining == 0m));
+                    paid, remaining == 0m, commitment.Priority, commitment.Urgent,
+                    commitment.RequiresAttention, commitment.IsCompleted,
+                    commitment.OverallRemainingAmount));
             }
         }
 
@@ -91,9 +93,15 @@ public sealed class FinancialSummaryService
         var expectedIncome = incomes.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate >= today).Sum(x => x.Amount);
         var expectedCommitments = details.Where(x => !x.IsPaid && x.DueDate >= today).Sum(x => x.DueAmount);
         var currentBalance = (await balanceService.GetAsync(ct)).SaldoReal;
+        var urgentCommitments = (await db.FinancialCommitments.AsNoTracking()
+                .Where(x => x.Urgent)
+                .ToListAsync(ct))
+            .Where(x => x.RequiresAttention)
+            .Select(x => new MonthlyUrgentCommitmentResponse(x.Id, x.Name, x.OverallRemainingAmount))
+            .ToList();
         return new(period, incomes.Sum(x => x.Amount), committed, incomes.Sum(x => x.Amount) - committed,
             allocated, missing, committed > 0 ? Math.Min(100m, allocated / committed * 100m) : 100m,
-            currentBalance + expectedIncome - expectedCommitments, details);
+            currentBalance + expectedIncome - expectedCommitments, details, urgentCommitments);
     }
 
 }
