@@ -3,12 +3,12 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import {
-  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BadgeCheck, Bell, BookOpen, Calculator, Calendar, LineChart,
-  ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, CircleHelp, Eye, Filter, Folder,
-  LayoutDashboard, List, Menu, Moon, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCw, Search, Settings, ShieldCheck, Sun,
-  Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, X, ArrowDownToLine, ArrowUpFromLine, Mail, LifeBuoy,
+  ArrowDownLeft, ArrowUpRight, BadgeCheck, Bell, BookOpen, Calculator,
+  ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye, Filter,
+  List, Pencil, Plus, RotateCw, Settings, ShieldCheck,
+  Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, ArrowDownToLine, ArrowUpFromLine, Mail, LifeBuoy,
 } from 'lucide-react'
-import { api, apiAvailabilityEvents, markAccountContextChanged } from './services/api'
+import { api, apiAvailabilityEvents } from './services/api'
 import { TutorialProvider, useTutorial } from './tutorials'
 import { CheckboxOption } from './components/CheckboxOption'
 import FinancialForecastPage from './pages/FinancialForecastPage.jsx'
@@ -158,22 +158,6 @@ function ModalLayer({ children, onClose }) {
     </div>,
     document.body,
   )
-}
-
-function AccountMenu({ accountState, open, disabled = false, onToggle, onClose, onAction, onSwitch }) {
-  const current = accountState?.current
-  const menuRef = useRef(null)
-  useEffect(() => {
-    if (!open) return undefined
-    const onPointerDown = event => { if (!menuRef.current?.contains(event.target)) onClose() }
-    const onKeyDown = event => { if (event.key === 'Escape') onClose() }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown) }
-  }, [open, onClose])
-  if (!current) return null
-  const protectionAction = current.isLocal ? 'protect' : 'password'
-  return <div ref={menuRef} className="account-menu"><button type="button" className="account-trigger" aria-haspopup="menu" aria-expanded={open} onClick={onToggle} disabled={disabled}><span className="account-avatar">{current.displayName.slice(0, 1).toUpperCase()}</span><span className="account-trigger-copy"><strong>{current.displayName}</strong><small>{current.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><span aria-hidden="true">⌄</span></button>{open && <div className="account-popover" role="menu" aria-label="Minha conta"><div className="account-popover-identity"><span className="account-avatar">{current.displayName.slice(0, 1).toUpperCase()}</span><span><strong>Minha conta</strong><small>{current.isLocal ? 'Conta local' : 'Conta protegida'}</small></span></div><div className="account-popover-divider" /><div className="account-management"><div className="account-actions"><button type="button" role="menuitem" onClick={() => { onClose(); onAction('profile') }}><Icon icon={UserCircle} size={17} />Perfil e Segurança</button><button type="button" role="menuitem" onClick={() => { onClose(); onAction(protectionAction) }}><Icon icon={ShieldCheck} size={17} />{current.isLocal ? 'Proteger conta' : 'Segurança / Alterar senha'}</button></div></div><div className="account-popover-divider" /><div className="account-popover-section"><div className="account-popover-heading"><span>Contas neste dispositivo</span><b>{accountState.accounts.length}/{accountState.limit}</b></div><div className="account-list">{accountState.accounts.map(account => <button type="button" role="menuitem" className={`account-list-item ${account.id === current.id ? 'active' : ''}`} key={account.id} onClick={() => { onClose(); onSwitch(account) }}><span className="account-avatar small">{account.displayName.slice(0, 1).toUpperCase()}</span><span><strong>{account.displayName}</strong><small>{account.isLocal ? 'Conta local' : 'Conta protegida'}</small></span>{account.id === current.id && <b>Atual</b>}</button>)}</div></div><div className="account-management"><div className="account-section-label">Gerenciar conta</div><div className="account-actions"><button type="button" role="menuitem" onClick={() => { onClose(); onAction('add') }} disabled={accountState.accounts.length >= accountState.limit}><Icon icon={Users} size={17} />Adicionar conta</button><button type="button" role="menuitem" onClick={() => { onClose(); onAction('rename') }}><Icon icon={Pencil} size={17} />Renomear conta</button>{!current.isLocal && <button type="button" role="menuitem" onClick={() => { onClose(); onAction('remove') }}><Icon icon={RefreshCw} size={17} />Remover deste dispositivo</button>}<button type="button" role="menuitem" className="danger" onClick={() => { onClose(); onAction('delete') }}><Icon icon={Trash2} size={17} />Excluir conta</button></div>{accountState.accounts.length >= accountState.limit && <p className="account-limit-message">Você já possui o limite de 4 contas neste dispositivo. Remova uma conta para adicionar outra.</p>}</div></div>}</div>
 }
 
 function AccountDialog({ mode, initialUsername = '', initialDisplayName = '', initialEmail = '', onClose, onSubmit }) {
@@ -391,7 +375,6 @@ function ApiAvailabilityBoundary({ children }) {
 function App() {
   const [accountState, setAccountState] = useState(null)
   const [accountReady, setAccountReady] = useState(false)
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [accountDialog, setAccountDialog] = useState(null)
   const [accountDeleteOpen, setAccountDeleteOpen] = useState(false)
   const [accountMutationBusy, setAccountMutationBusy] = useState(false)
@@ -426,17 +409,12 @@ function App() {
   const currentMonth = new Date().toISOString().slice(0, 7)
   const [selectedMonth, setSelectedMonth] = useState(() => sessionStorage.getItem('aloca-selected-month') || currentMonth)
   const [commitmentObjective, setCommitmentObjective] = useState(() => localStorage.getItem('aloca-commitment-objective') || '')
-  const { theme, toggleTheme } = useTheme()
   const { start: startTutorial } = useTutorial()
   const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#previsoes' ? 'forecast' : window.location.hash === '#grupos' ? 'groups' : window.location.hash === '#suporte' ? 'support' : window.location.hash === '#perfil' ? 'profile' : 'dashboard'
   const [view, setView] = useState(getView())
-  const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
-  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const refreshVersionRef = useRef(0)
   const accountTransitionRef = useRef(0)
-  const closeMobileNavigation = () => setMobileNavigationOpen(false)
-  useEffect(() => { localStorage.removeItem('aloca-sidebar-collapsed') }, [])
   useEffect(() => { if (!notice) return undefined; const timer = window.setTimeout(() => setNotice(''), 3500); return () => window.clearTimeout(timer) }, [notice])
 
   const refresh = async (expectedAccountId = accountState?.current?.id, transitionToken = accountTransitionRef.current) => {
@@ -494,13 +472,7 @@ function App() {
   useEffect(() => { if (accountReady && accountState?.current && !isSwitchingAccount) refresh(accountState.current.id) }, [accountReady, accountState?.current?.id, selectedMonth, filters.status, isSwitchingAccount])
   useEffect(() => { const onRecovered = () => { if (accountReady && accountState?.current) refresh() }; window.addEventListener(apiAvailabilityEvents.recovered, onRecovered); return () => window.removeEventListener(apiAvailabilityEvents.recovered, onRecovered) }, [accountReady, accountState?.current?.id])
   useEffect(() => { sessionStorage.setItem('aloca-selected-month', selectedMonth) }, [selectedMonth])
-  useEffect(() => { const onHash = () => { setView(getView()); setMobileNavigationOpen(false) }; window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash) }, [])
-  useEffect(() => {
-    if (!mobileNavigationOpen) return undefined
-    const closeOnEscape = event => { if (event.key === 'Escape') closeMobileNavigation() }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [mobileNavigationOpen])
+  useEffect(() => { const onHash = () => setView(getView()); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash) }, [])
   useEffect(() => { const timer = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 250); return () => clearTimeout(timer) }, [searchInput])
   useEffect(() => {
     if (!filtersOpen) return undefined
@@ -509,14 +481,6 @@ function App() {
     document.body.style.overflow = 'hidden'
     return () => { document.removeEventListener('keydown', closeOnEscape); document.body.style.overflow = '' }
   }, [filtersOpen])
-  useEffect(() => {
-    if (!createMenuOpen) return undefined
-    const closeOnEscape = event => { if (event.key === 'Escape') setCreateMenuOpen(false) }
-    const closeOnOutsideClick = event => { if (!event.target.closest('.global-create')) setCreateMenuOpen(false) }
-    document.addEventListener('keydown', closeOnEscape)
-    document.addEventListener('mousedown', closeOnOutsideClick)
-    return () => { document.removeEventListener('keydown', closeOnEscape); document.removeEventListener('mousedown', closeOnOutsideClick) }
-  }, [createMenuOpen])
   useEffect(() => {
     if (loading) return
     const markers = view === 'incomes'
@@ -541,7 +505,6 @@ function App() {
   const run = async action => { setError(''); setNotice(''); try { await action(); await refresh(); setNotice('Alterações salvas com sucesso.') } catch (e) { setError(errorText(e)) } }
   const syncAccount = async () => { const next = await api.account(); setAccountState(next); return next }
   const reloadAfterAccountEntry = () => {
-    setAccountMenuOpen(false)
     setAccountDialog(null)
     setIsSwitchingAccount(false)
     setAccountMutationBusy(false)
@@ -566,32 +529,11 @@ function App() {
       // Every account mutation owns the layer it opened. This also runs when
       // the API rejects, so a failed request can never leave a backdrop or
       // body scroll lock behind.
-      setAccountMenuOpen(false)
       setAccountDialog(null)
       setAccountDeleteOpen(false)
       setAccountMutationBusy(false)
     }
   }
-  const handleAccountSwitch = async account => {
-    if (account.id === accountState?.current?.id || isSwitchingAccount) return
-    const transitionToken = ++accountTransitionRef.current
-    setError(''); setAccountMenuOpen(false); setIsSwitchingAccount(true); setAccountMutationBusy(true); clearAccountData()
-    try {
-      await api.switchAccount(account.id)
-      markAccountContextChanged()
-      const next = await api.account()
-      if (!next.current || next.current.id !== account.id) throw new Error('A sessão retornou uma conta diferente da selecionada.')
-      reloadAfterAccountEntry()
-    } catch (e) {
-      setError(errorText(e))
-      const rollback = await syncAccount().catch(() => null)
-      if (rollback?.current) await refresh(rollback.current.id, transitionToken)
-      else clearAccountData()
-    } finally {
-      if (transitionToken === accountTransitionRef.current) { setAccountMenuOpen(false); setIsSwitchingAccount(false); setAccountMutationBusy(false) }
-    }
-  }
-  const handleAccountAction = action => { if (action === 'remove') { setAccountDialog({ mode: 'remove' }); return } if (action === 'delete') { setAccountDeleteOpen(true); return } if (action === 'profile') { window.location.hash = 'perfil'; return } setAccountDialog({ mode: action, username: accountState?.current?.username || '' }) }
   const handleAccountSubmit = async (mode, data) => { if (mode === 'create-local-form') { setAccountDialog({ mode: 'create-local' }); return } if (mode === 'create-local') { await api.createLocal(data.displayName, data.email); reloadAfterAccountEntry(); return } if (mode === 'login-form') { setAccountDialog({ mode: 'login' }); return } if (mode === 'login') { await api.login(data.username, data.password); reloadAfterAccountEntry(); return } if (mode === 'rename') { await runAccountMutation(() => api.renameAccount(data.displayName)); return } if (mode === 'protect') { await runAccountMutation(() => api.protectAccount(data)); return } if (mode === 'password') { await runAccountMutation(() => api.changePassword(data)) } }
   const updateProfile = data => runAccountMutation(() => api.updateProfile(data))
   const removeAccount = async () => runAccountMutation(() => api.removeAccountFromDevice())
@@ -603,9 +545,9 @@ function App() {
   if (!accountReady) return <div className="app-shell"><div className="loading">Preparando sua conta local…</div></div>
   if (!accountState?.current) return <div className="app-shell"><div className="loading account-recovery"><strong>Não foi possível abrir uma conta local</strong><span>Gerencie as contas deste dispositivo para liberar espaço e entrar no Aloca.</span></div></div>
   return <div className="app-shell">
-    <header className="topbar"><button type="button" className="mobile-menu-trigger" aria-label="Abrir navegação" aria-expanded={mobileNavigationOpen} onClick={() => setMobileNavigationOpen(value => !value)}><Icon icon={Menu} size={22} /></button><div className="brand"><div className="brand-name-row"><h1>Aloca</h1><span className="beta-badge">BETA</span></div></div><label className="topbar-search"><Icon icon={Search} size={18} /><input type="search" placeholder="Buscar algo..." aria-label="Buscar algo" /></label><div className="topbar-actions"><div className="global-create"><button type="button" className="primary global-create-trigger" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={() => setCreateMenuOpen(value => !value)}><Icon icon={Plus} size={17} /> <span>Novo</span></button>{createMenuOpen && <div className="global-create-menu" role="menu"><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setIncomeDialog(true) }}>Nova entrada</button><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setRecurringDialog(true) }}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={() => { setCreateMenuOpen(false); setEditing({}) }}>Novo compromisso</button></div>}</div><button type="button" className="theme-toggle" onClick={toggleTheme} aria-pressed={theme === 'dark'} aria-label={theme === 'dark' ? 'Tema escuro. Alternar para tema claro' : 'Tema claro. Alternar para tema escuro'} title={theme === 'dark' ? 'Tema escuro' : 'Tema claro'}><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Sun} size={15} /></span><span className="theme-toggle-track" aria-hidden="true"><span /></span><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Moon} size={15} /></span></button><AccountMenu accountState={accountState} open={accountMenuOpen} disabled={isSwitchingAccount} onToggle={() => setAccountMenuOpen(value => !value)} onClose={() => setAccountMenuOpen(false)} onAction={handleAccountAction} onSwitch={handleAccountSwitch} /></div></header>
     <CalculatorPopover open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
-    <div className="app-content-layout">{mobileNavigationOpen && <button type="button" className="app-sidebar-backdrop" aria-label="Fechar navegação" onClick={closeMobileNavigation} /> }<aside className={`app-sidebar ${mobileNavigationOpen ? 'is-open' : ''}`}><div className="app-sidebar-header"><span className="sidebar-section-label">MENU</span><button type="button" className="app-sidebar-close" aria-label="Fechar navegação" onClick={closeMobileNavigation}><Icon icon={X} size={21} /></button></div><nav className="sidebar-navigation" aria-label="Navegação principal"><span className="sidebar-section-label">NAVEGAÇÃO</span><a onClick={closeMobileNavigation} className={view === 'dashboard' ? 'active' : ''} href="#dashboard" aria-label="Visão geral" aria-current={view === 'dashboard' ? 'page' : undefined} data-tooltip="Visão geral"><span className="sidebar-icon"><Icon icon={LayoutDashboard} size={18} /></span>Visão geral</a><a onClick={closeMobileNavigation} className={view === 'incomes' ? 'active' : ''} href="#movimentacoes" aria-label="Movimentações" aria-current={view === 'incomes' ? 'page' : undefined} data-tooltip="Movimentações"><span className="sidebar-icon"><Icon icon={ArrowLeftRight} size={18} /></span>Movimentações</a><a onClick={closeMobileNavigation} className={view === 'commitments' ? 'active' : ''} href="#compromissos" aria-label="Compromissos" aria-current={view === 'commitments' ? 'page' : undefined} data-tooltip="Compromissos"><span className="sidebar-icon"><Icon icon={Calendar} size={18} /></span>Compromissos</a><span className="sidebar-section-label">ORGANIZAÇÃO</span><a onClick={closeMobileNavigation} className={view === 'groups' ? 'active' : ''} href="#grupos" aria-label="Grupos" aria-current={view === 'groups' ? 'page' : undefined} data-tooltip="Grupos"><span className="sidebar-icon"><Icon icon={Folder} size={18} /></span>Grupos</a><span className="sidebar-section-label">CONTA</span><a onClick={closeMobileNavigation} className={view === 'profile' ? 'active' : ''} href="#perfil" aria-label="Perfil e Segurança" aria-current={view === 'profile' ? 'page' : undefined} data-tooltip="Perfil e Segurança"><span className="sidebar-icon"><Icon icon={UserCircle} size={18} /></span>Perfil e Segurança</a><a onClick={closeMobileNavigation} className={view === 'support' ? 'active' : ''} href="#suporte" aria-label="Suporte" aria-current={view === 'support' ? 'page' : undefined} data-tooltip="Suporte"><span className="sidebar-icon"><Icon icon={LifeBuoy} size={18} /></span>Suporte</a><span className="sidebar-section-label">FERRAMENTAS</span><button type="button" onClick={() => { setCalculatorOpen(true); closeMobileNavigation() }} aria-label="Calculadora" data-tooltip="Calculadora"><span className="sidebar-icon"><Icon icon={Calculator} size={18} /></span>Calculadora</button><button type="button" onClick={() => { startTutorial(); closeMobileNavigation() }} aria-label="Ajuda e tutorial" data-tooltip="Ajuda e tutorial"><span className="sidebar-icon sidebar-help-icon"><Icon icon={CircleHelp} size={18} /></span>Ajuda e tutorial</button><a onClick={closeMobileNavigation} className={view === 'forecast' ? 'active' : ''} href="#previsoes" aria-label="Previsões e Dados" aria-current={view === 'forecast' ? 'page' : undefined} data-tooltip="Previsões e Dados"><span className="sidebar-icon"><Icon icon={LineChart} size={18} /></span>Previsões e Dados</a></nav><div className="sidebar-theme-control"><span>APARÊNCIA</span><button type="button" className="theme-toggle" onClick={toggleTheme} aria-pressed={theme === 'dark'} aria-label={theme === 'dark' ? 'Tema escuro. Alternar para tema claro' : 'Tema claro. Alternar para tema escuro'} title={theme === 'dark' ? 'Tema escuro' : 'Tema claro'}><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Sun} size={15} /></span><span className="theme-toggle-track" aria-hidden="true"><span /></span><span className="theme-toggle-icon" aria-hidden="true"><Icon icon={Moon} size={15} /></span></button></div></aside><main>
+    <main className="app-main">
+      <div className="page-content">
       {error && <div className="alert error">{error}</div>}
 
        {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSecurity={mode => setAccountDialog({ mode, username: accountState.current.username || '' })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <IncomeManagement incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} categories={categories} onCreate={() => setIncomeDialog(true)} onCreateRecurring={() => setRecurringDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onDelete={income => setIncomeDelete(income)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onRefresh={refresh} onRecurringDeleted={() => setNotice('Entrada recorrente excluída com sucesso.')} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} groups={groups} categories={categories} summary={summary} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen} activeFilterCount={activeFilterCount} setEditing={setEditing} setCollapsed={setCollapsed} collapsed={collapsed} run={run} refresh={refresh} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <>
@@ -619,7 +561,8 @@ function App() {
           <section className="dashboard-card dashboard-movements-card" id="movimentacoes" data-tour="dashboard-movements"><RecentIncomeSection incomes={incomes} expenses={expenses} onCreate={() => setIncomeDialog(true)} onCreateExpense={() => setExpenseDialog(true)} onEditExpense={setEditingExpense} onDeleteExpense={expense => setDeleteDialog({ ...expense, transaction: true })} onViewAll={() => { window.location.hash = 'movimentacoes' }} /></section>
         </div>
       </>}
-    </main></div>
+      </div>
+    </main>
     <footer className="app-footer"><span>© 2026 Aloca. Todos os direitos reservados.</span><span>Desenvolvido por Maxwell Xavier.</span><a href="https://github.com/xavierr-max" target="_blank" rel="noopener noreferrer">GitHub: github.com/xavierr-max</a></footer>
     {editing && <CommitmentModal item={editing} categories={categories} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); run(async () => {}) }} />}
     {balanceModal && <InitialBalanceModal value={summary?.initialBalance ?? 0} onClose={() => setBalanceModal(false)} onSaved={() => { setBalanceModal(false); refresh(); setNotice('Saldo inicial atualizado.') }} />}
