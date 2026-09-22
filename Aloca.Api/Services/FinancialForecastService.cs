@@ -32,6 +32,12 @@ public sealed class FinancialForecastService(
         DateOnly to,
         CancellationToken cancellationToken)
     {
+        // Forecast is also a direct entry point (unlike the recurring-income
+        // list endpoint), so it must materialize active future occurrences
+        // before normalization. Otherwise a persisted recurring-income row
+        // without forecast rows is silently absent from the projection.
+        await new RecurringIncomeService(balanceService.DbContext, clock: clock)
+            .EnsureOccurrencesAsync(to, cancellationToken);
         var events = await normalizer.NormalizeAsync(from, to, cancellationToken);
         // The first opening balance is the current real balance: initial
         // balance plus all transactions dated up to the business date, less
