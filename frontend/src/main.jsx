@@ -3,10 +3,10 @@ import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import {
-  ArrowDownLeft, ArrowUpRight, BadgeCheck, Bell, BookOpen, Calculator,
-  ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye, Filter,
-  List, Pencil, Plus, RotateCw, Settings, ShieldCheck,
-  Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, ArrowDownToLine, ArrowUpFromLine, Mail, LifeBuoy,
+  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, BadgeCheck, Bell, BookOpen, Calculator,
+  CalendarDays, ChevronDown, ChevronRight, ChevronUp, CircleAlert, CircleCheck, CircleHelp, Eye, Filter,
+  Folder, LayoutDashboard, List, Pencil, Plus, RotateCw, Settings, ShieldCheck,
+  Search, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, ArrowDownToLine, ArrowUpFromLine, Mail, LifeBuoy,
 } from 'lucide-react'
 import { api, apiAvailabilityEvents } from './services/api'
 import { TutorialProvider, useTutorial } from './tutorials'
@@ -372,6 +372,48 @@ function ApiAvailabilityBoundary({ children }) {
   return <>{availability === 'online' && children}{availability === 'offline' && <ApiUnavailableScreen checking={checking} retrying={retrying} onRetry={() => check(true)} status={status} />}</>
 }
 
+function NavItem({ href, label, icon: Glyph, active }) {
+  return <a className={`app-nav-item${active ? ' is-active' : ''}`} href={href} aria-label={label} aria-current={active ? 'page' : undefined} data-tooltip={label}>
+    <Icon icon={Glyph} size={22} />
+  </a>
+}
+
+function AppSidebar({ view }) {
+  const primaryItems = [
+    ['#dashboard', 'Visão geral', LayoutDashboard, view === 'dashboard'],
+    ['#movimentacoes', 'Movimentações', ArrowLeftRight, view === 'incomes'],
+    ['#compromissos', 'Compromissos', CalendarDays, view === 'commitments'],
+    ['#previsoes', 'Previsões e Dados', BarChart3, view === 'forecast'],
+    ['#grupos', 'Grupos', Folder, view === 'groups'],
+  ]
+  const secondaryItems = [
+    ['#perfil', 'Perfil e configurações', Settings, view === 'profile'],
+    ['#suporte', 'Ajuda e tutorial', CircleHelp, view === 'support'],
+  ]
+  return <aside className="app-sidebar" aria-label="Navegação principal">
+    <nav className="app-sidebar-primary">
+      {primaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+    </nav>
+    <nav className="app-sidebar-secondary" aria-label="Navegação secundária">
+      {secondaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+    </nav>
+  </aside>
+}
+
+function AppTopbar({ account, createMenuOpen, onToggleCreate, onNewIncome, onNewRecurring, onNewCommitment, theme, onToggleTheme, onAccount }) {
+  return <header className="app-topbar">
+    <label className="app-search"><Icon icon={Search} size={22} /><input type="search" placeholder="Buscar algo..." aria-label="Buscar algo" /></label>
+    <div className="app-topbar-actions">
+      <div className="app-create-wrap">
+        <button type="button" className="app-create-button" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={onToggleCreate}><Icon icon={Plus} size={19} /> Novo</button>
+        {createMenuOpen && <div className="app-create-menu" role="menu"><button type="button" role="menuitem" onClick={onNewIncome}>Nova entrada</button><button type="button" role="menuitem" onClick={onNewRecurring}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={onNewCommitment}>Novo compromisso</button></div>}
+      </div>
+      <button type="button" className="app-theme-toggle" onClick={onToggleTheme} aria-label="Alternar tema" title="Alternar tema"><Sun size={16} /><span><i /></span><Moon size={16} /></button>
+      <button type="button" className="app-account-button" onClick={onAccount} aria-label="Abrir perfil e configurações"><span className="app-account-avatar">{(account?.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>Minha conta</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>
+    </div>
+  </header>
+}
+
 function App() {
   const [accountState, setAccountState] = useState(null)
   const [accountReady, setAccountReady] = useState(false)
@@ -413,6 +455,8 @@ function App() {
   const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#previsoes' ? 'forecast' : window.location.hash === '#grupos' ? 'groups' : window.location.hash === '#suporte' ? 'support' : window.location.hash === '#perfil' ? 'profile' : 'dashboard'
   const [view, setView] = useState(getView())
   const [calculatorOpen, setCalculatorOpen] = useState(false)
+  const [createMenuOpen, setCreateMenuOpen] = useState(false)
+  const { theme, toggleTheme } = useTheme()
   const refreshVersionRef = useRef(0)
   const accountTransitionRef = useRef(0)
   useEffect(() => { if (!notice) return undefined; const timer = window.setTimeout(() => setNotice(''), 3500); return () => window.clearTimeout(timer) }, [notice])
@@ -474,6 +518,12 @@ function App() {
   useEffect(() => { sessionStorage.setItem('aloca-selected-month', selectedMonth) }, [selectedMonth])
   useEffect(() => { const onHash = () => setView(getView()); window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash) }, [])
   useEffect(() => { const timer = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 250); return () => clearTimeout(timer) }, [searchInput])
+  useEffect(() => {
+    if (!createMenuOpen) return undefined
+    const close = event => { if (event.key === 'Escape' || !event.target.closest('.app-create-wrap')) setCreateMenuOpen(false) }
+    document.addEventListener('keydown', close); document.addEventListener('mousedown', close)
+    return () => { document.removeEventListener('keydown', close); document.removeEventListener('mousedown', close) }
+  }, [createMenuOpen])
   useEffect(() => {
     if (!filtersOpen) return undefined
     const closeOnEscape = event => { if (event.key === 'Escape') setFiltersOpen(false) }
@@ -545,6 +595,9 @@ function App() {
   if (!accountReady) return <div className="app-shell"><div className="loading">Preparando sua conta local…</div></div>
   if (!accountState?.current) return <div className="app-shell"><div className="loading account-recovery"><strong>Não foi possível abrir uma conta local</strong><span>Gerencie as contas deste dispositivo para liberar espaço e entrar no Aloca.</span></div></div>
   return <div className="app-shell">
+    <div className="app-logo-slot" aria-hidden="true"><img src={theme === 'dark' ? '/aloca-logo-dark.png' : '/aloca-logo.png'} alt="" /></div>
+    <AppTopbar account={accountState.current} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setIncomeDialog(true) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} onAccount={() => { window.location.hash = 'perfil' }} />
+    <AppSidebar view={view} />
     <CalculatorPopover open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
     <main className="app-main">
       <div className="page-content">
