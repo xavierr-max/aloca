@@ -258,3 +258,532 @@
 .drawer-actions button, .account-trigger { display: inline-flex; align-items: center; gap: 8px; }
 .sidebar-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; }
 .icon-button > svg { display: block; }
+
+/* Compact top navigation: keep the existing structure and controls, but give
+   the header a consistent dashboard control rhythm. */
+.topbar {
+  height: 68px;
+  min-height: 68px;
+  border-radius: 0 0 18px 18px;
+  box-shadow: none;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Desktop navbar composition: identity, structural search, then actions. */
+@media (min-width: 768px) {
+  .topbar {
+    height: 78px;
+    min-height: 78px;
+    padding-inline: 24px;
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    background: var(--header-background);
+    gap: 24px;
+  }
+
+  .brand {
+    min-width: 42px;
+    width: 42px;
+    flex: 0 0 42px;
+  }
+
+  .brand-name-row { display: none; }
+
+  .topbar-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: clamp(280px, 28vw, 380px);
+    height: 50px;
+    flex: 0 1 clamp(280px, 28vw, 380px);
+    padding: 0 16px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-pill);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+  }
+
+  .topbar-search input {
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .topbar-search input::placeholder { color: var(--text-muted); }
+  .topbar-search:focus-within { border-color: var(--border-strong); }
+  .topbar-actions { margin-left: auto; gap: 10px; }
+  .topbar-actions > *, .global-create-trigger, .theme-toggle, .account-trigger { height: 46px; min-height: 46px; }
+  .global-create-trigger { padding-inline: 17px; border-radius: 15px; }
+  .theme-toggle { width: 78px; border-radius: var(--radius-pill); }
+  .account-trigger { min-width: 145px; border-radius: var(--radius-pill); }
+  .calculator-trigger { display: none; }
+}
+
+.topbar-actions > *,
+.global-create-trigger,
+.calculator-trigger,
+.theme-toggle,
+.account-trigger {
+  height: 36px;
+  min-height: 36px;
+}
+
+.global-create-trigger {
+  padding: 0 12px;
+  border-radius: 10px;
+}
+
+.calculator-trigger {
+  width: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
+}
+
+.theme-toggle {
+  width: 72px;
+  padding-block: 3px;
+  box-shadow: none;
+}
+
+.account-trigger {
+  min-width: 150px;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+.account-avatar {
+  width: 26px;
+  height: 26px;
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    height: 64px;
+    min-height: 64px;
+    padding-block: 8px;
+    border-radius: 0 0 16px 16px;
+  }
+}
+
+/* These duplicated entry points are intentionally kept out of every sidebar
+   breakpoint; their page and calculator functionality still exists elsewhere. */
+.sidebar-navigation > a:nth-child(8),
+.sidebar-navigation > button:nth-child(11) {
+  display: none;
+}
+
+/* Desktop sidebar hierarchy. The existing navigation nodes remain intact so
+   their routes and handlers are unchanged; only their visual grouping/order
+   is adjusted here. */
+@media (min-width: 768px) {
+  .app-sidebar {
+    flex-basis: 240px;
+    display: flex;
+    flex-direction: column;
+    top: calc(68px + var(--space-4));
+    height: calc(100vh - 68px - var(--space-6));
+    max-height: calc(100vh - 68px - var(--space-6));
+    padding-block: var(--space-4);
+  }
+
+  .sidebar-navigation {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-navigation > .sidebar-section-label,
+  .sidebar-navigation > a,
+  .sidebar-navigation > button {
+    flex: 0 0 auto;
+  }
+
+  .sidebar-navigation > .sidebar-section-label {
+    margin: 20px 10px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+  }
+
+  .sidebar-navigation > .sidebar-section-label:first-child {
+    order: 1;
+    margin-top: 0;
+    font-size: 0;
+  }
+
+  .sidebar-navigation > .sidebar-section-label:first-child::after {
+    content: 'PRINCIPAL';
+    font-size: 10px;
+  }
+
+  .sidebar-navigation > a,
+  .sidebar-navigation > button {
+    min-height: 42px;
+    padding: 0 10px;
+    border-radius: 10px;
+  }
+
+  .sidebar-navigation > a:nth-child(2) { order: 2; }
+  .sidebar-navigation > a:nth-child(3) { order: 3; }
+  .sidebar-navigation > a:nth-child(4) { order: 4; }
+  .sidebar-navigation > a:nth-child(13) { order: 5; }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(5) {
+    order: 6;
+    margin-top: 22px;
+    font-size: 0;
+  }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(5)::after {
+    content: 'ORGANIZAÇÃO';
+    font-size: 10px;
+  }
+
+  .sidebar-navigation > a:nth-child(6) { order: 7; }
+
+  /* Profile remains available through the account menu; calculator remains
+     available in the topbar. */
+  .sidebar-navigation > .sidebar-section-label:nth-child(7),
+  .sidebar-navigation > a:nth-child(8),
+  .sidebar-navigation > .sidebar-section-label:nth-child(10),
+  .sidebar-navigation > button:nth-child(11) {
+    display: none;
+  }
+
+  .sidebar-navigation > a:nth-child(9) { order: 9; }
+  .sidebar-navigation > button:nth-child(12) { order: 10; }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(10) {
+    display: block;
+    order: 8;
+    margin-top: 22px;
+    font-size: 0;
+  }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(10)::after {
+    content: 'SUPORTE';
+    font-size: 10px;
+  }
+
+  .sidebar-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .sidebar-navigation a.active,
+  .sidebar-navigation button.active {
+    position: relative;
+    border-color: color-mix(in srgb, var(--color-success) 18%, var(--border-default));
+    background: color-mix(in srgb, var(--success-surface) 58%, transparent);
+    color: var(--color-success);
+  }
+
+  .sidebar-navigation a.active::before,
+  .sidebar-navigation button.active::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--color-success);
+  }
+
+  /* Final visual refinement: consistent rhythm and a quieter active state. */
+  .sidebar-navigation {
+    gap: 5px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .sidebar-navigation > .sidebar-section-label {
+    margin-bottom: 4px;
+    color: var(--text-muted);
+  }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(5),
+  .sidebar-navigation > .sidebar-section-label:nth-child(10) {
+    margin-top: 21px;
+  }
+
+  .sidebar-navigation > .sidebar-section-label:nth-child(10) {
+    margin-top: auto;
+    padding-top: 21px;
+  }
+
+  .sidebar-navigation > a,
+  .sidebar-navigation > button {
+    height: 41px;
+    min-height: 41px;
+    padding-inline: 10px;
+  }
+
+  .sidebar-navigation a.active,
+  .sidebar-navigation button.active {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--success-surface) 44%, transparent);
+  }
+
+  .sidebar-navigation a.active::before,
+  .sidebar-navigation button.active::before {
+    top: 11px;
+    bottom: 11px;
+    width: 2px;
+  }
+}
+
+/* Responsive navigation shell. Desktop remains expanded; mobile keeps its
+   existing drawer behavior. */
+@media (min-width: 768px) {
+  .app-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 36px;
+    margin-bottom: 4px;
+  }
+
+  .app-sidebar-header .sidebar-section-label {
+    display: none;
+  }
+
+  .app-sidebar-close {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-default);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .app-sidebar-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+}
+
+@media (max-width: 1279px) and (min-width: 768px) {
+  .app-sidebar { flex-basis: 208px; }
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    height: 64px;
+    min-height: 64px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 8px 12px;
+    overflow: visible;
+  }
+
+  .mobile-menu-trigger {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    border: 1px solid var(--border-default);
+    border-radius: 9px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+  }
+
+  .brand { flex: 1 1 auto; min-width: 0; gap: 8px; }
+  .brand::before { width: 30px; height: 30px; flex-basis: 30px; border-radius: 9px; }
+  .topbar h1 { font-size: 21px; }
+  .beta-badge { display: none; }
+  .topbar-actions { flex: 0 0 auto; gap: 6px; }
+  .global-create-trigger { width: 36px; min-width: 36px; padding: 0; justify-content: center; }
+  .global-create-trigger span { display: none; }
+  .topbar-actions .calculator-trigger,
+  .topbar-actions .theme-toggle { display: none; }
+  .account-trigger { width: 36px; min-width: 36px; max-width: 36px; padding: 0; justify-content: center; }
+  .account-trigger-copy,
+  .account-trigger > span:last-child { display: none; }
+
+  .app-content-layout { display: block; padding: 0; }
+  .app-sidebar {
+    display: block;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 810;
+    width: min(86vw, 320px);
+    height: 100vh;
+    max-height: none;
+    padding: 78px 16px 24px;
+    transform: translateX(-105%);
+    transition: transform 160ms ease;
+    overflow-y: auto;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .app-sidebar.is-open { transform: translateX(0); }
+  .app-sidebar-header { position: absolute; inset: 16px 16px auto; display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .app-sidebar-header .sidebar-section-label { display: block; margin: 0; }
+  .app-sidebar-close { display: grid; width: 44px; height: 44px; min-height: 44px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-subtle); color: var(--text-primary); }
+  .app-sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 800; border: 0; min-height: 0; padding: 0; background: var(--overlay); cursor: pointer; }
+}
+
+@media (max-width: 430px) {
+  .topbar { padding-inline: 10px; }
+  .brand h1 { font-size: 20px; }
+}
+
+/* Desktop navigation rail. The existing navigation nodes and routes remain
+   intact; only their desktop presentation changes here. */
+@media (min-width: 1024px) {
+  .app-content-layout {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 24px;
+    padding-inline: var(--content-gutter);
+  }
+
+  .app-sidebar {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    width: 80px;
+    height: calc(100vh - 126px);
+    min-height: 520px;
+    max-height: calc(100vh - 126px);
+    padding: 12px;
+    border: 1px solid var(--border-default);
+    border-radius: 26px;
+    background: var(--bg-subtle);
+  }
+
+  .app-sidebar-header,
+  .sidebar-theme-control,
+  .sidebar-section-label {
+    display: none;
+  }
+
+  .sidebar-navigation {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  .sidebar-navigation > a,
+  .sidebar-navigation > button {
+    position: relative;
+    display: grid;
+    flex: 0 0 48px;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0;
+  }
+
+  .sidebar-navigation > a:nth-child(2) { order: 1; }
+  .sidebar-navigation > a:nth-child(3) { order: 2; }
+  .sidebar-navigation > a:nth-child(4) { order: 3; }
+  .sidebar-navigation > a:nth-child(13) { order: 4; }
+  .sidebar-navigation > a:nth-child(6) { order: 5; margin-top: 18px; }
+  .sidebar-navigation > a:nth-child(9) { order: 6; margin-top: auto; }
+  .sidebar-navigation > button:nth-child(12) { order: 7; }
+
+  .sidebar-navigation > a.active,
+  .sidebar-navigation > button.active {
+    border: 0;
+    background: var(--success-surface);
+    color: var(--color-success);
+  }
+
+  .sidebar-navigation > a:hover,
+  .sidebar-navigation > a:focus-visible,
+  .sidebar-navigation > button:hover,
+  .sidebar-navigation > button:focus-visible {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .sidebar-navigation > a.active:hover,
+  .sidebar-navigation > a.active:focus-visible,
+  .sidebar-navigation > button.active:hover,
+  .sidebar-navigation > button.active:focus-visible {
+    background: var(--success-surface);
+    color: var(--color-success);
+  }
+
+  .sidebar-navigation .sidebar-icon {
+    display: grid;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    color: currentColor;
+    font-size: 0;
+  }
+
+  .sidebar-navigation .sidebar-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .sidebar-navigation > a::after,
+  .sidebar-navigation > button::after {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 12px);
+    z-index: 30;
+    display: none;
+    width: max-content;
+    max-width: 220px;
+    padding: 8px 10px;
+    transform: translateY(-50%);
+    border: 1px solid var(--border-default);
+    border-radius: 9px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    content: attr(data-tooltip);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .sidebar-navigation > a:hover::after,
+  .sidebar-navigation > a:focus-visible::after,
+  .sidebar-navigation > button:hover::after,
+  .sidebar-navigation > button:focus-visible::after {
+    display: block;
+  }
+
+  .app-content-layout main {
+    padding-top: 32px;
+  }
+}
