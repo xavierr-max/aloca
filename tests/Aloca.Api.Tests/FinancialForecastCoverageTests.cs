@@ -98,6 +98,48 @@ public sealed class FinancialForecastCoverageTests
         Assert.Equal(469.73m, month.FreeBalance);
     }
 
+    [Fact]
+    public async Task ForecastMaterializesActiveRecurringIncomeBeforeNormalizingEvents()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.FinancialSettings.Add(new FinancialSettings(434.04m));
+        db.RecurringIncomes.Add(new RecurringIncome("Teste#ER1", 100m, null, RecurringIncomeFrequency.Monthly, new(2026, 9, 22), null, 22));
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(new(2026, 9, 22));
+        var service = new FinancialForecastService(new ForecastEventNormalizer(db), new ForecastCalculator(), new FinancialBalanceService(db, clock), clock);
+
+        var result = await service.GetAsync(new DateOnly(2026, 9, 1), 6, CancellationToken.None);
+
+        Assert.Equal(new[] { 100m, 100m, 100m, 100m, 100m, 100m }, result.Months.Select(x => x.TotalIncome).ToArray());
+        Assert.Equal(new[] { 534.04m, 634.04m, 734.04m, 834.04m, 934.04m, 1034.04m }, result.Months.Select(x => x.ClosingBalance).ToArray());
+        Assert.Equal(600m, result.Summary.TotalIncome);
+        Assert.Equal(1034.04m, result.Summary.ProjectedClosingBalance);
+    }
+
+    [Fact]
+    public async Task FullyCoveredCommitmentKeepsReservedAmountSeparateFromCoverageDeficit()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        db.FinancialSettings.Add(new FinancialSettings(434.04m));
+        var commitment = new FinancialCommitment("Compromisso coberto", 75m, 1, 0, 75m, null, false, new(2026, 9, 22));
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(new(2026, 9, 22));
+        var service = new FinancialForecastService(new ForecastEventNormalizer(db), new ForecastCalculator(), new FinancialBalanceService(db, clock), clock);
+
+        var result = await service.GetAsync(new DateOnly(2026, 9, 1), 6, CancellationToken.None);
+
+        Assert.Equal(75m, result.Summary.TotalAllocated);
+        Assert.Equal(75m, result.Summary.TotalCommitted);
+        Assert.Equal(0m, result.Summary.CoverageDeficit);
+        Assert.Equal(359.04m, result.Summary.UnallocatedBalance);
+        Assert.Equal(359.04m, result.Summary.FreeBalance);
+        var month = Assert.Single(result.Months, x => x.Month == 9);
+        Assert.Equal(75m, month.Allocated);
+        Assert.Equal(75m, month.Committed);
+        Assert.Equal(100m, month.Coverage);
+    }
+
     private sealed class FixedForecastClock(DateOnly today) : IBusinessClock
     {
         public DateTime UtcNow => today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);

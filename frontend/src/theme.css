@@ -11,6 +11,7 @@
    --chart-income:var(--color-income); --chart-expense:var(--color-expense); --chart-balance:#477e66;
    --layer-page:0; --layer-popover:700; --layer-drawer-backdrop:800; --layer-drawer:810; --layer-modal-backdrop:900; --layer-modal:910; --layer-toast:1000;
   --header-background:#fff; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover);
+  --surface-page:#f6f8f7; --surface-card:#fff; --surface-card-elevated:#fff; --surface-card-muted:#eef2f0; --surface-positive:#d9f0df; --surface-positive-muted:#d9f0df; --surface-positive-strong:#55a968; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#e0f0e5; --surface-expense-icon:#f4e1e1; --text-on-positive:#102419; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -23,6 +24,7 @@
   --overlay:rgba(0,0,0,.74); --shadow-sm:0 2px 10px rgba(0,0,0,.2); --shadow-md:0 16px 38px rgba(0,0,0,.34);
   --chart-income:var(--color-income); --chart-expense:var(--color-expense); --chart-balance:#9be0ad;
   --header-background:#0b0e10; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover);
+  --surface-page:#080b0d; --surface-card:#11161a; --surface-card-elevated:#1c2328; --surface-card-muted:#151c20; --surface-positive:#193a29; --surface-positive-muted:#193a29; --surface-positive-strong:#55b875; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#194b32; --surface-expense-icon:#53272b; --text-on-positive:#08150d; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
 }
 /* Aliases keep the existing component CSS compatible during the migration. */
 :root { --background:var(--bg-page); --canvas:var(--bg-page); --surface:var(--bg-card); --surface-elevated:var(--bg-elevated); --surface-hover:var(--bg-hover); --bg-primary:var(--bg-page); --bg-secondary:var(--bg-subtle); --ink:var(--text-primary); --ink-soft:var(--text-secondary); --muted:var(--text-muted); --neutral:var(--text-secondary); --neutral-strong:var(--text-primary); --line:var(--border-default); --border:var(--border-default); --border-subtle:var(--border-default); --surface-border:var(--border-default); --item-divider:var(--border-default); --primary:var(--color-success); --primary-hover:var(--color-income); --primary-active:var(--color-success); --primary-soft:var(--success-surface); --positive:var(--color-income); --positive-strong:var(--color-income); --positive-surface:var(--success-surface); --danger:var(--color-danger); --danger-strong:var(--color-danger); --warning:var(--color-warning); --neutral-surface:var(--bg-subtle); --accent:var(--color-success); --accent-dark:var(--color-income); --accent-pale:var(--success-surface); --forest:var(--text-primary); --forest-2:var(--text-secondary); }
@@ -418,3 +420,7 @@ body,button,input,select,textarea { font-family:'DM Sans',sans-serif; } body { m
 :root[data-theme="dark"] .brand-logo { background:var(--bg-card) url('/aloca-logo-dark.png') center/cover no-repeat; }
 .render-error-logo { width:46px; height:46px; margin:0 auto 15px; border-radius:15px; }
 .topbar h1::before { content:none !important; display:none !important; }
+
+.app-toast { position: fixed; top: 92px; right: 24px; z-index: var(--layer-toast); max-width: min(360px, calc(100vw - 32px)); padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--color-success) 28%, var(--border-default)); border-radius: 10px; background: var(--surface-card-elevated); color: var(--color-success); box-shadow: var(--shadow-sm); font-size: 12px; font-weight: 650; pointer-events: none; animation: toast-in .18s ease both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) { .app-toast { top: 80px; right: 16px; } }
