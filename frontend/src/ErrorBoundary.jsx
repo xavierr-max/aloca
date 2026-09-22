@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { BrandLogo } from './components/BrandLogo.jsx'
 
 export default class ErrorBoundary extends Component {
   state = { hasError: false }
@@ -18,7 +19,7 @@ export default class ErrorBoundary extends Component {
 
     return <main className="render-error-screen" role="alert" aria-live="assertive">
       <section className="render-error-card">
-        <div className="render-error-logo" aria-hidden="true">A</div>
+        <BrandLogo className="render-error-logo" />
         <span className="render-error-eyebrow">ALOCA · CONTROLE FINANCEIRO</span>
         <h1>Ocorreu um erro inesperado</h1>
         <p>Não foi possível exibir esta tela. Recarregue a página para tentar novamente.</p>

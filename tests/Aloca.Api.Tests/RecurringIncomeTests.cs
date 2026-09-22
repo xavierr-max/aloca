@@ -179,10 +179,6 @@ public sealed class RecurringIncomeTests
 
         var first = created!.Occurrences.Single(x => x.ScheduledDate == today);
         await service.ReceiveAsync(first.Id, CancellationToken.None);
-        var projection = await new FinancialProjectionService(db, service).GetAsync(3, CancellationToken.None);
-
-        Assert.Equal(160m, projection.TotalProjectedIncome);
-        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Incomes), x => x.Id == first.Id.ToString());
         Assert.Single(await db.Transactions.ToListAsync());
         Assert.Equal(80m, (await new FinancialBalanceService(db).GetAsync(CancellationToken.None)).SaldoReal);
     }
@@ -209,8 +205,6 @@ public sealed class RecurringIncomeTests
             (await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences.Single(x => x.Id == future.Id).Status);
         Assert.Contains((await service.GetAsync(created.Id, CancellationToken.None))!.Occurrences,
             x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate > future.ScheduledDate);
-        var projection = await new FinancialProjectionService(db, service).GetAsync(3, CancellationToken.None);
-        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Incomes), x => x.Id == future.Id.ToString());
     }
 
     [Fact]

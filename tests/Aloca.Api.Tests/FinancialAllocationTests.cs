@@ -326,6 +326,21 @@ public sealed class FinancialAllocationTests
     }
 
     [Fact]
+    public async Task DeallocationCannotWithdrawMoreThanTheCommitmentReserve()
+    {
+        await using var db = CreateDb();
+        var commitment = Commitment("Parcela", 200m, 1, true, allocatedAmount: 50m);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeallocateAsync(commitment.Id, 50.01m, default));
+
+        Assert.Equal("Deallocation amount cannot exceed the allocated amount.", error.Message);
+        Assert.Equal(50m, (await service.GetByIdAsync(commitment.Id, default))!.AllocatedAmount);
+    }
+
+    [Fact]
     public async Task FutureIncomeIsNotAvailableForCurrentAllocation()
     {
         await using var db = CreateDb();
@@ -409,6 +424,26 @@ public sealed class FinancialAllocationTests
         Assert.Equal(0m, saved.OverallCoveragePercentage);
         Assert.Equal(0m, saved.AllocatedForNextInstallment);
         Assert.False(saved.CanPay);
+    }
+
+    [Fact]
+    public async Task AllocateAvailableUsesOnlyTheAvailableBalanceWhenTheRemainingNeedIsLarger()
+    {
+        await using var db = CreateDb();
+        await SeedTransaction(db, 100m, TransactionType.Income);
+        var commitment = Commitment("Parcela", 200m, 1, true);
+        db.FinancialCommitments.Add(commitment);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.AllocateAvailableAsync(commitment.Id, default);
+
+        var saved = (await service.GetByIdAsync(commitment.Id, default))!;
+        var summary = await new FinancialSummaryService(db).GetAsync(default);
+        Assert.Equal(100m, saved.AllocatedAmount);
+        Assert.Equal(100m, saved.RemainingForNextInstallment);
+        Assert.Equal(0m, summary.SaldoNaoAlocado);
+        Assert.Equal(100m, summary.TotalReservado);
     }
 
     [Fact]

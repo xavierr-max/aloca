@@ -49,7 +49,7 @@ public sealed class AutomaticProcessingTests
     }
 
     [Fact]
-    public async Task AutomaticPaymentUpdatesBalanceReservationSummaryAndProjectionWithoutDoubleCounting()
+    public async Task AutomaticPaymentUpdatesBalanceReservationSummaryWithoutDoubleCounting()
     {
         await using var db = CreateDb();
         var today = BusinessClock.Today();
@@ -79,9 +79,6 @@ public sealed class AutomaticProcessingTests
         Assert.Equal(300m, detail.DueAmount);
         Assert.Equal(300m, detail.AllocatedAmount);
 
-        var projection = await new FinancialProjectionService(db, new RecurringIncomeService(db)).GetAsync(2, default);
-        Assert.DoesNotContain(projection.Months.SelectMany(x => x.Expenses), x => x.Id == $"{item.Id}:1");
-        Assert.Contains(projection.Months.SelectMany(x => x.Expenses), x => x.Id == $"{item.Id}:2");
     }
 
     [Fact]

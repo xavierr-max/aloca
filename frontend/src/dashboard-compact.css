@@ -11,9 +11,7 @@
   overflow: hidden;
   border: 1px solid var(--border-default);
   border-radius: 20px;
-  background:
-    linear-gradient(to right, transparent 0, transparent calc(21.27% - .5px), var(--border-default) calc(21.27% - .5px), var(--border-default) calc(21.27% + .5px), transparent calc(21.27% + .5px), transparent calc(44.56% - .5px), var(--border-default) calc(44.56% - .5px), var(--border-default) calc(44.56% + .5px), transparent calc(44.56% + .5px), transparent calc(81.27% - .5px), var(--border-default) calc(81.27% - .5px), var(--border-default) calc(81.27% + .5px), transparent calc(81.27% + .5px)),
-    var(--bg-card);
+  background: var(--bg-card);
   box-shadow: var(--shadow-sm);
 }
 
@@ -104,7 +102,6 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  border-left: 1px solid var(--border-default);
 }
 
 .command-allocation .metric {
@@ -200,7 +197,6 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  border-left: 1px solid var(--border-default);
 }
 
 .objective-heading {
@@ -458,7 +454,6 @@
   flex-direction: column;
   justify-content: flex-start;
   gap: 0;
-  border-left: 1px solid var(--border-default);
 }
 
 .command-free > strong { color: var(--color-success); }
@@ -509,8 +504,8 @@
     grid-template-areas: "balance committed" "free free" "objective objective" "details details";
     background: var(--bg-card);
   }
-  .command-objective { border-top: 1px solid var(--border-default); border-left: 0; }
-  .command-free { border-top: 1px solid var(--border-default); border-left: 0; }
+  .command-objective { border-left: 0; }
+  .command-free { border-left: 0; }
   .calculation-breakdown { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -525,7 +520,7 @@
   .command-free { padding: 16px; }
   .command-allocation,
   .command-free,
-  .command-objective { border-left: 0; border-top: 1px solid var(--border-default); }
+  .command-objective { border-left: 0; }
   .command-balance h2,
   .command-allocation .metric strong,
   .command-free > strong { font-size: 28px; }
@@ -545,3 +540,16 @@
 @media (prefers-reduced-motion: reduce) {
   .objective-suggestions { animation: none; }
 }
+.command-center { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-areas: "balance committed free estimated" "details details details details"; margin-bottom: 18px; }
+.command-estimated { grid-area: estimated; min-width: 0; padding: 18px 20px; }
+.command-estimated > strong { display: block; margin: 5px 0 6px; color: var(--text-primary); font-family: var(--font-display); font-size: clamp(26px, 2.3vw, 32px); font-weight: 650; letter-spacing: -.055em; line-height: 1.08; font-variant-numeric: tabular-nums; }
+.command-estimated > small { display: block; color: var(--text-secondary); font-size: 11px; line-height: 1.35; }
+.dashboard-grid { grid-template-columns: minmax(0, 1.45fr) minmax(300px, .75fr); align-items: start; }
+.dashboard-main-column { display: grid; gap: 18px; min-width: 0; }
+.dashboard-objective-card { padding: 0; overflow: hidden; }
+.dashboard-objective-card .command-objective { border: 0; padding: 22px; }
+.dashboard-summary-card { grid-column: auto; }
+.dashboard-commitments-card { grid-column: auto; min-width: 0; }
+
+@media(max-width:1023px) { .command-center { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "balance committed" "free estimated" "details details"; } .dashboard-grid { grid-template-columns: 1fr; } }
+@media(max-width:639px) { .command-center { grid-template-columns: 1fr; grid-template-areas: "balance" "committed" "free" "estimated" "details"; } .command-allocation, .command-free, .command-estimated { border-left: 0; } .command-balance, .command-allocation, .command-free, .command-estimated { padding: 16px; } .dashboard-grid { gap: 12px; margin-top: 16px; } .dashboard-objective-card .command-objective { padding: 18px 14px; } }

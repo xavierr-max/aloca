@@ -143,7 +143,9 @@ builder.Services.AddHostedService<DeviceRetentionHostedService>();
 builder.Services.AddScoped<FinancialAllocationReconciliationService>();
 builder.Services.AddScoped<FinancialCommitmentService>();
 builder.Services.AddScoped<FinancialSettingsService>();
-builder.Services.AddScoped<FinancialProjectionService>();
+builder.Services.AddScoped<IForecastEventNormalizer, ForecastEventNormalizer>();
+builder.Services.AddScoped<IForecastCalculator, ForecastCalculator>();
+builder.Services.AddScoped<IFinancialForecastService, FinancialForecastService>();
 builder.Services.AddHostedService<AutomaticProcessingHostedService>();
 
 var app = builder.Build();

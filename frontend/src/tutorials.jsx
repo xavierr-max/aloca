@@ -9,9 +9,8 @@ const tutorialDefinitions = {
     { selector: '[data-tour="initial-balance"]', title: 'Saldo inicial', description: 'Informe ou ajuste o valor que você já tinha antes de registrar novas movimentações. Isso não cria uma transação.' },
     { selector: '[data-tour="allocation-action"]', title: 'Alocar saldo', description: 'Veja seus compromissos e faça a alocação diretamente por lá.' },
     { selector: '[data-tour="dashboard-objective"]', title: 'Defina uma direção', description: 'Escolha uma sugestão ou escreva o objetivo que orienta como você quer usar o saldo reservado.' },
-    { selector: '[data-tour="dashboard-details"]', title: 'Explore o mês', description: 'Abra esta área para consultar o resumo mensal, a projeção, as movimentações recentes e os próximos compromissos.' },
+    { selector: '[data-tour="dashboard-details"]', title: 'Visão geral modular', description: 'Consulte o resumo mensal, a projeção resumida, os compromissos prioritários e as movimentações recentes.' },
     { selector: '[data-tour="dashboard-summary"]', title: 'Leia o mês', description: 'Consulte entradas, saídas, resultado, cobertura dos compromissos e saldo estimado do mês selecionado.' },
-    { selector: '[data-tour="dashboard-projection"]', title: 'Projete seu saldo', description: 'A projeção mostra entradas, saídas e saldo esperado. Escolha o período e clique em um mês para ver sua composição.' },
     { selector: '[data-tour="dashboard-movements"]', title: 'Registre movimentações', description: 'Nesta seção você consulta lançamentos recentes e pode registrar uma nova entrada ou saída.' },
   ],
   incomes: [
