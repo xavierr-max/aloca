@@ -10,7 +10,7 @@
   --overlay:rgba(16,20,22,.48); --shadow-sm:0 2px 8px rgba(16,20,22,.06); --shadow-md:0 12px 30px rgba(16,20,22,.1);
    --chart-income:var(--color-income); --chart-expense:var(--color-expense); --chart-balance:#477e66;
    --layer-page:0; --layer-popover:700; --layer-drawer-backdrop:800; --layer-drawer:810; --layer-modal-backdrop:900; --layer-modal:910; --layer-toast:1000;
-  --header-background:#fff; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover);
+  --header-background:#fff; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover); --surface-nav-active:#e4ebe6;
   --surface-page:#f6f8f7; --surface-card:#fff; --surface-card-elevated:#fff; --surface-card-muted:#eef2f0; --surface-positive:#d9f0df; --surface-positive-muted:#d9f0df; --surface-positive-strong:#55a968; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#e0f0e5; --surface-expense-icon:#f4e1e1; --text-on-positive:#102419; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
 }
 :root[data-theme="dark"] {
@@ -23,7 +23,7 @@
   --urgent-surface:rgba(255,119,125,.12); --urgent-surface-strong:rgba(255,119,125,.22); --urgent-border:rgba(255,137,143,.62); --urgent-ink:#ff9b9f;
   --overlay:rgba(0,0,0,.74); --shadow-sm:0 2px 10px rgba(0,0,0,.2); --shadow-md:0 16px 38px rgba(0,0,0,.34);
   --chart-income:var(--color-income); --chart-expense:var(--color-expense); --chart-balance:#9be0ad;
-  --header-background:#0b0e10; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover);
+  --header-background:#0b0e10; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover); --surface-nav-active:#f2f3ee;
   --surface-page:#080b0d; --surface-card:#11161a; --surface-card-elevated:#1c2328; --surface-card-muted:#151c20; --surface-positive:#193a29; --surface-positive-muted:#193a29; --surface-positive-strong:#55b875; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#194b32; --surface-expense-icon:#53272b; --text-on-positive:#08150d; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
 }
 /* Aliases keep the existing component CSS compatible during the migration. */
