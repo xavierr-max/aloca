@@ -29,6 +29,7 @@ import './dashboard-overview.css'
 import './commitments-base.css'
 import './responsive-overrides.css'
 import './account-contrast.css'
+import './mobile-foundation.css'
 
 const iconProps = { size: 18, strokeWidth: 1.8, 'aria-hidden': true, focusable: false }
 const Icon = ({ icon: Glyph, size, className = '' }) => <Glyph {...iconProps} size={size ?? iconProps.size} className={className} />
@@ -463,6 +464,29 @@ function MobileNavigation({ view, onClose }) {
   </div>
 }
 
+function MobileBottomNavigation({ view }) {
+  const items = [
+    ['#dashboard', 'Início', LayoutDashboard],
+    ['#movimentacoes', 'Movimentos', ArrowLeftRight],
+    ['#compromissos', 'Compromissos', CalendarDays],
+    ['#previsoes', 'Previsões', BarChart3],
+    ['#grupos', 'Grupos', Folder],
+    ['#perfil', 'Perfil', Settings],
+    ['#suporte', 'Suporte', LifeBuoy],
+  ]
+  return <nav className="mobile-bottom-navigation" aria-label="Navegação mobile">
+    <div className="mobile-bottom-navigation-scroll">
+      {items.map(([href, label, Glyph]) => {
+        const active = view === href.slice(1) || (href === '#movimentacoes' && view === 'incomes')
+        return <a key={href} href={href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined}>
+          <Glyph size={19} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
+          <span>{label}</span>
+        </a>
+      })}
+    </div>
+  </nav>
+}
+
 const dashboardCards = [
   { key: 'current', variant: 'solid-light', label: 'SALDO ATUAL', icon: Wallet, title: 'Saldo atual', description: 'Valor disponível atualmente na conta, considerando as movimentações já confirmadas.' },
   { key: 'reserved', variant: 'neutral', label: 'SALDO RESERVADO', icon: LockKeyhole, title: 'Saldo reservado', description: 'Parte do saldo que já foi reservada para compromissos futuros.' },
@@ -470,7 +494,7 @@ const dashboardCards = [
   { key: 'estimated', variant: 'neutral', label: 'SALDO FINAL ESTIMADO', icon: BarChart3, title: 'Saldo final estimado', description: 'Estimativa do saldo ao final do mês considerando os dados previstos.' },
 ]
 
-function DashboardPage({ summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments, onViewCommitments, incomes, expenses, dataError, onRetry }) {
+function DashboardPage({ account, summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments, onViewCommitments, incomes, expenses, dataError, onRetry }) {
   const [objective, setObjective] = useState(() => window.localStorage.getItem('aloca-commitment-objective') || '')
   const values = {
     current: Number(summary?.currentBalance ?? summary?.saldoReal) || 0,
@@ -479,6 +503,7 @@ function DashboardPage({ summary, monthlySummary, monthlyLoading, monthlyError, 
     estimated: Number(monthlySummary?.estimatedFinalBalance) || 0,
   }
   return <section className="dashboard-page" aria-labelledby="dashboard-title">
+    <div className="dashboard-desktop-view">
     <header className="dashboard-header">
       <h1 id="dashboard-title">Bem-vindo de volta!</h1>
       <p>Seu dinheiro, sob controle.</p>
@@ -497,7 +522,30 @@ function DashboardPage({ summary, monthlySummary, monthlyLoading, monthlyError, 
     </div>
     <UpcomingCommitmentsSection commitments={commitments} onViewAll={onViewCommitments} />
     <RecentMovementsSection incomes={incomes} expenses={expenses} error={dataError} onRetry={onRetry} onViewAll={() => { window.location.hash = 'movimentacoes' }} />
+    </div>
+    <MobileDashboard account={account} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlyLoading} monthlyError={monthlyError} selectedMonth={selectedMonth} onMonthChange={onMonthChange} onRetryMonthly={onRetryMonthly} commitments={commitments} onViewCommitments={onViewCommitments} onViewMovements={() => { window.location.hash = 'movimentacoes' }} />
   </section>
+}
+
+function MobileDashboard({ account, summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments = [], onViewCommitments, onViewMovements }) {
+  const current = Number(summary?.currentBalance ?? summary?.saldoReal) || 0
+  const reserved = Number(summary?.allocatedBalance ?? summary?.totalReservado) || 0
+  const free = Number(summary?.freeBalance ?? summary?.saldoLivre) || 0
+  const coverage = Math.min(100, Math.max(0, Number(monthlySummary?.coveragePercentage) || 0))
+  const upcoming = [...commitments]
+    .filter(item => !item.isCompleted && (item.nextDueDate || item.dueDate))
+    .sort((left, right) => (left.priority ?? Number.MAX_SAFE_INTEGER) - (right.priority ?? Number.MAX_SAFE_INTEGER) || String(left.nextDueDate || left.dueDate).localeCompare(String(right.nextDueDate || right.dueDate)) || left.name.localeCompare(right.name))
+    .slice(0, 3)
+  const firstName = String(account?.displayName || '').trim().split(/\s+/)[0] || 'aqui'
+
+  return <div className="mobile-dashboard" aria-label="Resumo financeiro mobile">
+    <header className="mobile-dashboard-heading"><p>Olá, {firstName} <span aria-hidden="true">👋</span></p><h1>Seu resumo financeiro</h1></header>
+    <div className="mobile-dashboard-month"><CalendarDays size={17} strokeWidth={1.8} aria-hidden="true" /><MonthPicker value={selectedMonth} onChange={onMonthChange} /></div>
+    <section className="mobile-dashboard-section mobile-dashboard-summary" aria-labelledby="mobile-summary-title"><header className="mobile-dashboard-section-heading"><h2 id="mobile-summary-title">Resumo</h2><a href="#compromissos">Ver tudo</a></header><div className="mobile-dashboard-context-chips" aria-label="Contexto do resumo"><span className="is-active" aria-current="page">Este mês</span><a href="#compromissos">Compromissos</a><a href="#movimentacoes" onClick={onViewMovements}>Movimentações</a></div></section>
+    <section className="mobile-dashboard-hero" aria-label="Saldo atual"><div className="mobile-dashboard-hero-label"><span>SALDO ATUAL</span><Wallet size={18} strokeWidth={1.8} aria-hidden="true" /></div><strong>{money(current)}</strong><span>Disponível hoje</span></section>
+    <section className="mobile-dashboard-metrics" aria-label="Métricas financeiras"><article><span>Reservado</span><strong>{money(reserved)}</strong></article><article><span>Livre</span><strong>{money(free)}</strong></article><article><span>Cobertura</span><strong>{monthlyLoading && !monthlySummary ? '—' : `${Math.round(coverage)}%`}</strong><i aria-hidden="true"><b style={{ width: `${coverage}%` }} /></i></article></section>
+    <section className="mobile-dashboard-section mobile-dashboard-upcoming" aria-labelledby="mobile-upcoming-title"><header className="mobile-dashboard-section-heading"><h2 id="mobile-upcoming-title">Próximos pagamentos</h2><button type="button" onClick={onViewCommitments}>Ver todos</button></header>{monthlyError && !monthlySummary && <div className="mobile-dashboard-inline-error" role="alert"><span>Não foi possível carregar o resumo do mês.</span><button type="button" onClick={onRetryMonthly}>Tentar novamente</button></div>}{upcoming.length ? <div className="mobile-dashboard-payment-list">{upcoming.map(item => { const urgent = Boolean(item.urgent || item.requiresAttention); const amount = Number(item.installmentAmount ?? item.missingForNextInstallment ?? 0); return <button type="button" className={`mobile-dashboard-payment${urgent ? ' is-urgent' : ''}`} key={item.id} onClick={onViewCommitments} aria-label={`Abrir compromissos. ${item.name}`}><span className="mobile-dashboard-payment-icon" aria-hidden="true">{urgent ? <CircleAlert size={17} /> : <CalendarDays size={17} />}</span><span className="mobile-dashboard-payment-copy"><strong>{item.name}</strong><small>{formatDate(item.nextDueDate || item.dueDate)}</small></span><strong className="mobile-dashboard-payment-amount">{money(amount)}</strong><ChevronRight size={17} aria-hidden="true" /></button> })}</div> : <p className="mobile-dashboard-empty">Nenhum pagamento próximo.</p>}</section>
+  </div>
 }
 
 function UpcomingCommitmentsSection({ commitments, onViewAll }) {
@@ -823,12 +871,13 @@ function App() {
     <AppTopbar account={accountState.current} accountState={accountState} accountMutationBusy={accountMutationBusy} accountPopoverOpen={accountPopoverOpen} onToggleAccount={() => setAccountPopoverOpen(value => !value)} onCloseAccount={() => setAccountPopoverOpen(false)} onAccountAction={{ profile: () => { setAccountPopoverOpen(false); window.location.hash = 'perfil' }, protect: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'protect' }) }, switch: switchAccount, add: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'add' }) }, remove: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'remove' }) }}} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-income' }) }} onNewExpense={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-expense' }) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} onOpenNavigation={() => setMobileNavigationOpen(true)} />
     <AppSidebar view={view} />
     {mobileNavigationOpen && <MobileNavigation view={view} onClose={() => setMobileNavigationOpen(false)} />}
+    <MobileBottomNavigation view={view} />
     <CalculatorPopover open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
     <main className="app-main">
       <div className="page-content">
       {error && view !== 'commitments' && <div className="alert error">{error}</div>}
 
-       {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSecurity={mode => setAccountDialog({ mode })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete && view !== 'commitments' ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <MovementsPage incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} summary={summary} categories={categories} onEdit={item => setMovementForm({ mode: 'edit', item })} onDelete={item => { setMovementDeleteError(''); setMovementDelete(item) }} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} categories={categories} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} activeFilterCount={activeFilterCount} onOpenFilters={() => setFiltersOpen(true)} summary={summary} onCreate={() => setEditing({})} setEditing={setEditing} run={run} refresh={refresh} loading={loading} initialLoadComplete={initialLoadComplete} error={error} onRetry={() => refresh()} onClearFilters={clearFilters} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <DashboardPage summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlySummaryLoading} monthlyError={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetryMonthly={retryMonthlySummary} commitments={commitments} onViewCommitments={() => { window.location.hash = 'compromissos' }} incomes={incomes} expenses={expenses} dataError={error} onRetry={() => refresh()} />}
+       {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSecurity={mode => setAccountDialog({ mode })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete && view !== 'commitments' ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <MovementsPage incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} summary={summary} categories={categories} onEdit={item => setMovementForm({ mode: 'edit', item })} onDelete={item => { setMovementDeleteError(''); setMovementDelete(item) }} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} categories={categories} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} activeFilterCount={activeFilterCount} onOpenFilters={() => setFiltersOpen(true)} summary={summary} onCreate={() => setEditing({})} setEditing={setEditing} run={run} refresh={refresh} loading={loading} initialLoadComplete={initialLoadComplete} error={error} onRetry={() => refresh()} onClearFilters={clearFilters} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <DashboardPage account={accountState.current} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlySummaryLoading} monthlyError={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetryMonthly={retryMonthlySummary} commitments={commitments} onViewCommitments={() => { window.location.hash = 'compromissos' }} incomes={incomes} expenses={expenses} dataError={error} onRetry={() => refresh()} />}
       </div>
     </main>
     <footer className="app-footer"><span>© 2026 Aloca. Todos os direitos reservados.</span><span>Desenvolvido por Maxwell Xavier.</span><a href="https://github.com/xavierr-max" target="_blank" rel="noopener noreferrer">GitHub: github.com/xavierr-max</a></footer>

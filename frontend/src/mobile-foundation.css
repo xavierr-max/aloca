@@ -1,0 +1,1479 @@
+/* Mobile Design System foundation.
+ * This layer only applies to the structural mobile breakpoint. Desktop and
+ * tablet rules remain owned by the existing stylesheets.
+ */
+:root {
+  --mobile-space-1: 4px;
+  --mobile-space-2: 8px;
+  --mobile-space-3: 12px;
+  --mobile-space-4: 16px;
+  --mobile-space-5: 20px;
+  --mobile-space-6: 24px;
+  --mobile-control-size: 44px;
+  --mobile-content-gutter: 16px;
+  --mobile-radius-control: 12px;
+  --mobile-radius-surface: 16px;
+  --mobile-bottom-nav-height: 73px;
+  --mobile-content-bottom-gap: 24px;
+}
+
+/* Etapa 7: overlays, formulários e sheets mobile.
+   Mantido no fim do arquivo para vencer apenas a cascata mobile anterior. */
+@media (max-width: 767px) {
+  .modal-backdrop,
+  .movement-modal-backdrop,
+  .drawer-backdrop,
+  .app-drawer-backdrop,
+  .forecast-drawer-backdrop {
+    z-index: var(--layer-modal-backdrop, 900) !important;
+  }
+
+  .modal-backdrop,
+  .movement-modal-backdrop,
+  .drawer-backdrop,
+  .app-drawer-backdrop,
+  .forecast-drawer-backdrop {
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center;
+    padding: 0 !important;
+  }
+
+  .modal,
+  .movement-modal,
+  .filter-drawer,
+  .app-drawer,
+  .forecast-month-drawer {
+    position: relative;
+    z-index: var(--layer-modal, 910) !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: min(92dvh, 820px) !important;
+    margin: 0 !important;
+    border-radius: var(--mobile-radius-sheet, 22px) var(--mobile-radius-sheet, 22px) 0 0 !important;
+    box-shadow: var(--shadow-lg, 0 18px 50px rgba(0, 0, 0, .18));
+  }
+
+  .modal,
+  .movement-modal {
+    overflow-y: auto;
+    padding: var(--mobile-space-5, 20px) var(--mobile-space-4, 16px)
+      max(var(--mobile-space-5, 20px), env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .filter-drawer,
+  .app-drawer,
+  .forecast-month-drawer {
+    height: min(92dvh, 820px) !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .filter-drawer .drawer-content,
+  .app-drawer .app-drawer-content,
+  .forecast-month-drawer .forecast-month-drawer-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .modal-head,
+  .drawer-head,
+  .app-drawer-header {
+    min-width: 0;
+  }
+
+  .modal h2,
+  .drawer-head h2,
+  .app-drawer-header h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .modal input:not([type="checkbox"]),
+  .modal select,
+  .modal textarea,
+  .movement-form input,
+  .movement-form select,
+  .movement-form textarea,
+  .commitment-form-grid input,
+  .commitment-form-grid select,
+  .commitment-form-grid textarea,
+  .app-drawer-form input:not([type="checkbox"]),
+  .app-drawer-form select,
+  .app-drawer-form textarea,
+  .filter-drawer input,
+  .filter-drawer select,
+  .filter-drawer textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    max-width: 100%;
+  }
+
+  .modal textarea,
+  .movement-form textarea,
+  .commitment-form-grid textarea {
+    min-height: 96px;
+    resize: vertical;
+  }
+
+  .form-grid,
+  .commitment-form-grid,
+  .commitment-drawer-facts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .modal-actions,
+  .movement-modal-actions,
+  .drawer-actions,
+  .app-drawer-footer,
+  .detail-drawer-actions,
+  .commitment-drawer-action-buttons {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--mobile-space-2, 8px);
+    width: 100%;
+  }
+
+  .modal-actions button,
+  .movement-modal-actions button,
+  .drawer-actions button,
+  .app-drawer-footer button,
+  .detail-drawer-actions button,
+  .commitment-drawer-action-buttons button {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--mobile-control-size, 46px);
+  }
+
+  .modal-actions,
+  .drawer-actions,
+  .app-drawer-footer,
+  .detail-drawer-actions {
+    padding-bottom: max(var(--mobile-space-3, 12px), env(safe-area-inset-bottom));
+  }
+
+  .modal button,
+  .movement-modal button,
+  .filter-drawer button,
+  .app-drawer button,
+  .forecast-month-drawer button,
+  .modal [role="button"],
+  .filter-drawer [role="button"] {
+    min-height: var(--mobile-control-size, 46px);
+  }
+
+  .modal input:focus,
+  .modal select:focus,
+  .modal textarea:focus,
+  .movement-modal input:focus,
+  .movement-modal select:focus,
+  .movement-modal textarea:focus,
+  .filter-drawer input:focus,
+  .filter-drawer select:focus,
+  .filter-drawer textarea:focus {
+    scroll-margin-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+
+  /* Menus permanecem popovers e não devem ultrapassar a viewport. */
+  .movement-actions-menu,
+  .commitment-static-menu,
+  .account-popover,
+  .global-create-menu,
+  .movement-create-popover,
+  .card-menu-popover {
+    z-index: var(--layer-popover, 700) !important;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .movement-actions-menu button,
+  .commitment-static-menu button,
+  .account-popover button,
+  .global-create-menu button,
+  .movement-create-popover button,
+  .card-menu-popover button {
+    min-height: 44px;
+  }
+}
+
+.mobile-dashboard {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .dashboard-desktop-view { display: none; }
+  .mobile-dashboard { display: grid; gap: 24px; width: 100%; min-width: 0; }
+  .mobile-dashboard-heading p { margin: 0 0 6px; color: var(--text-secondary); font-size: 14px; }
+  .mobile-dashboard-heading h1 { margin: 0; color: var(--text-primary); font-size: clamp(24px, 7vw, 30px); font-weight: 650; letter-spacing: -.045em; line-height: 1.1; }
+  .mobile-dashboard-month { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 0 13px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-card); color: var(--text-secondary); }
+  .mobile-dashboard-month .dashboard-month-picker { flex: 1; min-width: 0; }
+  .mobile-dashboard-month .dashboard-month-picker-trigger { min-height: 46px; padding: 0; border: 0; background: transparent; font-size: 14px; }
+  .mobile-dashboard-month .dashboard-month-picker-trigger:focus-visible, .mobile-dashboard-month .dashboard-month-picker.is-open .dashboard-month-picker-trigger { box-shadow: none; }
+  .mobile-dashboard-section { min-width: 0; }
+  .mobile-dashboard-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .mobile-dashboard-section-heading h2 { margin: 0; color: var(--text-primary); font-size: 18px; font-weight: 650; letter-spacing: -.025em; }
+  .mobile-dashboard-section-heading button,
+  .mobile-dashboard-section-heading a { min-height: 32px; padding: 4px 0; border: 0; background: transparent; color: var(--color-success); font-size: 12px; font-weight: 650; text-decoration: none; }
+  .mobile-dashboard-context-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .mobile-dashboard-context-chips::-webkit-scrollbar { display: none; }
+  .mobile-dashboard-context-chips span,
+  .mobile-dashboard-context-chips a { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 32px; padding: 7px 11px; border-radius: 999px; background: var(--bg-subtle); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-decoration: none; }
+  .mobile-dashboard-context-chips .is-active { background: var(--color-success); color: var(--text-inverse); }
+  .mobile-dashboard-context-chips a:focus-visible,
+  .mobile-dashboard-section-heading a:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }
+  .mobile-dashboard-hero { display: grid; gap: 12px; padding: 20px; border-radius: 22px; background: var(--dashboard-solid-accent); color: var(--dashboard-solid-accent-ink); }
+  .mobile-dashboard-hero-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 650; letter-spacing: .07em; }
+  .mobile-dashboard-hero > strong { overflow-wrap: anywhere; font-size: clamp(28px, 8vw, 32px); font-weight: 700; letter-spacing: -.05em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .mobile-dashboard-hero > span { font-size: 13px; opacity: .82; }
+  .mobile-dashboard-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .mobile-dashboard-metrics article { display: grid; min-width: 0; min-height: 86px; align-content: space-between; gap: 9px; padding: 13px 11px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--bg-card); }
+  .mobile-dashboard-metrics span { color: var(--text-secondary); font-size: 11px; line-height: 1.2; }
+  .mobile-dashboard-metrics strong { min-width: 0; overflow-wrap: anywhere; color: var(--text-primary); font-size: clamp(15px, 4.2vw, 20px); font-weight: 700; letter-spacing: -.035em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .mobile-dashboard-metrics i { display: block; height: 4px; overflow: hidden; border-radius: 999px; background: var(--bg-hover); }
+  .mobile-dashboard-metrics i b { display: block; height: 100%; border-radius: inherit; background: var(--color-success); }
+  .mobile-dashboard-payment-list { border-top: 1px solid var(--border-default); }
+  .mobile-dashboard-payment { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 17px; align-items: center; gap: 9px; width: 100%; min-height: 66px; padding: 8px 0; border: 0; border-bottom: 1px solid var(--border-default); background: transparent; color: var(--text-muted); font: inherit; text-align: left; cursor: pointer; }
+  .mobile-dashboard-payment:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; border-radius: var(--mobile-radius-control); }
+  .mobile-dashboard-payment:hover { background: var(--bg-subtle); }
+  .mobile-dashboard-payment-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--bg-subtle); color: var(--color-success); }
+  .mobile-dashboard-payment-copy { display: grid; min-width: 0; gap: 4px; }
+  .mobile-dashboard-payment-copy strong { overflow: hidden; color: var(--text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-dashboard-payment-copy small { color: var(--text-muted); font-size: 11px; }
+  .mobile-dashboard-payment-amount { color: var(--text-primary); font-size: 12px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .mobile-dashboard-payment.is-urgent .mobile-dashboard-payment-icon { background: var(--danger-surface); color: var(--color-danger); }
+  .mobile-dashboard-payment.is-urgent .mobile-dashboard-payment-copy small { color: var(--color-danger); }
+  .mobile-dashboard-empty { margin: 0; padding: 14px 0; color: var(--text-secondary); font-size: 12px; }
+  .mobile-dashboard-inline-error { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 12px; }
+  .mobile-dashboard-inline-error button { justify-self: start; min-height: 32px; padding: 4px 0; border: 0; background: transparent; color: var(--color-success); font-size: 12px; font-weight: 650; }
+}
+
+@media (max-width: 360px) {
+  .mobile-dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mobile-dashboard-metrics article:last-child { grid-column: 1 / -1; }
+  .mobile-dashboard-payment { grid-template-columns: 32px minmax(0, 1fr) auto 15px; gap: 7px; }
+  .mobile-dashboard-payment-amount { font-size: 11px; }
+}
+
+/* Mobile forecast presentation. Forecast data, chart interaction and month
+ * details remain owned by the existing forecast components. */
+@media (max-width: 767px) {
+  .forecast-page-shell {
+    min-height: 0;
+    padding-bottom: 104px;
+  }
+
+  .forecast-page-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    padding: 0 0 16px;
+  }
+
+  .forecast-planning-header {
+    order: 1;
+    gap: 10px;
+    margin-bottom: 0;
+  }
+
+  .forecast-eyebrow {
+    font-size: 10px;
+  }
+
+  .forecast-planning-title {
+    margin-top: 5px;
+    font-size: 25px;
+    letter-spacing: -.045em;
+  }
+
+  .forecast-planning-header > label {
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .forecast-planning-header select {
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+
+  .forecast-inline-error {
+    order: 2;
+    margin: 0;
+    border-radius: 14px;
+  }
+
+  .forecast-kpi-grid {
+    order: 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  .forecast-kpi-card {
+    min-height: 118px;
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .forecast-kpi-card.is-balance {
+    grid-column: 1 / -1;
+    order: -1;
+    min-height: 142px;
+    padding: 18px;
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: var(--text-inverse);
+  }
+
+  .forecast-kpi-card.is-balance .forecast-kpi-heading,
+  .forecast-kpi-card.is-balance .forecast-kpi-secondary,
+  .forecast-kpi-card.is-balance > strong {
+    color: var(--text-inverse);
+  }
+
+  .forecast-kpi-card.is-balance .forecast-icon {
+    background: color-mix(in srgb, var(--color-success) 70%, var(--text-inverse));
+    color: var(--text-inverse);
+  }
+
+  .forecast-kpi-heading {
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .forecast-kpi-card .forecast-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .forecast-kpi-card > strong {
+    margin-top: 13px;
+    overflow-wrap: anywhere;
+    font-size: clamp(19px, 6vw, 28px);
+    font-weight: 700;
+    line-height: 1.05;
+    white-space: normal;
+  }
+
+  .forecast-kpi-card.is-balance > strong {
+    margin-top: 18px;
+    font-size: clamp(28px, 8vw, 34px);
+  }
+
+  .forecast-kpi-secondary {
+    margin-top: 5px;
+    font-size: 10px;
+  }
+
+  .forecast-main-grid {
+    display: flex;
+    flex-direction: column;
+    order: 4;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .forecast-side-column {
+    display: contents;
+  }
+
+  .forecast-coverage {
+    order: 1;
+    min-height: 0;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .forecast-recommendations {
+    order: 3;
+    min-height: 0;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .forecast-main-chart {
+    order: 2;
+    min-width: 0;
+    min-height: 0;
+    padding: 16px 12px;
+    border-radius: 18px;
+  }
+
+  .forecast-card-title h3 {
+    font-size: 17px;
+  }
+
+  .forecast-card-title > span {
+    max-width: 42%;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .forecast-chart-frame {
+    min-width: 0;
+    margin-top: 12px;
+  }
+
+  .forecast-line-chart {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .forecast-axis-label {
+    font-size: 9px;
+  }
+
+  .forecast-month-label {
+    font-size: 9px;
+  }
+
+  .forecast-selected-value {
+    font-size: 10px;
+  }
+
+  .forecast-details-trigger {
+    min-height: 36px;
+    margin-top: 4px;
+    padding: 6px 0;
+    font-size: 11px;
+  }
+
+  .forecast-donut-placeholder {
+    width: 104px;
+    height: 104px;
+    margin: 12px auto 10px;
+  }
+
+  .forecast-donut-placeholder::before {
+    width: 76px;
+    height: 76px;
+  }
+
+  .forecast-donut-placeholder strong {
+    font-size: 22px;
+  }
+
+  .forecast-coverage p,
+  .forecast-coverage small {
+    font-size: 11px;
+  }
+
+  .forecast-recommendation-list {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 10px;
+  }
+
+  .forecast-recommendation-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 8px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  .forecast-recommendation-card > span {
+    grid-row: span 2;
+  }
+
+  .forecast-recommendation-card strong,
+  .forecast-recommendation-card small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .forecast-recommendation-empty {
+    margin-top: 12px;
+  }
+
+  .forecast-balance-grid {
+    display: none;
+  }
+
+  .forecast-mini-grid {
+    order: 5;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  .forecast-mini-card {
+    min-width: 0;
+    min-height: 78px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .forecast-mini-card .forecast-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .forecast-mini-card > div > span {
+    overflow-wrap: anywhere;
+    font-size: 10px;
+  }
+
+  .forecast-mini-card strong {
+    overflow-wrap: anywhere;
+    font-size: clamp(14px, 4.5vw, 18px);
+    white-space: normal;
+  }
+
+  .forecast-loading {
+    order: 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .forecast-loading i,
+  .forecast-loading div {
+    height: 118px;
+    border-radius: 16px;
+  }
+
+  .forecast-loading i:first-child {
+    grid-column: 1 / -1;
+    height: 142px;
+  }
+
+  .forecast-loading div {
+    grid-column: 1 / -1;
+    height: 250px;
+  }
+
+  .forecast-drawer-backdrop {
+    z-index: var(--layer-modal-backdrop, 900);
+  }
+
+  .forecast-month-drawer {
+    width: 100%;
+    max-width: none;
+    height: min(92dvh, 820px);
+    padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .forecast-info-tooltip {
+    z-index: var(--layer-popover, 700);
+    width: min(280px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 360px) {
+  .forecast-kpi-grid,
+  .forecast-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-kpi-card.is-balance {
+    grid-column: auto;
+  }
+
+  .forecast-card-title > span {
+    max-width: 38%;
+  }
+}
+
+/* Mobile movements presentation. Existing state, filtering, pagination and
+ * row actions remain the single source of behavior. */
+@media (max-width: 767px) {
+  .movements-page {
+    padding-bottom: 16px;
+  }
+
+  .movements-header {
+    margin: 4px 0 20px;
+  }
+
+  .movements-header h1 {
+    font-size: 26px;
+    letter-spacing: -.045em;
+  }
+
+  .movements-header p {
+    font-size: 13px;
+  }
+
+  .movements-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .movements-summary-card {
+    min-height: 96px;
+    padding: 13px 12px;
+    border-radius: 16px;
+  }
+
+  .movements-summary-label {
+    gap: 5px;
+    font-size: 10px;
+    letter-spacing: .04em;
+  }
+
+  .movements-summary-card strong {
+    margin-top: 9px;
+    overflow-wrap: anywhere;
+    font-size: clamp(19px, 6vw, 25px);
+    font-weight: 700;
+  }
+
+  .movements-summary-card small {
+    margin-top: 6px;
+    font-size: 10px;
+  }
+
+  .movements-tabs-wrap {
+    margin-inline: -2px;
+    border-bottom-color: var(--border-default);
+  }
+
+  .movements-tabs {
+    gap: 2px;
+  }
+
+  .movements-tabs button {
+    min-height: 42px;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .movements-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 12px 0 14px;
+  }
+
+  .movements-search {
+    grid-column: 1 / -1;
+  }
+
+  .movements-filters input,
+  .movements-filters select {
+    min-height: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .movements-content {
+    min-height: 0;
+  }
+
+  .movements-result-count {
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+
+  .movements-list {
+    border-radius: 16px;
+  }
+
+  .movement-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 9px;
+    min-height: 70px;
+    padding: 12px 11px;
+  }
+
+  .movement-type-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .movement-main > strong {
+    font-size: 13px;
+  }
+
+  .movement-meta {
+    gap: 5px 8px;
+    margin-top: 4px;
+    font-size: 10px;
+  }
+
+  .movement-badge {
+    padding: 3px 6px;
+    border-radius: 999px;
+  }
+
+  .movement-amount {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: -2px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .movement-actions {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .movement-actions-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .movement-actions-menu {
+    right: 0;
+    max-width: calc(100vw - 24px);
+    min-width: 148px;
+    border-radius: 12px;
+  }
+
+  .movement-actions-menu button {
+    min-height: 44px;
+  }
+
+  .movements-pagination {
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .movements-pagination button {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .movements-state {
+    min-height: 96px;
+    padding: 18px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+  }
+
+  .movements-skeleton .movement-row {
+    min-height: 70px;
+  }
+
+  .movement-modal-backdrop {
+    z-index: var(--layer-modal-backdrop, 900);
+  }
+}
+
+@media (max-width: 360px) {
+  .movements-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .movements-summary-card {
+    min-height: 82px;
+  }
+
+  .movements-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .movements-search {
+    grid-column: auto;
+  }
+}
+
+/* Mobile commitments presentation. Behavior remains owned by the existing
+ * list item, menu, filters and detail drawer components. */
+.mobile-commitments-only { display: none; }
+
+@media (max-width: 767px) {
+  .commitments-page {
+    gap: 20px;
+    padding-bottom: 16px;
+  }
+
+  .commitments-page-header {
+    display: block;
+  }
+
+  .commitments-page-heading h2 {
+    font-size: 26px;
+    letter-spacing: -.045em;
+  }
+
+  .commitments-page-heading p {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  .commitments-create-button {
+    width: 100%;
+    margin-top: 14px;
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .commitments-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .commitments-summary-card {
+    min-width: 0;
+    min-height: 92px;
+    padding: 13px;
+    border-radius: 16px;
+  }
+
+  .commitments-summary-card strong {
+    overflow-wrap: anywhere;
+    font-size: 17px;
+  }
+
+  .commitments-summary-card small {
+    font-size: 10px;
+  }
+
+  .commitments-toolbar {
+    margin-top: 0;
+  }
+
+  .commitments-toolbar-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .commitments-search-field {
+    grid-column: 1 / -1;
+  }
+
+  .commitments-toolbar select {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    border-radius: 12px;
+  }
+
+  .commitments-toolbar select[aria-label='Filtrar por grupo'],
+  .commitments-toolbar select[aria-label='Ordenar compromissos'] {
+    display: none;
+  }
+
+  .commitments-toolbar .commitments-more-filters {
+    width: auto;
+    min-height: 44px;
+    padding-inline: 13px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+
+  .commitments-result-count {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+
+  .commitments-list {
+    gap: 12px;
+  }
+
+  .commitments-list-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 0;
+    position: relative;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--bg-card);
+  }
+
+  .commitments-list-item.is-urgent-uncovered,
+  .commitments-list-item.is-urgent-partial {
+    background: var(--bg-card);
+  }
+
+  .commitments-list-main {
+    grid-column: 1 / -1;
+    padding-right: 34px;
+  }
+
+  .commitments-list-name {
+    font-size: 16px;
+    line-height: 1.25;
+  }
+
+  .commitments-list-meta {
+    display: block;
+    margin-top: 5px;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .commitments-list-due,
+  .commitments-list-value {
+    grid-column: 1;
+  }
+
+  .commitments-list-value {
+    order: 2;
+  }
+
+  .commitments-list-due {
+    order: 3;
+  }
+
+  .commitments-list-value span,
+  .commitments-list-due span {
+    font-size: 11px;
+  }
+
+  .commitments-list-value strong {
+    color: var(--text-primary);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -.045em;
+  }
+
+  .commitments-list-due strong {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .commitments-list-reserve {
+    grid-column: 1 / -1;
+    order: 4;
+    padding-top: 4px;
+  }
+
+  .commitments-list-reserve-heading {
+    margin-bottom: 6px;
+  }
+
+  .commitments-list-progress {
+    height: 7px;
+  }
+
+  .commitments-list-reserve small {
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+
+  .commitments-list-status {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    order: 1;
+    width: auto;
+    min-height: 28px;
+    padding: 6px 9px;
+  }
+
+  .commitments-list-menu {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+  }
+
+  .commitments-list-menu .commitment-static-menu-trigger {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    background: var(--bg-subtle);
+  }
+
+  .commitments-list-item.is-completed {
+    opacity: .84;
+  }
+
+  .commitments-list-item.is-completed .commitments-list-name::after {
+    content: ' · Pago';
+    color: var(--color-success);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .commitment-static-menu {
+    z-index: var(--layer-popover, 700);
+    max-width: calc(100vw - 16px);
+  }
+
+  .commitment-static-menu button {
+    min-height: 44px;
+  }
+
+  .app-drawer-backdrop,
+  .drawer-backdrop {
+    z-index: var(--layer-modal-backdrop, 900) !important;
+  }
+
+  .commitment-detail-drawer,
+  .filter-drawer {
+    z-index: var(--layer-modal, 910) !important;
+  }
+
+  .commitment-detail-drawer .app-drawer {
+    border-radius: 22px 22px 0 0;
+  }
+
+  .commitment-detail-drawer .app-drawer-content {
+    padding-bottom: 20px;
+  }
+
+  .commitments-state,
+  .commitments-error-state {
+    min-height: 0;
+    padding: 20px 14px;
+    border-radius: 16px;
+  }
+
+  .commitments-list-skeleton-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 170px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .commitments-list-skeleton-row span:first-child,
+  .commitments-list-skeleton-row span:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .commitments-summary { grid-template-columns: 1fr; }
+  .commitments-list-item { padding: 14px; }
+  .commitments-list-value strong { font-size: 23px; }
+}
+
+.mobile-bottom-navigation {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-dashboard { display: grid; }
+  html {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-width: 320px;
+    overflow-x: hidden;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  a,
+  summary,
+  input[type='checkbox'],
+  input[type='radio'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a[role='button'],
+  summary {
+    min-height: var(--mobile-control-size);
+  }
+
+  .app-shell {
+    width: calc(100% - 16px);
+    min-height: calc(100dvh - 16px);
+    margin: 8px auto;
+    border-radius: var(--mobile-radius-surface);
+  }
+
+  .app-mobile-menu-button,
+  .mobile-navigation-backdrop {
+    display: none;
+  }
+
+  .app-topbar {
+    padding-top: max(var(--mobile-space-2), env(safe-area-inset-top));
+    padding-right: max(var(--mobile-space-3), env(safe-area-inset-right));
+    padding-bottom: var(--mobile-space-2);
+    padding-left: max(var(--mobile-space-3), env(safe-area-inset-left));
+  }
+
+  .page-content {
+    padding-right: max(var(--mobile-content-gutter), env(safe-area-inset-right));
+    padding-left: max(var(--mobile-content-gutter), env(safe-area-inset-left));
+    padding-bottom: max(104px, calc(40px + env(safe-area-inset-bottom)));
+  }
+
+  .app-topbar::before {
+    content: 'Aloca';
+    display: block;
+    margin-right: auto;
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.04em;
+  }
+
+  .app-mobile-menu-button,
+  .app-create-button,
+  .app-theme-toggle,
+  .app-account-button {
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
+  }
+
+  .mobile-navigation {
+    padding-top: max(var(--mobile-space-5), env(safe-area-inset-top));
+    padding-right: max(var(--mobile-space-4), env(safe-area-inset-right));
+    padding-bottom: max(var(--mobile-space-5), env(safe-area-inset-bottom));
+    padding-left: max(var(--mobile-space-4), env(safe-area-inset-left));
+    border-radius: 0 var(--mobile-radius-surface) var(--mobile-radius-surface) 0;
+  }
+
+  .mobile-navigation nav a {
+    min-height: var(--mobile-control-size);
+    border-radius: var(--mobile-radius-control);
+  }
+
+  .modal-backdrop,
+  .movement-modal-backdrop {
+    padding-top: max(var(--mobile-space-3), env(safe-area-inset-top));
+    padding-right: max(var(--mobile-space-3), env(safe-area-inset-right));
+    padding-bottom: max(var(--mobile-space-3), env(safe-area-inset-bottom));
+    padding-left: max(var(--mobile-space-3), env(safe-area-inset-left));
+  }
+
+  .modal,
+  .movement-modal,
+  .app-drawer,
+  .filter-drawer,
+  .detail-drawer {
+    border-radius: var(--mobile-radius-surface);
+  }
+
+  .modal-actions button,
+  .movement-modal-actions button,
+  .drawer-actions button,
+  .detail-drawer-actions button,
+  .commitment-drawer-action-buttons button {
+    min-height: var(--mobile-control-size);
+  }
+
+  .mobile-bottom-navigation {
+    display: block;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--layer-drawer, 810);
+    padding: 8px max(var(--mobile-space-2), env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(var(--mobile-space-2), env(safe-area-inset-left));
+    border-top: 1px solid var(--border-default);
+    background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+    box-shadow: 0 -8px 24px color-mix(in srgb, var(--shadow-color, #000) 10%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+
+  .mobile-bottom-navigation-scroll {
+    display: flex;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mobile-bottom-navigation-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-bottom-navigation a {
+    display: inline-flex;
+    flex: 1 0 76px;
+    min-height: 56px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: var(--mobile-radius-control);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .mobile-bottom-navigation a.is-active {
+    background: var(--surface-nav-active);
+    color: var(--color-success);
+  }
+
+  .mobile-bottom-navigation a:focus-visible {
+    outline: 3px solid var(--color-info);
+    outline-offset: -2px;
+  }
+}
+
+/* Etapa transversal: reserva estrutural para a navegação fixa. */
+@media (max-width: 767px) {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - 16px);
+    padding-bottom: calc(
+      var(--mobile-bottom-nav-height)
+      + var(--mobile-content-bottom-gap)
+      + env(safe-area-inset-bottom)
+    );
+  }
+
+  .app-main {
+    flex: 1 0 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .page-content {
+    padding-bottom: 0 !important;
+  }
+
+  .mobile-bottom-navigation {
+    min-height: var(--mobile-bottom-nav-height);
+  }
+}
+
+/* Etapa 8: Perfil e Conta mobile. A lógica continua em ProfileSecurityPage,
+   AccountPopover e nos modais existentes; este bloco trata somente a leitura. */
+@media (max-width: 767px) {
+  .profile-page {
+    width: 100%;
+    max-width: none;
+    padding-top: var(--mobile-space-3);
+  }
+
+  .profile-page .page-heading {
+    align-items: flex-start;
+    gap: var(--mobile-space-3);
+    margin-bottom: var(--mobile-space-5);
+  }
+
+  .profile-page .page-heading > svg {
+    display: none;
+  }
+
+  .profile-page .page-heading h2 {
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.08;
+  }
+
+  .profile-page .page-heading p {
+    max-width: 34ch;
+    margin-top: var(--mobile-space-2);
+    font-size: 13px;
+  }
+
+  .profile-hero {
+    margin-bottom: var(--mobile-space-3);
+    border-radius: var(--mobile-radius-surface);
+  }
+
+  .profile-hero-banner {
+    height: 64px;
+    padding: 14px var(--mobile-space-4);
+  }
+
+  .profile-hero-content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--mobile-space-3);
+    padding: 0 var(--mobile-space-4) var(--mobile-space-4);
+    margin-top: -20px;
+  }
+
+  .profile-hero .account-identity-avatar {
+    width: 56px;
+    height: 56px;
+    border-width: 3px;
+    font-size: 22px;
+  }
+
+  .profile-hero-copy {
+    min-width: 0;
+    padding-top: 22px;
+  }
+
+  .profile-hero-copy h3,
+  .profile-hero-copy p,
+  .profile-hero-copy .account-status {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-hero-copy h3 {
+    font-size: 18px;
+  }
+
+  .profile-edit-link {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: var(--mobile-control-size);
+    justify-content: center;
+    margin: 0;
+    border-radius: var(--mobile-radius-control);
+  }
+
+  .account-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: var(--mobile-space-4);
+    border-radius: var(--mobile-radius-control);
+  }
+
+  .account-summary > div {
+    min-height: 68px;
+    padding: var(--mobile-space-3);
+  }
+
+  .account-summary strong {
+    line-height: 1.25;
+  }
+
+  .profile-page .account-page-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mobile-space-3);
+  }
+
+  .profile-page .account-card {
+    width: 100%;
+    min-width: 0;
+    padding: var(--mobile-space-4);
+    border-radius: var(--mobile-radius-surface);
+  }
+
+  .profile-page .account-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--mobile-space-3);
+  }
+
+  .profile-page .account-card-heading h3 {
+    margin-top: var(--mobile-space-1);
+    font-size: 16px;
+  }
+
+  .account-form {
+    display: grid;
+    gap: var(--mobile-space-3);
+    padding-top: var(--mobile-space-2);
+  }
+
+  .account-form label {
+    gap: var(--mobile-space-2);
+    font-size: 12px;
+  }
+
+  .account-form input {
+    width: 100%;
+    min-height: 46px;
+    border-radius: var(--mobile-radius-control);
+  }
+
+  .account-form-actions,
+  .account-form-actions .primary {
+    width: 100%;
+  }
+
+  .account-form-actions .primary,
+  .account-security-card .secondary,
+  .profile-page .danger-zone .danger-button {
+    min-height: var(--mobile-control-size);
+  }
+
+  .account-security-card p {
+    max-width: none;
+    line-height: 1.5;
+  }
+
+  .account-security-card .secondary {
+    width: 100%;
+  }
+
+  .security-details dd {
+    max-width: 62%;
+  }
+
+  .profile-page .danger-zone {
+    display: block;
+    margin-top: 0;
+    padding: var(--mobile-space-4);
+    border-color: color-mix(in srgb, var(--color-danger) 30%, var(--border-default));
+  }
+
+  .profile-page .danger-zone p {
+    margin: var(--mobile-space-2) 0 var(--mobile-space-3);
+    line-height: 1.45;
+  }
+
+  .profile-page .danger-zone .danger-button {
+    width: 100%;
+  }
+
+  .account-popover,
+  .account-card-popover {
+    right: -8px !important;
+    width: min(350px, calc(100vw - 24px)) !important;
+    max-height: min(70dvh, 560px);
+    padding: var(--mobile-space-3);
+    overflow-y: auto;
+  }
+
+  .account-card-popover .account-actions button,
+  .account-card-popover .account-remove-device,
+  .account-protection-cta {
+    min-height: var(--mobile-control-size);
+  }
+
+  .account-add-options {
+    display: grid;
+    gap: var(--mobile-space-2);
+  }
+
+  .account-add-options button {
+    width: 100%;
+    min-height: var(--mobile-control-size);
+  }
+}
+
+@media (max-width: 360px) {
+  .account-summary {
+    grid-template-columns: 1fr;
+  }
+}
