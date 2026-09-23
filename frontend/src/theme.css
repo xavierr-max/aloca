@@ -13,6 +13,7 @@
   --header-background:#fff; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover); --surface-nav-active:#e4ebe6;
   --dashboard-solid-light:#fbfcfa; --dashboard-solid-light-ink:#101416; --dashboard-solid-accent:var(--color-success); --dashboard-solid-accent-ink:#fff;
   --surface-page:#f6f8f7; --surface-card:#fff; --surface-card-elevated:#fff; --surface-card-muted:#eef2f0; --surface-positive:#d9f0df; --surface-positive-muted:#d9f0df; --surface-positive-strong:#55a968; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#e0f0e5; --surface-expense-icon:#f4e1e1; --text-on-positive:#102419; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
+  --surface-modal:#fafbf9; --brand-green:#39a96b; --brand-green-hover:#36a568; --brand-green-soft:#e4f4e9; --text-on-green:#10251c; --text-icon:#63726e; --text-on-dark:#f3f6f4; --text-muted-on-dark:#aebab5;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -27,6 +28,7 @@
   --header-background:#0b0e10; --header-text:var(--text-primary); --header-muted:var(--text-secondary); --header-hover:var(--bg-hover); --surface-nav-active:#f2f3ee;
   --dashboard-solid-light:#f7f8f5; --dashboard-solid-light-ink:#101416; --dashboard-solid-accent:#2f9d62; --dashboard-solid-accent-ink:#07130c;
   --surface-page:#080b0d; --surface-card:#11161a; --surface-card-elevated:#1c2328; --surface-card-muted:#151c20; --surface-positive:#193a29; --surface-positive-muted:#193a29; --surface-positive-strong:#55b875; --surface-commitment:#f7f7f4; --surface-commitment-icon:#e8e9e5; --surface-income-icon:#194b32; --surface-expense-icon:#53272b; --text-on-positive:#08150d; --text-on-commitment:#111416; --text-on-commitment-muted:#5e6462;
+  --surface-modal:#fafbf9; --brand-green:#39a96b; --brand-green-hover:#48b879; --brand-green-soft:#193a29; --text-on-green:#08150d; --text-icon:#aebab5; --text-on-dark:#f3f6f4; --text-muted-on-dark:#aebab5;
 }
 /* Aliases keep the existing component CSS compatible during the migration. */
 :root { --background:var(--bg-page); --canvas:var(--bg-page); --surface:var(--bg-card); --surface-elevated:var(--bg-elevated); --surface-hover:var(--bg-hover); --bg-primary:var(--bg-page); --bg-secondary:var(--bg-subtle); --ink:var(--text-primary); --ink-soft:var(--text-secondary); --muted:var(--text-muted); --neutral:var(--text-secondary); --neutral-strong:var(--text-primary); --line:var(--border-default); --border:var(--border-default); --border-subtle:var(--border-default); --surface-border:var(--border-default); --item-divider:var(--border-default); --primary:var(--color-success); --primary-hover:var(--color-income); --primary-active:var(--color-success); --primary-soft:var(--success-surface); --positive:var(--color-income); --positive-strong:var(--color-income); --positive-surface:var(--success-surface); --danger:var(--color-danger); --danger-strong:var(--color-danger); --warning:var(--color-warning); --neutral-surface:var(--bg-subtle); --accent:var(--color-success); --accent-dark:var(--color-income); --accent-pale:var(--success-surface); --forest:var(--text-primary); --forest-2:var(--text-secondary); }
@@ -426,3 +428,21 @@ body,button,input,select,textarea { font-family:Inter,system-ui,-apple-system,Bl
 .app-toast { position: fixed; top: 92px; right: 24px; z-index: var(--layer-toast); max-width: min(360px, calc(100vw - 32px)); padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--color-success) 28%, var(--border-default)); border-radius: 10px; background: var(--surface-card-elevated); color: var(--color-success); box-shadow: var(--shadow-sm); font-size: 12px; font-weight: 650; pointer-events: none; animation: toast-in .18s ease both; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 760px) { .app-toast { top: 80px; right: 16px; } }
+
+/* Contrast pass: keep finance hierarchy independent from the active theme. */
+.metric,.movements-summary-card { color:var(--text-primary); }
+.metric:not(.dark):not(.green):not(.red) span,.movements-summary-label { color:#667570; }
+.metric:not(.dark):not(.green):not(.red) strong,.movements-summary-card.is-balance strong { color:#10181c; }
+.metric:not(.dark):not(.green):not(.red) small { color:#667570; }
+.metric .info-tooltip-trigger,.movements-summary-label svg { color:#63726e; }
+.metric.dark { background:#171d1b!important; border:1px solid rgba(214,171,72,.28)!important; color:#f3f6f4; }
+.metric.dark span { color:#f3f6f4!important; }.metric.dark strong { color:#fff!important; }.metric.dark small { color:#aebab5!important; }.metric.dark .metric-action { color:#e3bb60; }
+.metric.green { background:#39a96b!important; border-color:#36a568!important; color:#10251c; }.metric.green span,.metric.green small { color:#10251c!important; }.metric.green strong { color:#fff!important; }.metric.green .metric-action,.metric.green .info-tooltip-trigger { color:#10251c!important; }
+[data-theme="dark"] .metric:not(.dark):not(.green):not(.red) strong { color:#fff!important; }
+[data-theme="dark"] .metric:not(.dark):not(.green):not(.red) span { color:#aebab5!important; }
+[data-theme="dark"] .metric:not(.dark):not(.green):not(.red) small { color:#aebab5!important; }
+.badge.active,.status-badge { background:#e4f4e9!important; color:#17613b!important; }
+.groups-page { color:#f3f6f4; }.groups-page .page-heading .eyebrow { color:#aebab5; }.groups-page .page-heading h2 { color:#fff; }.groups-page .page-heading p { color:#9eaaa5; }
+.groups-page .group-manager { background:#171d1b; border-color:rgba(255,255,255,.1); }.groups-page .group-manager-heading { color:#fff; }.groups-page .group-manager-heading span { color:#aebab5; }.groups-page .group-manager-list,.groups-page .group-manager-row { border-color:rgba(255,255,255,.1); }.groups-page .group-manager-row strong { color:#f3f6f4; }
+.groups-page .group-manager .empty { background:#f7f8f6; border-color:#dde3df; color:#7a8782; }.groups-page .group-manager .empty strong { color:#24302b; }.groups-page .page-heading .primary { background:var(--brand-green)!important; color:var(--text-on-green)!important; }.groups-page .page-heading .primary:hover { background:var(--brand-green-hover)!important; }
+.modal { background:var(--surface-modal)!important; color:#17201c!important; border:1px solid #dde3df; }.modal .eyebrow { color:#66756f!important; }.modal h2 { color:#17201c!important; }.modal label { color:#52615b!important; }.modal input:not([type="checkbox"]) { background:#fff!important; color:#17201c!important; border-color:#cdd6d1!important; }.modal input:not([type="checkbox"])::placeholder { color:#98a49f!important; }.modal input:not([type="checkbox"]):focus { border-color:var(--brand-green)!important; outline:2px solid color-mix(in srgb,var(--brand-green) 24%,transparent); }.modal .icon-button { color:#63726e!important; }.modal .icon-button:hover { background:#f0f3f1!important; color:#34423c!important; }.modal .secondary { background:#171d1b!important; color:#fff!important; }.modal .primary { background:var(--brand-green)!important; color:#102019!important; }.modal .primary:hover { background:var(--brand-green-hover)!important; }
