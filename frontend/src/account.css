@@ -22,3 +22,97 @@
 .account-actions{padding-top:0}
 @media(max-width:760px){.account-popover{right:-40px;width:min(310px,calc(100vw - 24px))}}
 .account-page{max-width:980px;margin:0 auto;padding:18px 0 48px}.account-page .page-heading{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}.account-page .page-heading>svg{color:var(--color-success);margin-top:8px}.account-page-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.account-card{display:grid;gap:14px;padding:20px;border:1px solid var(--border-default);border-radius:16px;background:var(--bg-card);box-shadow:var(--shadow-sm)}.account-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.account-card-heading>svg{color:var(--text-secondary)}.account-card h3{margin:4px 0 0;font-size:18px}.account-card p{margin:0;color:var(--text-secondary);font-size:13px;line-height:1.55}.account-form{display:grid;gap:13px}.account-form-actions{display:flex;align-items:center;gap:12px}.form-success{color:var(--color-success);font-size:12px}.account-info-card dl{display:grid;gap:10px;margin:0}.account-info-card dl div{display:flex;justify-content:space-between;gap:16px;padding-bottom:10px;border-bottom:1px solid var(--border-default)}.account-info-card dt{color:var(--text-secondary);font-size:12px}.account-info-card dd{margin:0;font-size:13px;text-align:right;overflow-wrap:anywhere}.danger-zone{border-color:color-mix(in srgb,var(--color-danger) 30%,var(--border-default))}.danger-zone .eyebrow,.danger-zone svg{color:var(--color-danger)}.support-page{max-width:700px}.support-card{grid-template-columns:auto 1fr;align-items:start;max-width:560px;margin-top:20px}.support-card h3{margin:5px 0;font-size:20px;overflow-wrap:anywhere}.account-card-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--success-surface);color:var(--color-success)}.support-contact-button{display:inline-flex;align-items:center;gap:8px;margin-top:6px;text-decoration:none}.support-contact-button:hover{text-decoration:none}@media(max-width:760px){.account-page{padding:12px 0 32px}.account-page-grid{grid-template-columns:1fr}.account-card{padding:16px}.support-card{grid-template-columns:1fr}.account-page .page-heading h2{font-size:22px}.account-form-actions{align-items:flex-start;flex-direction:column}}
+
+/* Compact account dropdown: keep account actions together without competing
+   with the navbar controls or the page content. */
+.account-popover {
+  width: 260px;
+  padding: 8px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.account-popover-identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 7px 8px;
+}
+
+.account-popover-identity > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-popover-identity strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.account-popover-identity small {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.account-popover-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-default);
+}
+
+.account-popover .account-management,
+.account-popover .account-popover-section {
+  padding-top: 4px;
+}
+
+.account-popover .account-actions {
+  gap: 2px;
+}
+
+.account-popover .account-actions button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.account-popover .account-actions button svg {
+  flex: 0 0 17px;
+  color: var(--text-secondary);
+}
+
+.account-popover .account-actions button:hover svg,
+.account-popover .account-actions button:focus-visible svg {
+  color: var(--color-success);
+}
+
+.account-popover .account-section-label {
+  padding: 4px 8px 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.account-popover .account-protection-card {
+  margin-top: 4px;
+}
+
+.account-trigger:focus-visible,
+.account-popover button:focus-visible {
+  outline: 2px solid var(--color-info);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .account-popover {
+    width: min(260px, calc(100vw - 24px));
+  }
+}
+
+.app-account-wrap{position:relative}.account-card-popover{width:350px;padding:10px}.account-card-popover .account-popover-identity{padding:7px 8px 11px}.account-protected-state{display:flex;align-items:center;gap:7px;margin:4px 7px 8px;color:var(--color-success);font-size:12px;font-weight:650}.account-card-popover .account-actions button{display:flex;align-items:center;gap:9px}.account-card-popover .account-actions button svg:last-child{margin-left:auto}.account-remove-device{width:100%;margin-top:8px;padding:9px;border:0;border-radius:8px;background:transparent;color:var(--color-danger);text-align:left;font:inherit;font-size:12px;cursor:pointer}.account-remove-device:hover{background:var(--bg-hover)}.account-switch-list{display:grid;gap:4px;margin-top:14px}.account-switch-item{display:flex;align-items:center;gap:9px;width:100%;padding:10px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--text-primary);text-align:left;cursor:pointer;font:inherit}.account-switch-item:hover,.account-switch-item.is-current{background:var(--bg-hover);border-color:var(--border-default)}.account-switch-item>span:nth-child(2){display:flex;flex-direction:column;min-width:0}.account-switch-item small{margin-top:2px;color:var(--text-secondary);font-size:11px}.account-switch-item b{margin-left:auto;color:var(--color-success)}@media(max-width:760px){.account-card-popover{width:min(350px,calc(100vw - 24px));right:-40px}}

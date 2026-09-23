@@ -29,9 +29,16 @@ public sealed record MonthlyFinancialSummaryResponse(
     decimal MissingAmount,
     decimal CoveragePercentage,
     decimal EstimatedFinalBalance,
-    IReadOnlyCollection<MonthlyCommitmentResponse> Commitments);
+    IReadOnlyCollection<MonthlyCommitmentResponse> Commitments,
+    IReadOnlyCollection<MonthlyUrgentCommitmentResponse> UrgentCommitments);
+
+public sealed record MonthlyUrgentCommitmentResponse(
+    Guid CommitmentId,
+    string Name,
+    decimal OverallRemainingAmount);
 
 public sealed record MonthlyCommitmentResponse(
+    Guid CommitmentId,
     string Id,
     string Name,
     int? InstallmentNumber,
@@ -42,7 +49,12 @@ public sealed record MonthlyCommitmentResponse(
     decimal RemainingAmount,
     decimal CoveragePercentage,
     bool IsPaid,
-    bool IsCovered)
+    bool IsCovered,
+    int? Priority,
+    bool Urgent,
+    bool RequiresAttention,
+    bool IsCompleted,
+    decimal OverallRemainingAmount)
 {
     public string CoverageStatus => IsCovered ? "covered" : AllocatedAmount > 0m ? "partial" : "none";
 }

@@ -24,10 +24,9 @@ main { min-width: 0; width: min(100%, var(--content-max)); }
 .empty, .loading { min-height: 150px; display: grid; place-content: center; gap: 8px; text-align: center; }
 .mobile-menu-trigger { display: none; }
 .app-sidebar-header, .app-sidebar-close, .sidebar-theme-control, .app-sidebar-backdrop { display: none; }
-.commitment-card *, .commitment-static-card *, .income-row *, .recurring-row *, .dashboard-panel * { min-width: 0; }
-.commitment-card h3, .commitment-static-card h3, .income-info strong, .recurring-main strong { overflow-wrap: anywhere; }
-.commitment-card:hover, .commitment-static-card:hover, .metric:hover { transform: none !important; }
-.commitment-card button, .commitment-static-card button { white-space: normal; }
+.income-row *, .recurring-row *, .dashboard-panel * { min-width: 0; }
+.income-info strong, .recurring-main strong { overflow-wrap: anywhere; }
+.metric:hover { transform: none !important; }
 
 @media (max-width: 1023px) {
   .app-sidebar { flex-basis: 208px; }
