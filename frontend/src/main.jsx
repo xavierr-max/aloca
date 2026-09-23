@@ -28,6 +28,7 @@ import './ux-overhaul.css'
 import './dashboard-overview.css'
 import './commitments-base.css'
 import './responsive-overrides.css'
+import './account-contrast.css'
 
 const iconProps = { size: 18, strokeWidth: 1.8, 'aria-hidden': true, focusable: false }
 const Icon = ({ icon: Glyph, size, className = '' }) => <Glyph {...iconProps} size={size ?? iconProps.size} className={className} />
