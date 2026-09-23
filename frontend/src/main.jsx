@@ -444,10 +444,10 @@ function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverO
 }
 
 const dashboardCards = [
-  { key: 'current', label: 'SALDO ATUAL', icon: Wallet, title: 'Saldo atual', description: 'Valor disponível atualmente na conta, considerando as movimentações já confirmadas.' },
-  { key: 'reserved', label: 'SALDO RESERVADO', icon: LockKeyhole, title: 'Saldo reservado', description: 'Parte do saldo que já foi reservada para compromissos futuros.' },
-  { key: 'unallocated', label: 'SALDO NÃO ALOCADO', icon: Wallet, title: 'Saldo não alocado', description: 'Valor que ainda não foi reservado para nenhum compromisso.' },
-  { key: 'estimated', label: 'SALDO FINAL ESTIMADO', icon: BarChart3, title: 'Saldo final estimado', description: 'Estimativa do saldo ao final do mês considerando os dados previstos.' },
+  { key: 'current', variant: 'solid-light', label: 'SALDO ATUAL', icon: Wallet, title: 'Saldo atual', description: 'Valor disponível atualmente na conta, considerando as movimentações já confirmadas.' },
+  { key: 'reserved', variant: 'neutral', label: 'SALDO RESERVADO', icon: LockKeyhole, title: 'Saldo reservado', description: 'Parte do saldo que já foi reservada para compromissos futuros.' },
+  { key: 'unallocated', variant: 'solid-accent', label: 'SALDO NÃO ALOCADO', icon: Wallet, title: 'Saldo não alocado', description: 'Valor que ainda não foi reservado para nenhum compromisso.' },
+  { key: 'estimated', variant: 'neutral', label: 'SALDO FINAL ESTIMADO', icon: BarChart3, title: 'Saldo final estimado', description: 'Estimativa do saldo ao final do mês considerando os dados previstos.' },
 ]
 
 function DashboardPage({ summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments, onViewCommitments, incomes, expenses, dataError, onRetry }) {
@@ -464,10 +464,9 @@ function DashboardPage({ summary, monthlySummary, monthlyLoading, monthlyError, 
       <p>Seu dinheiro, sob controle.</p>
     </header>
     <div className="dashboard-balance-grid" aria-label="Saldos financeiros">
-      {dashboardCards.map(({ key, label, icon: Glyph, title, description }) => <article key={key} className={`dashboard-balance-card${key === 'unallocated' ? ' is-highlighted' : ''}`}>
+      {dashboardCards.map(({ key, variant, label, icon: Glyph, title, description }) => <article key={key} className={`dashboard-balance-card dashboard-balance-card--${variant}`}>
         <div className="dashboard-card-topline"><span className="dashboard-card-label">{label} <InfoTooltip title={title} description={description} /></span><span className="dashboard-card-icon" aria-hidden="true"><Glyph size={19} strokeWidth={1.8} /></span></div>
-        <strong className="dashboard-card-value">{money(values[key])}</strong>
-        {key === 'current' && <span className="dashboard-card-status">Disponível</span>}
+        <div className="dashboard-card-content"><strong className="dashboard-card-value">{money(values[key])}</strong><div className="dashboard-card-auxiliary">{key === 'current' && <span className="dashboard-card-status">Disponível</span>}</div></div>
       </article>)}
     </div>
     <div className="dashboard-secondary-grid">
@@ -592,8 +591,8 @@ function MonthlySummaryCard({ summary, commitments = [], loading, error, selecte
     { key: 'income', label: 'Entradas', value: money(summary.recurringIncomeTotal), icon: ArrowDownLeft, tone: 'income', tooltip: 'Entradas previstas para o mês selecionado.' },
     { key: 'commitments', label: 'Compromissos', value: money(summary.commitmentTotal), icon: ArrowUpRight, tone: 'expense', tooltip: 'Total das parcelas e compromissos previstos para este mês.' },
     { key: 'result', label: 'Resultado', value: signedMoney(summary.monthlyResult), icon: ArrowLeftRight, tone: Number(summary.monthlyResult) < 0 ? 'negative' : Number(summary.monthlyResult) > 0 ? 'positive' : 'neutral', tooltip: 'Entradas previstas menos compromissos previstos no mês.' },
-    { key: 'reserved', label: 'Reservado / alocado', value: money(summary.allocatedAmount), icon: Wallet, tone: 'reserved', tooltip: 'Valor já alocado para cobrir os compromissos deste mês.' },
-    { key: 'final', label: 'Saldo final', value: money(summary.estimatedFinalBalance), icon: BarChart3, tone: Number(summary.estimatedFinalBalance) < 0 ? 'negative' : 'positive', tooltip: 'Saldo estimado após as entradas e compromissos considerados no período.' },
+    { key: 'reserved', variant: 'solid-light', label: 'Reservado / alocado', value: money(summary.allocatedAmount), icon: Wallet, tone: 'reserved', tooltip: 'Valor já alocado para cobrir os compromissos deste mês.' },
+    { key: 'final', variant: 'solid-accent', label: 'Saldo final', value: money(summary.estimatedFinalBalance), icon: BarChart3, tone: Number(summary.estimatedFinalBalance) < 0 ? 'negative' : 'positive', tooltip: 'Saldo estimado após as entradas e compromissos considerados no período.' },
   ] : []
   const monthlyCommitments = summary?.commitments || []
   const pendingCommitments = monthlyCommitments.filter(item => !item.isCovered)
@@ -609,7 +608,7 @@ function MonthlySummaryCard({ summary, commitments = [], loading, error, selecte
   return <section className="dashboard-secondary-card dashboard-month-summary" aria-labelledby="monthly-summary-title">
     <header className="dashboard-month-header"><div><span className="eyebrow">CONTEXTO TEMPORAL</span><h2 id="monthly-summary-title">Resumo financeiro do mês</h2></div><MonthPicker value={selectedMonth} onChange={onMonthChange} /></header>
     {loading && !summary ? <div className="dashboard-month-loading" aria-busy="true"><span /><span /><span /><span /><span /></div> : error && !summary ? <div className="dashboard-month-error" role="alert"><span>{error}</span><button type="button" className="secondary" onClick={onRetry}>Tentar novamente</button></div> : <>
-      <div className="dashboard-month-metrics">{metrics.map(({ key, label, value, icon: Glyph, tone, tooltip }) => <article className={`dashboard-month-metric is-${tone}`} key={key}><span className="dashboard-month-icon" aria-hidden="true"><Glyph size={17} strokeWidth={1.8} /></span><div className="dashboard-month-metric-title"><span className="dashboard-month-label">{label}</span><InfoTooltip title={label} description={tooltip} /></div><strong>{value}</strong></article>)}</div>
+      <div className="dashboard-month-metrics">{metrics.map(({ key, variant, label, value, icon: Glyph, tone, tooltip }) => <article className={`dashboard-month-metric dashboard-month-metric--${variant || 'neutral'} is-${tone}`} key={key}><span className="dashboard-month-icon" aria-hidden="true"><Glyph size={17} strokeWidth={1.8} /></span><div className="dashboard-month-metric-title metric-label-row"><span className="dashboard-month-label">{label}</span><InfoTooltip title={label} description={tooltip} /></div><strong>{value}</strong></article>)}</div>
       {(monthlyCommitments.length > 0 || urgentCommitments.length > 0) && <div className={`dashboard-month-coverage ${urgentCommitments.length ? 'is-urgent' : hasDeficit ? 'is-pending' : 'is-covered'}`}>
         {monthlyCommitments.length > 0 && (hasDeficit ? <div className="dashboard-month-coverage-alert"><span className="dashboard-month-coverage-icon" aria-hidden="true"><TriangleAlert size={16} /></span><div><strong>Cobertura do mês pendente</strong><span>Faltam {money(summary.missingAmount)} para cobrir os compromissos de {monthText}.</span></div></div> : <span className="dashboard-month-covered-message"><CircleCheck size={15} aria-hidden="true" /> Compromissos do mês cobertos</span>)}
         {urgentCommitments.length > 0 && <div className="dashboard-month-coverage-alert dashboard-month-global-urgent"><span className="dashboard-month-coverage-icon" aria-hidden="true"><TriangleAlert size={16} /></span><div><strong>{urgentCommitments.length} compromisso{urgentCommitments.length === 1 ? '' : 's'} urgente{urgentCommitments.length === 1 ? '' : 's'} ainda precisa{urgentCommitments.length === 1 ? '' : 'm'} de atenção</strong><span>Faltam {money(missingForUrgent)} no total desses compromissos.</span></div></div>}
@@ -903,7 +902,7 @@ function CommitmentObjective({ selectedObjective, onChange }) {
   return <div className="dashboard-objective-content" aria-label="Objetivo da reserva">
     <div className="dashboard-objective-heading"><div><span className="eyebrow">DIREÇÃO DO SALDO</span><h3>Objetivo da reserva <InfoTooltip title="Objetivo da reserva" description="Representa a prioridade financeira que você definiu para orientar suas decisões e reservas." /></h3></div></div>
     <div className={`dashboard-objective-body${objectiveEditing ? ' is-editing' : ''}`}>
-      {objectiveEditing ? <div className="objective-editing">
+      {objectiveEditing ? <div className="objective-edit-form">
         <span className="dashboard-objective-edit-help">Escreva aqui seu objetivo financeiro</span>
         <textarea ref={editorRef} className="dashboard-objective-editor" aria-label="Objetivo da reserva" value={draft} placeholder="Ex.: quitar dívidas, montar reserva, organizar o próximo mês" rows="2" onClick={event => event.stopPropagation()} onChange={event => saveDraft(event.target.value)} />
         <div className="dashboard-objective-edit-actions"><button type="button" className="secondary" onClick={cancelEditing}>Cancelar</button><button type="button" className="primary" onClick={saveObjective}>Salvar</button></div>
