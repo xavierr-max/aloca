@@ -6,7 +6,7 @@ import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, BadgeCheck, Bell, Calculator,
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye,
   Folder, Info, LayoutDashboard, List, Pencil, Plus, RotateCw, Settings, ShieldCheck, Target,
-  Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy,
+  Menu, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy,
 } from 'lucide-react'
 import { api, apiAvailabilityEvents, markAccountContextChanged } from './services/api'
 import { CheckboxOption } from './components/CheckboxOption'
@@ -21,6 +21,7 @@ import './semantic.css'
 import './theme.css'
 import './calculator.css'
 import './responsive-system.css'
+import './responsive-overrides.css'
 import './account.css'
 import './profile-page.css'
 import './navigation.css'
@@ -430,8 +431,9 @@ function AppSidebar({ view }) {
   </aside>
 }
 
-function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverOpen, onToggleAccount, onCloseAccount, onAccountAction, createMenuOpen, onToggleCreate, onNewIncome, onNewExpense, onNewRecurring, onNewCommitment, theme, onToggleTheme }) {
+function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverOpen, onToggleAccount, onCloseAccount, onAccountAction, createMenuOpen, onToggleCreate, onNewIncome, onNewExpense, onNewRecurring, onNewCommitment, theme, onToggleTheme, onOpenNavigation }) {
   return <header className="app-topbar">
+    <button type="button" className="app-mobile-menu-button" onClick={onOpenNavigation} aria-label="Abrir navegação" aria-controls="mobile-navigation"><Menu size={20} /></button>
     <div className="app-topbar-actions">
       <div className="app-create-wrap">
         <button type="button" className="app-create-button" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={onToggleCreate}><Icon icon={Plus} size={19} /> Novo</button>
@@ -441,6 +443,24 @@ function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverO
       <div className="app-account-wrap"><button type="button" className="app-account-button" onClick={onToggleAccount} aria-haspopup="dialog" aria-expanded={accountPopoverOpen} aria-controls={accountPopoverOpen ? 'account-popover' : undefined} aria-label="Abrir gerenciamento da conta"><span className="app-account-avatar">{(account?.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>Minha conta</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>{accountPopoverOpen && <div id="account-popover"><AccountPopover accountState={accountState} busy={accountMutationBusy} onClose={onCloseAccount} onProfile={onAccountAction.profile} onProtect={onAccountAction.protect} onSwitch={onAccountAction.switch} onAdd={onAccountAction.add} onRemove={onAccountAction.remove} /></div>}</div>
     </div>
   </header>
+}
+
+function MobileNavigation({ view, onClose }) {
+  const items = [
+    ['#dashboard', 'Visão geral', LayoutDashboard],
+    ['#movimentacoes', 'Movimentações', ArrowLeftRight],
+    ['#compromissos', 'Compromissos', CalendarDays],
+    ['#previsoes', 'Previsões e Dados', BarChart3],
+    ['#grupos', 'Grupos', Folder],
+    ['#perfil', 'Perfil e configurações', Settings],
+    ['#suporte', 'Suporte', LifeBuoy],
+  ]
+  return <div className="mobile-navigation-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+    <aside id="mobile-navigation" className="mobile-navigation" role="dialog" aria-modal="true" aria-label="Navegação">
+      <div className="mobile-navigation-header"><span className="eyebrow">ALOCA</span><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar navegação">×</button></div>
+      <nav>{items.map(([href, label, Glyph]) => <a key={href} href={href} className={view === href.slice(1) || (href === '#movimentacoes' && view === 'incomes') ? 'is-active' : ''} onClick={onClose}><Glyph size={19} /><span>{label}</span></a>)}</nav>
+    </aside>
+  </div>
 }
 
 const dashboardCards = [
@@ -660,8 +680,17 @@ function App() {
   const [selectedMonth, setSelectedMonth] = useState(() => normalizeMonth(sessionStorage.getItem('aloca-selected-month') || currentMonth))
   const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#previsoes' ? 'forecast' : window.location.hash === '#grupos' ? 'groups' : window.location.hash === '#suporte' ? 'support' : window.location.hash === '#perfil' ? 'profile' : 'dashboard'
   const [view, setView] = useState(getView())
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
+  useEffect(() => {
+    if (!mobileNavigationOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const closeOnEscape = event => { if (event.key === 'Escape') setMobileNavigationOpen(false) }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', closeOnEscape) }
+  }, [mobileNavigationOpen])
   const { theme, toggleTheme } = useTheme()
   const refreshVersionRef = useRef(0)
   const accountTransitionRef = useRef(0)
@@ -791,8 +820,9 @@ function App() {
   if (!accountState?.current) return <div className="app-shell"><div className="loading account-recovery"><strong>Não foi possível abrir uma conta local</strong><span>Gerencie as contas deste dispositivo para liberar espaço e entrar no Aloca.</span></div></div>
   return <div className="app-shell">
     <div className="app-logo-slot" aria-hidden="true"><img src={theme === 'dark' ? '/aloca-logo-dark.png' : '/aloca-logo.png'} alt="" /></div>
-    <AppTopbar account={accountState.current} accountState={accountState} accountMutationBusy={accountMutationBusy} accountPopoverOpen={accountPopoverOpen} onToggleAccount={() => setAccountPopoverOpen(value => !value)} onCloseAccount={() => setAccountPopoverOpen(false)} onAccountAction={{ profile: () => { setAccountPopoverOpen(false); window.location.hash = 'perfil' }, protect: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'protect' }) }, switch: switchAccount, add: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'add' }) }, remove: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'remove' }) }}} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-income' }) }} onNewExpense={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-expense' }) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} />
+    <AppTopbar account={accountState.current} accountState={accountState} accountMutationBusy={accountMutationBusy} accountPopoverOpen={accountPopoverOpen} onToggleAccount={() => setAccountPopoverOpen(value => !value)} onCloseAccount={() => setAccountPopoverOpen(false)} onAccountAction={{ profile: () => { setAccountPopoverOpen(false); window.location.hash = 'perfil' }, protect: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'protect' }) }, switch: switchAccount, add: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'add' }) }, remove: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'remove' }) }}} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-income' }) }} onNewExpense={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-expense' }) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} onOpenNavigation={() => setMobileNavigationOpen(true)} />
     <AppSidebar view={view} />
+    {mobileNavigationOpen && <MobileNavigation view={view} onClose={() => setMobileNavigationOpen(false)} />}
     <CalculatorPopover open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
     <main className="app-main">
       <div className="page-content">
