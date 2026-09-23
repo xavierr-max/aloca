@@ -6,9 +6,10 @@ import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, BadgeCheck, Bell, Calculator,
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye,
   Folder, Info, LayoutDashboard, List, Pencil, Plus, RotateCw, Settings, ShieldCheck, Target,
-  Menu, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy,
+  Menu, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy, Camera,
 } from 'lucide-react'
 import { api, apiAvailabilityEvents, markAccountContextChanged } from './services/api'
+import { APP_VERSION } from './appVersion'
 import { CheckboxOption } from './components/CheckboxOption'
 import FinancialForecastPage from './pages/FinancialForecastPage.jsx'
 import MovementsPage from './features/movements/MovementsPage.jsx'
@@ -30,6 +31,19 @@ import './commitments-base.css'
 import './responsive-overrides.css'
 import './account-contrast.css'
 import './mobile-foundation.css'
+
+const navigationItems = [
+  { id: 'dashboard', href: '#dashboard', view: 'dashboard', desktopLabel: 'Visão geral', mobileLabel: 'Início', icon: LayoutDashboard },
+  { id: 'movimentacoes', href: '#movimentacoes', view: 'incomes', desktopLabel: 'Movimentações', mobileLabel: 'Movimentos', icon: ArrowLeftRight },
+  { id: 'compromissos', href: '#compromissos', view: 'commitments', desktopLabel: 'Compromissos', mobileLabel: 'Compromissos', icon: CalendarDays },
+  { id: 'previsoes', href: '#previsoes', view: 'forecast', desktopLabel: 'Previsões e Dados', mobileLabel: 'Previsões', icon: BarChart3 },
+  { id: 'grupos', href: '#grupos', view: 'groups', desktopLabel: 'Grupos', mobileLabel: 'Grupos', icon: Folder },
+  { id: 'perfil', href: '#perfil', view: 'profile', desktopLabel: 'Perfil e configurações', mobileLabel: 'Perfil', icon: Settings },
+  { id: 'suporte', href: '#suporte', view: 'support', desktopLabel: 'Suporte', mobileLabel: 'Suporte', icon: LifeBuoy },
+]
+
+const navigationItemMatchesHash = (item, hash) => hash === item.href || hash.startsWith(`${item.href}/`)
+const navigationItemIsActive = (item, view) => item.view === view
 
 const iconProps = { size: 18, strokeWidth: 1.8, 'aria-hidden': true, focusable: false }
 const Icon = ({ icon: Glyph, size, className = '' }) => <Glyph {...iconProps} size={size ?? iconProps.size} className={className} />
@@ -113,9 +127,10 @@ const LAYER_TOKENS = Object.freeze({
   toast: 1000,
 })
 
-function ModalLayer({ children, onClose }) {
+function ModalLayer({ children, onClose, className = '', backdropClassName = '' }) {
   const openerRef = useRef(typeof document !== 'undefined' ? document.activeElement : null)
   const contentRef = useRef(null)
+  const backdropRef = useRef(null)
   const onCloseRef = useRef(onClose)
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
@@ -128,7 +143,12 @@ function ModalLayer({ children, onClose }) {
     const focusable = () => [...content?.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') || []]
     const focusInitial = () => { const target = content?.querySelector('[autofocus]') || focusable()[0]; target?.focus() }
     const frame = window.requestAnimationFrame(focusInitial)
+    const isTopLayer = () => {
+      const layers = [...document.querySelectorAll('[data-modal-layer]')]
+      return layers[layers.length - 1] === backdropRef.current
+    }
     const onKeyDown = event => {
+      if (!isTopLayer()) return
       if (event.key === 'Escape') {
         event.preventDefault()
         event.stopPropagation()
@@ -154,8 +174,8 @@ function ModalLayer({ children, onClose }) {
 
   if (typeof document === 'undefined') return null
   return createPortal(
-    <div className="modal-backdrop" data-modal-layer style={{ zIndex: LAYER_TOKENS.modalBackdrop }} onMouseDown={event => { if (event.target === event.currentTarget) onCloseRef.current?.() }}>
-      <div ref={contentRef} className="modal" role="dialog" aria-modal="true" style={{ zIndex: LAYER_TOKENS.modal }}>{children}</div>
+    <div ref={backdropRef} className={`modal-backdrop ${backdropClassName}`.trim()} data-modal-layer style={{ zIndex: LAYER_TOKENS.modalBackdrop }} onMouseDown={event => { if (event.target === event.currentTarget) onCloseRef.current?.() }}>
+      <div ref={contentRef} className={`modal ${className}`.trim()} role="dialog" aria-modal="true" style={{ zIndex: LAYER_TOKENS.modal }}>{children}</div>
     </div>,
     document.body,
   )
@@ -185,6 +205,34 @@ function AccountDeleteModal({ displayName, isLocal, onClose, onConfirm }) {
   return <ModalLayer onClose={() => { if (!busy) onClose() }}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">AÇÃO DESTRUTIVA</span><h2>Excluir conta</h2></div><button type="button" className="icon-button" onClick={onClose} disabled={busy}>×</button></div><p className="modal-copy">Excluir esta conta apagará todos os dados financeiros associados. Esta ação não pode ser desfeita.</p>{!isLocal && <p className="modal-copy">Por segurança, confirme o nome da conta e informe a senha atual.</p>}{error && <div className="alert error">{error}</div>}<label>Digite “{expected}” para confirmar<input autoFocus value={confirmation} onChange={e => setConfirmation(e.target.value)} disabled={busy} /></label>{!isLocal && <label>Senha atual<input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} disabled={busy} /></label>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="danger-button" disabled={busy}>{busy ? 'Excluindo…' : 'Excluir conta'}</button></div></form></ModalLayer>
 }
 
+function AccountAvatar({ account, size = 'default', className = '', decorative = true }) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [account?.avatarUrl])
+  const initial = (account?.displayName || 'M').slice(0, 1).toUpperCase()
+  return <span className={`account-avatar-view account-avatar-view-${size} ${className}`.trim()} aria-hidden={decorative ? 'true' : undefined}>
+    {account?.avatarUrl && !failed ? <img src={account.avatarUrl} alt={decorative ? '' : 'Pré-visualização da foto de perfil'} onError={() => setFailed(true)} /> : initial}
+  </span>
+}
+
+function ProfileImageDialog({ account, busy, onClose, onSave, onRemove }) {
+  const [file, setFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [error, setError] = useState('')
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
+  const choose = event => {
+    const next = event.target.files?.[0]
+    event.target.value = ''
+    if (!next) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(next.type)) return setError('Use uma imagem JPEG, PNG ou WebP.')
+    if (next.size > 5 * 1024 * 1024) return setError('A foto deve ter no máximo 5 MB.')
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setError(''); setFile(next); setPreviewUrl(URL.createObjectURL(next))
+  }
+  const save = async () => { if (!file || busy) return; setError(''); try { await onSave(file) } catch (e) { setError(errorText(e)) } }
+  const remove = async () => { if (busy) return; setError(''); try { await onRemove() } catch (e) { setError(errorText(e)) } }
+  return <ModalLayer onClose={() => { if (!busy) onClose() }}><div className="modal-head"><div><span className="eyebrow">PERFIL</span><h2>Alterar foto de perfil</h2></div><button type="button" className="icon-button" onClick={onClose} disabled={busy} aria-label="Fechar">×</button></div><div className="profile-image-dialog-content"><AccountAvatar account={file ? { ...account, avatarUrl: previewUrl } : account} size="preview" decorative={false} /><p>{file?.name || (account.avatarUrl ? 'Foto atual' : 'Nenhuma foto selecionada')}</p></div>{error && <div className="alert error" role="alert">{error}</div>}<input id="profile-image-file" type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={choose} /><div className="profile-image-dialog-actions"><label className="secondary" htmlFor="profile-image-file">Escolher imagem</label>{account.avatarUrl && <button type="button" className="secondary" onClick={remove} disabled={busy}>{busy ? 'Salvando…' : 'Remover foto'}</button>}<button type="button" className="primary" onClick={save} disabled={!file || busy}>{busy ? 'Salvando…' : 'Salvar foto'}</button></div></ModalLayer>
+}
+
 function AccountPopover({ accountState, busy, onClose, onProfile, onProtect, onSwitch, onAdd, onRemove }) {
   const popoverRef = useRef(null)
   const current = accountState?.current
@@ -204,7 +252,7 @@ function AccountPopover({ accountState, busy, onClose, onProfile, onProtect, onS
   if (!current) return null
   const run = action => { if (!busy) action() }
   return <div ref={popoverRef} className="account-popover account-card-popover" role="dialog" aria-label="Gerenciamento da conta">
-    <div className="account-popover-identity"><span className="account-avatar" aria-hidden="true">{(current.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>{current.displayName || 'Minha conta'}</strong><small>{current.isLocal ? 'Conta local' : 'Conta protegida'}</small></span></div>
+    <div className="account-popover-identity"><AccountAvatar account={current} /><span><strong>{current.displayName || 'Minha conta'}</strong><small>{current.isLocal ? 'Conta local' : 'Conta protegida'}</small></span></div>
     {current.isLocal ? <section className="account-protection-card"><div className="account-protection-copy"><span className="account-protection-icon"><ShieldCheck size={16} /></span><div><div className="account-protection-title-row"><strong>Proteja sua conta</strong></div><p>Use e-mail e senha para acessar esta mesma conta com segurança em outros contextos.</p></div></div><button type="button" className="account-protection-cta" onClick={() => run(onProtect)} disabled={busy}>Proteger conta</button></section> : <div className="account-protected-state"><ShieldCheck size={15} /> Conta protegida{current.email ? ` · ${current.email}` : ''}</div>}
     <div className="account-popover-divider" />
     <div className="account-actions account-management">
@@ -214,6 +262,7 @@ function AccountPopover({ accountState, busy, onClose, onProfile, onProtect, onS
     </div>
     {atLimit && <p className="account-limit-message">Limite de 4 contas atingido. Remova uma conta protegida deste dispositivo para liberar espaço.</p>}
     {!current.isLocal && <button type="button" className="account-remove-device" onClick={() => run(onRemove)} disabled={busy}>Remover deste dispositivo</button>}
+    <div className="account-popover-footer" aria-label={`Versão ${APP_VERSION}`}><strong>Aloca</strong><span>{APP_VERSION}</span></div>
   </div>
 }
 
@@ -222,17 +271,19 @@ function SupportPage({ account }) {
   return <section className="account-page support-page"><div className="page-heading"><div><span className="eyebrow">AJUDA</span><h2>Suporte</h2><p>Entre em contato para tirar dúvidas, relatar problemas ou enviar sugestões.</p></div><LifeBuoy size={34} aria-hidden="true" /></div><article className="account-card support-card"><div className="account-card-icon"><Mail size={20} /></div><div><span className="eyebrow">CANAL DE CONTATO</span><h3>alocafinance.app@gmail.com</h3><p>Responderemos pelo e-mail informado assim que possível.</p><a className="primary support-contact-button" href="mailto:alocafinance.app@gmail.com"><Mail size={17} />Entrar em contato</a></div></article></section>
 }
 
-function ProfileSecurityPage({ account, onUpdateProfile, onSecurity, onDelete }) {
+function ProfileSecurityPage({ account, onUpdateProfile, onSecurity, onDelete, onSaveAvatar, onRemoveAvatar, accountMutationBusy }) {
   const [displayName, setDisplayName] = useState(account.displayName || '')
   const [email, setEmail] = useState(account.email || '')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
   useEffect(() => { setDisplayName(account.displayName || ''); setEmail(account.email || '') }, [account.id, account.displayName, account.email])
   const save = async event => { event.preventDefault(); setError(''); setSaved(false); if (!displayName.trim()) return setError('Informe o nome da conta.'); if (!account.isLocal && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setError('Informe um e-mail válido.'); setSaving(true); try { await onUpdateProfile(account.isLocal ? { displayName } : { displayName, email }); setSaved(true) } catch (e) { setError(errorText(e)) } finally { setSaving(false) } }
   const accountType = account.isLocal ? 'Local neste dispositivo' : 'Protegida por senha'
   const securityLabel = account.isLocal ? 'Ainda não protegida' : 'Protegida'
-  return <section className="account-page profile-page"><div className="page-heading"><div><span className="eyebrow">MINHA CONTA</span><h2>Perfil e Segurança</h2><p>Atualize seus dados e mantenha sua conta protegida.</p></div><UserCircle size={34} aria-hidden="true" /></div><header className="profile-hero"><div className="profile-hero-banner" aria-hidden="true"><span>ALOCA</span></div><div className="profile-hero-content"><span className="account-identity-avatar" aria-hidden="true">{(account.displayName || 'A').slice(0, 1).toUpperCase()}</span><div className="profile-hero-copy"><h3>{account.displayName || 'Sua conta'}</h3><p>{account.isLocal ? 'Conta local' : 'Conta protegida'}</p><span className={`account-status ${account.isLocal ? 'is-local' : ''}`}><ShieldCheck size={15} />{securityLabel}</span></div><button type="button" className="profile-edit-link" onClick={() => document.querySelector('.account-form input')?.focus()}><Pencil size={15} />Editar perfil</button></div></header><div className="account-summary" aria-label="Resumo da conta"><div><span>Conta</span><strong>{accountType}</strong></div><div><span>Segurança</span><strong className={account.isLocal ? 'summary-muted' : ''}>{securityLabel}</strong></div>{!account.isLocal && <div><span>E-mail</span><strong>{account.email}</strong></div>}</div><div className="account-page-grid"><section className="account-card account-profile-card"><div className="account-card-heading"><div><span className="eyebrow">PERFIL</span><h3>{account.isLocal ? 'Renomear conta' : 'Informações pessoais'}</h3></div><Pencil size={18} aria-hidden="true" /></div><form onSubmit={save} className="account-form">{error && <div className="alert error">{error}</div>}<label>Nome da conta<input value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>{!account.isLocal && <label>E-mail<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /><small className="field-hint">Seu e-mail é privado e usado para acessar sua conta.</small></label>}<div className="account-form-actions"><button className="primary" type="submit" disabled={saving}>{saving ? 'Salvando…' : account.isLocal ? 'Renomear conta' : 'Salvar alterações'}</button>{saved && <span className="form-success" role="status">Alterações salvas</span>}</div></form></section><section className={`account-card account-security-card ${account.isLocal ? 'is-unprotected' : 'is-protected'}`}><div className="account-card-heading"><div><span className="eyebrow">SEGURANÇA</span><h3>Segurança da conta</h3></div><ShieldCheck size={18} aria-hidden="true" /></div><div className="security-state"><span className="security-state-icon" aria-hidden="true">{account.isLocal ? '○' : '✓'}</span><strong>{account.isLocal ? 'Conta local' : 'Conta protegida'}</strong></div><p>{account.isLocal ? 'Esta conta usa apenas um nome neste dispositivo.' : 'Sua conta usa e-mail e senha para proteger o acesso.'}</p>{!account.isLocal && <dl className="security-details"><div><dt>E-mail</dt><dd>{account.email}</dd></div></dl>}<button className="secondary" type="button" onClick={() => onSecurity(account.isLocal ? 'protect' : 'password')}>{account.isLocal ? 'Proteger minha conta' : 'Alterar senha'}</button></section><section className="account-card danger-zone"><div className="danger-copy"><div className="account-card-heading"><div><span className="eyebrow">ZONA DE PERIGO</span><h3>Excluir conta</h3></div><TriangleAlert size={18} aria-hidden="true" /></div><p>Exclui permanentemente a conta e seus dados.</p></div><button className="danger-button" type="button" onClick={onDelete}>Excluir conta</button></section></div></section>
+  const focusProfile = () => { const input = document.querySelector('#profile-name'); input?.scrollIntoView({ behavior: 'smooth', block: 'center' }); input?.focus() }
+  return <section className="account-page profile-page"><div className="page-heading"><div><span className="eyebrow">CONFIGURAÇÕES</span><h2>Perfil e Segurança</h2><p>Gerencie suas informações e mantenha sua conta protegida.</p></div></div><header className="profile-hero"><div className="profile-hero-banner" aria-hidden="true"><span>ALOCA <small>BETA</small></span></div><div className="profile-hero-content"><button type="button" className="profile-avatar-button" onClick={() => setAvatarDialogOpen(true)} disabled={accountMutationBusy} aria-label="Alterar foto de perfil" title="Alterar foto de perfil"><AccountAvatar account={account} size="hero" /><span className="profile-avatar-edit" aria-hidden="true"><Camera size={13} /></span></button><div className="profile-hero-copy"><h3>{account.displayName || 'Sua conta'}</h3><p>{account.isLocal ? 'Conta local' : 'Conta protegida'}</p><span className={`account-status ${account.isLocal ? 'is-local' : ''}`}><ShieldCheck size={15} />{securityLabel}</span></div><button type="button" className="profile-edit-link" onClick={focusProfile}><Pencil size={15} />Editar perfil</button></div></header><div className="account-summary" aria-label="Resumo da conta"><div><div className="summary-label"><UserCircle size={14} aria-hidden="true" /><span>Conta ativa</span></div><strong>{accountType}</strong></div><div><div className="summary-label"><ShieldCheck size={14} aria-hidden="true" /><span>Segurança</span></div><strong className={account.isLocal ? 'summary-muted' : 'summary-success'}>{securityLabel}</strong></div><div><div className="summary-label"><Info size={14} aria-hidden="true" /><span>Contexto</span></div><strong>{account.isLocal ? 'Seus dados ficam neste dispositivo.' : 'Acesso por e-mail e senha.'}</strong></div></div><div className="account-page-grid"><section className="account-card account-profile-card"><div className="account-card-heading"><div><span className="eyebrow">PERFIL</span><h3>Perfil</h3><p>Gerencie suas informações básicas.</p></div><Pencil size={18} aria-hidden="true" /></div><form onSubmit={save} className="account-form">{error && <div className="alert error" role="alert" aria-live="assertive">{error}</div>}<label>Nome da conta<input id="profile-name" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>{!account.isLocal && <label>E-mail<input type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /><small className="field-hint">Seu e-mail é privado e usado para acessar sua conta.</small></label>}<div className="account-form-actions"><button className="primary" type="submit" disabled={saving}>{saving ? 'Salvando…' : 'Salvar alterações'}</button>{saved && <span className="form-success" role="status">Alterações salvas</span>}</div></form></section><section className={`account-card account-security-card ${account.isLocal ? 'is-unprotected' : 'is-protected'}`}><div className="account-card-heading"><div><span className="eyebrow">SEGURANÇA</span><h3>Segurança da conta</h3><p>{account.isLocal ? 'Mantenha seus dados protegidos e acessíveis.' : 'Gerencie o acesso seguro à sua conta.'}</p></div><ShieldCheck size={18} aria-hidden="true" /></div>{account.isLocal ? <><div className="security-local-callout"><strong>Conta local</strong><span>Esta conta usa apenas um nome neste dispositivo. Seus dados ficam salvos localmente.</span></div><div className="security-protect-copy"><strong>Proteja sua conta</strong><p>Crie uma conta com e-mail e senha para manter seus dados seguros e acessíveis em outros dispositivos.</p></div><button className="primary" type="button" onClick={() => onSecurity('protect')}>Configurar conta segura</button></> : <><div className="security-state"><span className="security-state-icon" aria-hidden="true">✓</span><strong>Conta protegida</strong></div><dl className="security-details"><div><dt>E-mail</dt><dd>{account.email}</dd></div></dl><button className="secondary" type="button" onClick={() => onSecurity('password')}>Alterar senha</button></>}</section><section className="account-card danger-zone"><div className="danger-copy"><div className="account-card-heading"><div><span className="eyebrow">ZONA DE PERIGO</span><h3>Excluir conta</h3></div><TriangleAlert size={18} aria-hidden="true" /></div><p>Estas ações são permanentes e não podem ser desfeitas.</p><small>Exclui permanentemente a conta e todos os seus dados.</small></div><button className="danger-button" type="button" onClick={onDelete}>Excluir conta</button></section></div>{avatarDialogOpen && <ProfileImageDialog account={account} busy={accountMutationBusy} onClose={() => setAvatarDialogOpen(false)} onSave={async file => { await onSaveAvatar(file); setAvatarDialogOpen(false) }} onRemove={async () => { await onRemoveAvatar(); setAvatarDialogOpen(false) }} />}</section>
 }
 
 const calculatorNumber = value => Math.round((value + Number.EPSILON) * 1e10) / 1e10
@@ -411,76 +462,51 @@ function NavItem({ href, label, icon: Glyph, active }) {
 }
 
 function AppSidebar({ view }) {
-  const primaryItems = [
-    ['#dashboard', 'Visão geral', LayoutDashboard, view === 'dashboard'],
-    ['#movimentacoes', 'Movimentações', ArrowLeftRight, view === 'incomes'],
-    ['#compromissos', 'Compromissos', CalendarDays, view === 'commitments'],
-    ['#previsoes', 'Previsões e Dados', BarChart3, view === 'forecast'],
-    ['#grupos', 'Grupos', Folder, view === 'groups'],
-  ]
-  const secondaryItems = [
-    ['#perfil', 'Perfil e configurações', Settings, view === 'profile'],
-    ['#suporte', 'Suporte', LifeBuoy, view === 'support'],
-  ]
+  const primaryItems = navigationItems.slice(0, 5)
+  const secondaryItems = navigationItems.slice(5)
   return <aside className="app-sidebar" aria-label="Navegação principal">
     <nav className="app-sidebar-primary">
-      {primaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+      {primaryItems.map(item => <NavItem key={item.id} href={item.href} label={item.desktopLabel} icon={item.icon} active={navigationItemIsActive(item, view)} />)}
     </nav>
     <nav className="app-sidebar-secondary" aria-label="Navegação secundária">
-      {secondaryItems.map(([href, label, Glyph, active]) => <NavItem key={href} href={href} label={label} icon={Glyph} active={active} />)}
+      {secondaryItems.map(item => <NavItem key={item.id} href={item.href} label={item.desktopLabel} icon={item.icon} active={navigationItemIsActive(item, view)} />)}
     </nav>
   </aside>
 }
 
 function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverOpen, onToggleAccount, onCloseAccount, onAccountAction, createMenuOpen, onToggleCreate, onNewIncome, onNewExpense, onNewRecurring, onNewCommitment, theme, onToggleTheme, onOpenNavigation }) {
   return <header className="app-topbar">
+    <img className="app-mobile-brand" src="/aloca-mark-mobile.png" alt="Aloca" />
     <button type="button" className="app-mobile-menu-button" onClick={onOpenNavigation} aria-label="Abrir navegação" aria-controls="mobile-navigation"><Menu size={20} /></button>
     <div className="app-topbar-actions">
       <div className="app-create-wrap">
-        <button type="button" className="app-create-button" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={onToggleCreate}><Icon icon={Plus} size={19} /> Novo</button>
+        <button type="button" className="app-create-button" aria-label="Novo" title="Novo" aria-haspopup="menu" aria-expanded={createMenuOpen} onClick={onToggleCreate}><Icon icon={Plus} size={19} /><span className="app-create-label">Novo</span></button>
         {createMenuOpen && <div className="app-create-menu" role="menu"><button type="button" role="menuitem" onClick={onNewIncome}>Nova entrada</button><button type="button" role="menuitem" onClick={onNewExpense}>Nova saída</button><button type="button" role="menuitem" onClick={onNewRecurring}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={onNewCommitment}>Novo compromisso</button></div>}
       </div>
       <button type="button" className="app-theme-toggle" onClick={onToggleTheme} aria-label="Alternar tema" title="Alternar tema"><Sun size={16} /><span><i /></span><Moon size={16} /></button>
-      <div className="app-account-wrap"><button type="button" className="app-account-button" onClick={onToggleAccount} aria-haspopup="dialog" aria-expanded={accountPopoverOpen} aria-controls={accountPopoverOpen ? 'account-popover' : undefined} aria-label="Abrir gerenciamento da conta"><span className="app-account-avatar">{(account?.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>{account?.displayName || 'Minha conta'}</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>{accountPopoverOpen && <div id="account-popover"><AccountPopover accountState={accountState} busy={accountMutationBusy} onClose={onCloseAccount} onProfile={onAccountAction.profile} onProtect={onAccountAction.protect} onSwitch={onAccountAction.switch} onAdd={onAccountAction.add} onRemove={onAccountAction.remove} /></div>}</div>
+      <div className="app-account-wrap"><button type="button" className="app-account-button" onClick={onToggleAccount} aria-haspopup="dialog" aria-expanded={accountPopoverOpen} aria-controls={accountPopoverOpen ? 'account-popover' : undefined} aria-label="Abrir gerenciamento da conta"><AccountAvatar account={account} className="app-account-avatar" /><span><strong>{account?.displayName || 'Minha conta'}</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>{accountPopoverOpen && <div id="account-popover"><AccountPopover accountState={accountState} busy={accountMutationBusy} onClose={onCloseAccount} onProfile={onAccountAction.profile} onProtect={onAccountAction.protect} onSwitch={onAccountAction.switch} onAdd={onAccountAction.add} onRemove={onAccountAction.remove} /></div>}</div>
     </div>
   </header>
 }
 
 function MobileNavigation({ view, onClose }) {
-  const items = [
-    ['#dashboard', 'Visão geral', LayoutDashboard],
-    ['#movimentacoes', 'Movimentações', ArrowLeftRight],
-    ['#compromissos', 'Compromissos', CalendarDays],
-    ['#previsoes', 'Previsões e Dados', BarChart3],
-    ['#grupos', 'Grupos', Folder],
-    ['#perfil', 'Perfil e configurações', Settings],
-    ['#suporte', 'Suporte', LifeBuoy],
-  ]
   return <div className="mobile-navigation-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <aside id="mobile-navigation" className="mobile-navigation" role="dialog" aria-modal="true" aria-label="Navegação">
       <div className="mobile-navigation-header"><span className="eyebrow">ALOCA</span><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar navegação">×</button></div>
-      <nav>{items.map(([href, label, Glyph]) => <a key={href} href={href} className={view === href.slice(1) || (href === '#movimentacoes' && view === 'incomes') ? 'is-active' : ''} onClick={onClose}><Glyph size={19} /><span>{label}</span></a>)}</nav>
+      <nav>{navigationItems.map(item => <a key={item.id} href={item.href} className={navigationItemIsActive(item, view) ? 'is-active' : ''} onClick={onClose}><item.icon size={19} /><span>{item.desktopLabel}</span></a>)}</nav>
     </aside>
   </div>
 }
 
 function MobileBottomNavigation({ view }) {
-  const items = [
-    ['#dashboard', 'Início', LayoutDashboard],
-    ['#movimentacoes', 'Movimentos', ArrowLeftRight],
-    ['#compromissos', 'Compromissos', CalendarDays],
-    ['#previsoes', 'Previsões', BarChart3],
-    ['#grupos', 'Grupos', Folder],
-    ['#perfil', 'Perfil', Settings],
-    ['#suporte', 'Suporte', LifeBuoy],
-  ]
   return <nav className="mobile-bottom-navigation" aria-label="Navegação mobile">
     <div className="mobile-bottom-navigation-scroll">
-      {items.map(([href, label, Glyph]) => {
-        const active = view === href.slice(1) || (href === '#movimentacoes' && view === 'incomes')
-        return <a key={href} href={href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined}>
+      {navigationItems.map(item => {
+        const active = navigationItemIsActive(item, view)
+        const Glyph = item.icon
+        return <a key={item.id} href={item.href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined}>
           <Glyph size={19} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
-          <span>{label}</span>
+          <span>{item.mobileLabel}</span>
         </a>
       })}
     </div>
@@ -523,14 +549,14 @@ function DashboardPage({ account, summary, monthlySummary, monthlyLoading, month
     <UpcomingCommitmentsSection commitments={commitments} onViewAll={onViewCommitments} />
     <RecentMovementsSection incomes={incomes} expenses={expenses} error={dataError} onRetry={onRetry} onViewAll={() => { window.location.hash = 'movimentacoes' }} />
     </div>
-    <MobileDashboard account={account} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlyLoading} monthlyError={monthlyError} selectedMonth={selectedMonth} onMonthChange={onMonthChange} onRetryMonthly={onRetryMonthly} commitments={commitments} onViewCommitments={onViewCommitments} onViewMovements={() => { window.location.hash = 'movimentacoes' }} />
+    <MobileDashboard account={account} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlyLoading} monthlyError={monthlyError} selectedMonth={selectedMonth} onMonthChange={onMonthChange} onRetryMonthly={onRetryMonthly} commitments={commitments} onViewCommitments={onViewCommitments} />
   </section>
 }
 
-function MobileDashboard({ account, summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments = [], onViewCommitments, onViewMovements }) {
+function MobileDashboard({ account, summary, monthlySummary, monthlyLoading, monthlyError, selectedMonth, onMonthChange, onRetryMonthly, commitments = [], onViewCommitments }) {
   const current = Number(summary?.currentBalance ?? summary?.saldoReal) || 0
   const reserved = Number(summary?.allocatedBalance ?? summary?.totalReservado) || 0
-  const free = Number(summary?.freeBalance ?? summary?.saldoLivre) || 0
+  const unallocated = Number(summary?.unallocatedBalance ?? summary?.saldoNaoAlocado) || 0
   const coverage = Math.min(100, Math.max(0, Number(monthlySummary?.coveragePercentage) || 0))
   const upcoming = [...commitments]
     .filter(item => !item.isCompleted && (item.nextDueDate || item.dueDate))
@@ -541,9 +567,9 @@ function MobileDashboard({ account, summary, monthlySummary, monthlyLoading, mon
   return <div className="mobile-dashboard" aria-label="Resumo financeiro mobile">
     <header className="mobile-dashboard-heading"><p>Olá, {firstName} <span aria-hidden="true">👋</span></p><h1>Seu resumo financeiro</h1></header>
     <div className="mobile-dashboard-month"><CalendarDays size={17} strokeWidth={1.8} aria-hidden="true" /><MonthPicker value={selectedMonth} onChange={onMonthChange} /></div>
-    <section className="mobile-dashboard-section mobile-dashboard-summary" aria-labelledby="mobile-summary-title"><header className="mobile-dashboard-section-heading"><h2 id="mobile-summary-title">Resumo</h2><a href="#compromissos">Ver tudo</a></header><div className="mobile-dashboard-context-chips" aria-label="Contexto do resumo"><span className="is-active" aria-current="page">Este mês</span><a href="#compromissos">Compromissos</a><a href="#movimentacoes" onClick={onViewMovements}>Movimentações</a></div></section>
-    <section className="mobile-dashboard-hero" aria-label="Saldo atual"><div className="mobile-dashboard-hero-label"><span>SALDO ATUAL</span><Wallet size={18} strokeWidth={1.8} aria-hidden="true" /></div><strong>{money(current)}</strong><span>Disponível hoje</span></section>
-    <section className="mobile-dashboard-metrics" aria-label="Métricas financeiras"><article><span>Reservado</span><strong>{money(reserved)}</strong></article><article><span>Livre</span><strong>{money(free)}</strong></article><article><span>Cobertura</span><strong>{monthlyLoading && !monthlySummary ? '—' : `${Math.round(coverage)}%`}</strong><i aria-hidden="true"><b style={{ width: `${coverage}%` }} /></i></article></section>
+    <section className="mobile-dashboard-section mobile-dashboard-summary" aria-labelledby="mobile-summary-title"><header className="mobile-dashboard-section-heading"><h2 id="mobile-summary-title">Resumo</h2><a href="#compromissos">Ver tudo</a></header><div className="mobile-dashboard-context-chips" aria-label="Contexto do resumo"><span className="is-active" aria-current="page">Este mês</span></div></section>
+    <section className="mobile-dashboard-hero" aria-label="Saldo atual"><div className="mobile-dashboard-hero-label"><span>SALDO ATUAL <InfoTooltip title="Saldo atual" description="Valor disponível atualmente na conta, considerando as movimentações já confirmadas." /></span><Wallet size={18} strokeWidth={1.8} aria-hidden="true" /></div><strong>{money(current)}</strong><span>Disponível hoje</span></section>
+    <section className="mobile-dashboard-metrics" aria-label="Métricas financeiras"><article><span>Reservado <InfoTooltip title="Reservado" description="Valor já separado para cobrir os compromissos do mês." /></span><strong>{money(reserved)}</strong><i className="is-placeholder" aria-hidden="true" /></article><article><span>Não alocado <InfoTooltip title="Não alocado" description="Valor do saldo atual que ainda não foi destinado a compromissos." /></span><strong>{money(unallocated)}</strong><i className="is-placeholder" aria-hidden="true" /></article><article><span>Cobertura <InfoTooltip title="Cobertura" description="Percentual dos compromissos do mês que já possui valor reservado." /></span><strong>{monthlyLoading && !monthlySummary ? '—' : `${Math.round(coverage)}%`}</strong><i aria-hidden="true"><b style={{ width: `${coverage}%` }} /></i></article></section>
     <section className="mobile-dashboard-section mobile-dashboard-upcoming" aria-labelledby="mobile-upcoming-title"><header className="mobile-dashboard-section-heading"><h2 id="mobile-upcoming-title">Próximos pagamentos</h2><button type="button" onClick={onViewCommitments}>Ver todos</button></header>{monthlyError && !monthlySummary && <div className="mobile-dashboard-inline-error" role="alert"><span>Não foi possível carregar o resumo do mês.</span><button type="button" onClick={onRetryMonthly}>Tentar novamente</button></div>}{upcoming.length ? <div className="mobile-dashboard-payment-list">{upcoming.map(item => { const urgent = Boolean(item.urgent || item.requiresAttention); const amount = Number(item.installmentAmount ?? item.missingForNextInstallment ?? 0); return <button type="button" className={`mobile-dashboard-payment${urgent ? ' is-urgent' : ''}`} key={item.id} onClick={onViewCommitments} aria-label={`Abrir compromissos. ${item.name}`}><span className="mobile-dashboard-payment-icon" aria-hidden="true">{urgent ? <CircleAlert size={17} /> : <CalendarDays size={17} />}</span><span className="mobile-dashboard-payment-copy"><strong>{item.name}</strong><small>{formatDate(item.nextDueDate || item.dueDate)}</small></span><strong className="mobile-dashboard-payment-amount">{money(amount)}</strong><ChevronRight size={17} aria-hidden="true" /></button> })}</div> : <p className="mobile-dashboard-empty">Nenhum pagamento próximo.</p>}</section>
   </div>
 }
@@ -726,7 +752,7 @@ function App() {
   const [movementDeleteError, setMovementDeleteError] = useState('')
   const currentMonth = new Date().toISOString().slice(0, 7)
   const [selectedMonth, setSelectedMonth] = useState(() => normalizeMonth(sessionStorage.getItem('aloca-selected-month') || currentMonth))
-  const getView = () => window.location.hash === '#movimentacoes' ? 'incomes' : window.location.hash === '#compromissos' ? 'commitments' : window.location.hash === '#previsoes' ? 'forecast' : window.location.hash === '#grupos' ? 'groups' : window.location.hash === '#suporte' ? 'support' : window.location.hash === '#perfil' ? 'profile' : 'dashboard'
+  const getView = () => navigationItems.find(item => navigationItemMatchesHash(item, window.location.hash))?.view || 'dashboard'
   const [view, setView] = useState(getView())
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -846,6 +872,8 @@ function App() {
   }
   const handleAccountSubmit = async (mode, data) => { if (mode === 'create-local') { await api.createLocal(); reloadAfterAccountEntry(); return } if (mode === 'login-form') { setAccountDialog({ mode: 'login' }); return } if (mode === 'login') { await api.login(data.email, data.password); reloadAfterAccountEntry(); return } if (mode === 'rename') { await runAccountMutation(() => api.renameAccount(data.displayName)); return } if (mode === 'protect') { await runAccountMutation(() => api.protectAccount(data)); return } if (mode === 'password') { await runAccountMutation(() => api.changePassword(data)) } }
   const updateProfile = data => runAccountMutation(() => api.updateProfile(data))
+  const saveAvatar = file => runAccountMutation(() => api.uploadAvatar(file))
+  const removeAvatar = () => runAccountMutation(() => api.removeAvatar())
   const removeAccount = async () => runAccountMutation(() => api.removeAccountFromDevice())
   const deleteAccount = async request => runAccountMutation(() => api.deleteAccount(request))
   const switchAccount = async () => {
@@ -877,10 +905,10 @@ function App() {
       <div className="page-content">
       {error && view !== 'commitments' && <div className="alert error">{error}</div>}
 
-       {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSecurity={mode => setAccountDialog({ mode })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete && view !== 'commitments' ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <MovementsPage incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} summary={summary} categories={categories} onEdit={item => setMovementForm({ mode: 'edit', item })} onDelete={item => { setMovementDeleteError(''); setMovementDelete(item) }} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} categories={categories} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} activeFilterCount={activeFilterCount} onOpenFilters={() => setFiltersOpen(true)} summary={summary} onCreate={() => setEditing({})} setEditing={setEditing} run={run} refresh={refresh} loading={loading} initialLoadComplete={initialLoadComplete} error={error} onRetry={() => refresh()} onClearFilters={clearFilters} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <DashboardPage account={accountState.current} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlySummaryLoading} monthlyError={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetryMonthly={retryMonthlySummary} commitments={commitments} onViewCommitments={() => { window.location.hash = 'compromissos' }} incomes={incomes} expenses={expenses} dataError={error} onRetry={() => refresh()} />}
+       {view === 'forecast' ? <FinancialForecastPage /> : view === 'support' ? <SupportPage account={accountState.current} /> : view === 'profile' ? <ProfileSecurityPage account={accountState.current} onUpdateProfile={updateProfile} onSaveAvatar={saveAvatar} onRemoveAvatar={removeAvatar} accountMutationBusy={accountMutationBusy} onSecurity={mode => setAccountDialog({ mode })} onDelete={() => setAccountDeleteOpen(true)} /> : loading && !initialLoadComplete && view !== 'commitments' ? <div className="loading">Carregando sua vida financeira…</div> : view === 'incomes' ? <MovementsPage incomes={incomes} expenses={expenses} recurringIncomes={recurringIncomes} summary={summary} categories={categories} onEdit={item => setMovementForm({ mode: 'edit', item })} onDelete={item => { setMovementDeleteError(''); setMovementDelete(item) }} /> : view === 'commitments' ? <CommitmentsPage commitments={commitments} filtered={filtered} categories={categories} filters={filters} setFilters={setFilters} searchInput={searchInput} setSearchInput={setSearchInput} activeFilterCount={activeFilterCount} onOpenFilters={() => setFiltersOpen(true)} summary={summary} onCreate={() => setEditing({})} setEditing={setEditing} run={run} refresh={refresh} loading={loading} initialLoadComplete={initialLoadComplete} error={error} onRetry={() => refresh()} onClearFilters={clearFilters} /> : view === 'groups' ? <GroupManagement categories={categories} onCreate={async name => { await api.createCategory(name); await refresh() }} onEdit={editCategory} onDelete={deleteCategory} /> : <DashboardPage account={accountState.current} summary={summary} monthlySummary={monthlySummary} monthlyLoading={monthlySummaryLoading} monthlyError={monthlySummaryError} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onRetryMonthly={retryMonthlySummary} commitments={commitments} onViewCommitments={() => { window.location.hash = 'compromissos' }} incomes={incomes} expenses={expenses} dataError={error} onRetry={() => refresh()} />}
       </div>
     </main>
-    <footer className="app-footer"><span>© 2026 Aloca. Todos os direitos reservados.</span><span>Desenvolvido por Maxwell Xavier.</span><a href="https://github.com/xavierr-max" target="_blank" rel="noopener noreferrer">GitHub: github.com/xavierr-max</a></footer>
+    <footer className="app-footer"><span>© 2026 Aloca</span><span aria-hidden="true">·</span><span>{APP_VERSION}</span><span aria-hidden="true">·</span><span>Desenvolvido por Maxwell Xavier</span><span aria-hidden="true">·</span><a href="https://github.com/xavierr-max" target="_blank" rel="noopener noreferrer">GitHub</a></footer>
     {editing && <CommitmentModal item={editing} categories={categories} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); run(async () => {}) }} />}
     {movementForm && <MovementFormModal mode={movementForm.mode} item={movementForm.item} categories={categories} currentBalance={summary?.currentBalance ?? summary?.saldoReal ?? 0} onClose={() => setMovementForm(null)} onSaved={async message => { setMovementForm(null); await refresh(); setNotice(message) }} />}
     {movementDelete && <ConfirmModal title="Excluir movimentação?" message={`“${movementDelete.description}” será removida e o saldo relacionado será atualizado.`} confirmLabel="Excluir" busy={movementDeleteBusy} busyLabel="Excluindo…" error={movementDeleteError} tone="danger" onClose={() => { if (!movementDeleteBusy) setMovementDelete(null) }} onConfirm={async () => { setMovementDeleteBusy(true); setMovementDeleteError(''); try { if (movementDelete.type === 'Income') await api.deleteIncome(movementDelete.id); else await api.deleteExpense(movementDelete.id); setMovementDelete(null); await refresh(); setNotice('Movimentação excluída.') } catch (e) { setMovementDeleteError(errorText(e)) } finally { setMovementDeleteBusy(false) } }} />}
@@ -890,7 +918,7 @@ function App() {
     {filtersOpen && <FilterDrawer filters={filters} setFilters={setFilters} categories={categories} onClear={clearFilters} onClose={() => setFiltersOpen(false)} />}
     {categoryDialog && <CategoryModal category={categoryDialog} onClose={() => setCategoryDialog(null)} onSaved={() => { setCategoryDialog(null); run(async () => {}) }} />}
     {deleteDialog && <ConfirmModal title={deleteDialog.transaction ? 'Excluir saída?' : `Excluir o grupo “${deleteDialog.name}”?`} message={deleteDialog.transaction ? `A saída “${deleteDialog.description}” de ${money(deleteDialog.amount)} será removida do saldo real.` : `Os registros associados não serão excluídos e passarão para “Sem grupo”.`} confirmLabel={deleteDialog.transaction ? 'Excluir' : 'Excluir grupo'} onClose={() => setDeleteDialog(null)} onConfirm={() => run(async () => { if (deleteDialog.transaction) await api.deleteExpense(deleteDialog.id); else { await api.deleteCategory(deleteDialog.id); if (filters.category === deleteDialog.id) setFilters(current => ({ ...current, category: '' })) } setDeleteDialog(null) })} />}
-    {accountDialog?.mode === 'switch' && <ModalLayer onClose={() => setAccountDialog(null)}><div className="modal-head"><div><span className="eyebrow">CONTAS NESTE DISPOSITIVO</span><h2>Trocar conta</h2></div><button type="button" className="icon-button" onClick={() => setAccountDialog(null)}>×</button></div><div className="account-switch-list">{(accountState.accounts || []).map(item => <button type="button" key={item.id} className={item.id === accountState.current.id ? 'account-switch-item is-current' : 'account-switch-item'} onClick={() => performAccountSwitch(item.id)} disabled={accountMutationBusy}><span className="account-avatar small">{(item.displayName || 'M').slice(0, 1).toUpperCase()}</span><span><strong>{item.displayName}</strong><small>{item.isLocal ? 'Conta local' : 'Conta protegida'}</small></span>{item.id === accountState.current.id && <b>✓</b>}</button>)}</div></ModalLayer>}
+    {accountDialog?.mode === 'switch' && <ModalLayer onClose={() => setAccountDialog(null)}><div className="modal-head"><div><span className="eyebrow">CONTAS NESTE DISPOSITIVO</span><h2>Trocar conta</h2></div><button type="button" className="icon-button" onClick={() => setAccountDialog(null)}>×</button></div><div className="account-switch-list">{(accountState.accounts || []).map(item => <button type="button" key={item.id} className={item.id === accountState.current.id ? 'account-switch-item is-current' : 'account-switch-item'} onClick={() => performAccountSwitch(item.id)} disabled={accountMutationBusy}><AccountAvatar account={item} size="small" /><span><strong>{item.displayName}</strong><small>{item.isLocal ? 'Conta local' : 'Conta protegida'}</small></span>{item.id === accountState.current.id && <b>✓</b>}</button>)}</div></ModalLayer>}
     {accountDialog && accountDialog.mode !== 'remove' && accountDialog.mode !== 'switch' && <AccountDialog mode={accountDialog.mode} initialDisplayName={accountState?.current?.displayName || ''} initialEmail={accountState?.current?.email || ''} onClose={() => setAccountDialog(null)} onSubmit={handleAccountSubmit} />}
     {accountDialog?.mode === 'remove' && <ConfirmModal title="Remover conta deste dispositivo?" message="A conta será desvinculada deste dispositivo e liberará um espaço na lista de contas. Os dados da conta não serão excluídos." confirmLabel="Remover" busy={accountMutationBusy} onClose={() => { if (!accountMutationBusy) setAccountDialog(null) }} onConfirm={removeAccount} />}
     {accountDeleteOpen && <AccountDeleteModal displayName={accountState?.current?.displayName || ''} isLocal={accountState?.current?.isLocal} onClose={() => setAccountDeleteOpen(false)} onConfirm={deleteAccount} />}
@@ -1244,22 +1272,22 @@ function CommitmentsPage({ commitments, filtered, categories, filters, setFilter
     </header>
     {initialLoading ? <CommitmentSummarySkeleton /> : <section className="commitments-summary" aria-label="Resumo dos compromissos">
       <article className="commitments-summary-card commitments-summary-card-committed">
-        <div className="commitments-summary-label"><Icon icon={Wallet} size={18} /><span>Total comprometido</span></div>
+        <div className="commitments-summary-label"><Icon icon={Wallet} size={18} /><span>Total comprometido</span><InfoTooltip title="Total comprometido" description="Soma do valor que ainda falta pagar nos compromissos ativos." /></div>
         <strong>{money(totalCommitted)}</strong>
         <small>Compromissos ativos</small>
       </article>
       <article className="commitments-summary-card commitments-summary-card-reserved">
-        <div className="commitments-summary-label"><Icon icon={LockKeyhole} size={18} /><span>Total reservado</span></div>
+        <div className="commitments-summary-label"><Icon icon={LockKeyhole} size={18} /><span>Total reservado</span><InfoTooltip title="Total reservado" description="Valor já separado para cobrir os compromissos ativos." /></div>
         <strong>{money(totalReserved)}</strong>
         <small>Saldo já alocado</small>
       </article>
       <article className="commitments-summary-card commitments-summary-card-missing">
-        <div className="commitments-summary-label"><Icon icon={CircleAlert} size={18} /><span>Falta reservar</span></div>
+        <div className="commitments-summary-label"><Icon icon={CircleAlert} size={18} /><span>Falta reservar</span><InfoTooltip title="Falta reservar" description="Quanto ainda precisa ser separado para cobrir completamente os compromissos ativos." /></div>
         <strong>{money(missingToReserve)}</strong>
         <small>Para cobertura completa</small>
       </article>
       <article className="commitments-summary-card commitments-summary-card-next">
-        <div className="commitments-summary-label"><Icon icon={CalendarDays} size={18} /><span>Próximo vencimento</span></div>
+        <div className="commitments-summary-label"><Icon icon={CalendarDays} size={18} /><span>Próximo vencimento</span><InfoTooltip title="Próximo vencimento" description="Data e valor da próxima cobrança entre os compromissos ativos." /></div>
         {nextCommitment ? <><strong>{formatDate(nextCommitment.nextDueDate)}</strong><small>{nextCommitment.name} · {money(nextCommitment.installmentAmount)}</small></> : <><strong>Nenhum vencimento</strong><small>Não há compromissos ativos</small></>}
       </article>
     </section>}
@@ -1411,6 +1439,7 @@ function CommitmentDetailsDrawer({ item, availableBalance, priority, onClose, on
   const deleteCommitment = async () => { setDeleting(true); setDeleteError(''); try { await onDelete(); setConfirmDelete(false); onClose() } catch (e) { setDeleteError(errorText(e)) } finally { setDeleting(false) } }
   const history = Array.from({ length: item.isOpenEnded ? Math.min(item.paidInstallments + 1, 24) : item.totalInstallments }, (_, index) => { const paid = index < item.paidInstallments; const current = index === item.paidInstallments; const reservedAmount = paid ? item.installmentAmount : current ? Math.min(item.allocatedForNextInstallment, item.installmentAmount) : 0; return { number: index + 1, paid, current, reserved: reservedAmount, missing: Math.max(0, item.installmentAmount - reservedAmount), dueDate: addMonths(item.dueDate, index) } })
   const releaseAll = async () => { setConfirmRelease(false); await mutate(() => api.releaseAllAllocation(item.id)) }
+  const releaseConfirmation = confirmRelease && <ModalLayer backdropClassName="release-confirm-backdrop" className="release-confirm-modal" onClose={() => setConfirmRelease(false)}><div className="release-confirm-heading"><span aria-hidden="true">!</span><h2>Retirar toda a reserva?</h2></div><p>{money(item.allocatedAmount)} voltarão a ficar disponíveis para novas alocações. O compromisso continuará ativo.</p><div className="release-confirm-actions"><button type="button" className="secondary" onClick={() => setConfirmRelease(false)}>Cancelar</button><button type="button" className="release-confirm-button" onClick={releaseAll}>Retirar reserva</button></div></ModalLayer>
   const overallCoverage = Number(item.overallCoveragePercentage)
   const urgentUncovered = Boolean(item.requiresAttention)
   const nextDueDate = item.nextDueDate || addMonths(item.dueDate, item.paidInstallments)
@@ -1431,7 +1460,7 @@ function CommitmentDetailsDrawer({ item, availableBalance, priority, onClose, on
     <section className="commitment-drawer-section commitment-drawer-installment-section"><div className="commitment-drawer-section-heading"><h3>Parcelas e histórico</h3><small>{item.isOpenEnded ? 'Recorrência sem término definido' : `${item.paidInstallments} de ${item.totalInstallments} pagas`}</small></div><div className="drawer-installments">{history.map(row => <div className={`drawer-installment ${row.paid ? 'is-paid' : row.current ? 'is-current' : ''}`} key={row.number}><div><strong>{item.isOpenEnded ? 'Cobrança' : 'Parcela'} {row.number}</strong><small>{formatDate(row.dueDate)} · {row.paid ? 'Paga' : row.current ? 'Próxima' : 'Pendente'}</small></div><div><strong>{money(item.installmentAmount)}</strong><small>Reservado {money(row.reserved)} · Faltam {money(row.missing)}</small></div></div>)}</div></section>
     {message && <div className="inline-error" role="status">{message}</div>}
     {item.objective && <section className="commitment-drawer-section commitment-drawer-objective"><h3>Objetivo</h3><p>{item.objective}</p></section>}
-    {confirmRelease && <div className="release-confirmation" role="alert"><strong>Retirar toda a reserva?</strong><p>{money(item.allocatedAmount)} voltarão a ficar disponíveis para novas alocações. O compromisso continuará ativo.</p><div><button className="secondary" onClick={() => setConfirmRelease(false)}>Cancelar</button><button className="release-confirm-button" onClick={releaseAll}>Retirar reserva</button></div></div>}
+    {releaseConfirmation}
   </AppDrawer>
 }
 

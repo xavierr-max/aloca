@@ -3,6 +3,7 @@
 html, body { max-width: 100%; }
 img, svg, canvas { max-width: 100%; }
 button, input, select, textarea { max-width: 100%; }
+.app-mobile-brand { display: none; }
 .app-mobile-menu-button { display: none; }
 .mobile-navigation-backdrop { position: fixed; inset: 0; z-index: var(--layer-drawer-backdrop, 800); background: var(--overlay); }
 .mobile-navigation { width: min(88vw, 340px); height: 100%; padding: 20px 16px; overflow-y: auto; background: var(--bg-elevated); box-shadow: var(--shadow-md); animation: mobile-navigation-in .18s ease both; }
@@ -38,10 +39,12 @@ button, input, select, textarea { max-width: 100%; }
 @media (max-width: 767px) {
   .app-shell { width: calc(100% - 16px); min-height: calc(100dvh - 16px); margin: 8px auto; border-radius: 18px; }
   .app-topbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .app-mobile-brand { display: block; }
   .app-mobile-menu-button { display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border-default); border-radius: 11px; background: var(--bg-subtle); color: var(--text-primary); }
   .app-topbar-actions { gap: 6px; }
   .app-create-button, .app-theme-toggle, .app-account-button { height: 44px; min-height: 44px; border-radius: 11px; }
-  .app-create-button { width: 44px; font-size: 0; }
+  .app-create-button { width: 44px; }
+  .app-create-label { display: none; }
   .app-create-button svg { margin: 0; }
   .app-create-menu { position: fixed; top: 60px; right: 12px; left: auto; width: min(220px, calc(100vw - 24px)); }
   .app-theme-toggle { width: 44px; padding: 0; }

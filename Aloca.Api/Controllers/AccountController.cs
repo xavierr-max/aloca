@@ -59,6 +59,28 @@ public sealed class AccountController(AccountService service) : ControllerBase
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
+    [HttpGet("avatar")]
+    public async Task<IActionResult> Avatar(CancellationToken ct)
+    {
+        var avatar = await service.GetCurrentAvatarAsync(ct);
+        return avatar is null ? NotFound() : PhysicalFile(avatar.Value.Path, avatar.Value.ContentType, enableRangeProcessing: false);
+    }
+
+    [HttpPost("avatar"), EnableRateLimiting("account")]
+    public async Task<ActionResult<CurrentAccountDto>> UploadAvatar(IFormFile? file, CancellationToken ct)
+    {
+        try { return Ok(await service.SetAvatarAsync(file, ct)); }
+        catch (AccountConflictException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
+    }
+
+    [HttpDelete("avatar"), EnableRateLimiting("account")]
+    public async Task<IActionResult> DeleteAvatar(CancellationToken ct)
+    {
+        try { await service.RemoveAvatarAsync(ct); return NoContent(); }
+        catch (UnauthorizedAccessException ex) { return Unauthorized(new { message = ex.Message }); }
+    }
+
     [HttpPatch("rename"), EnableRateLimiting("account")]
     public async Task<ActionResult<CurrentAccountDto>> Rename(RenameAccountRequest request, CancellationToken ct)
     {

@@ -34,11 +34,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-aloca}
       DataProtection__ApplicationName: ${DATA_PROTECTION_APPLICATION_NAME:-Aloca}
       DataProtection__KeysPath: ${DATA_PROTECTION_KEYS_PATH:-/app/data-protection-keys}
+      Account__AvatarStoragePath: ${ACCOUNT_AVATAR_STORAGE_PATH:-/app/account-avatars}
       ForwardedHeaders__TrustedProxyNetwork: 172.30.0.0/24
     secrets:
       - postgres_password
     volumes:
       - aloca_data_protection_keys:/app/data-protection-keys
+      - aloca_account_avatars:/app/account-avatars
     networks:
       - backend
     depends_on:
@@ -82,6 +84,7 @@ secrets:
 volumes:
   aloca_postgres_data:
   aloca_data_protection_keys:
+  aloca_account_avatars:
 
 networks:
   edge:

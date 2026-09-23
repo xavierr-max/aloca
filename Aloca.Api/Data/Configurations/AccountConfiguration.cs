@@ -11,6 +11,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.ToTable("accounts");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.DisplayName).HasMaxLength(80).IsRequired();
+        builder.Property(x => x.AvatarFileName).HasMaxLength(120);
         builder.Property(x => x.Email).HasMaxLength(254);
         builder.Property(x => x.NormalizedEmail).HasMaxLength(254);
         builder.Property(x => x.PasswordHash).HasMaxLength(512);

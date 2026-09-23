@@ -23,6 +23,7 @@ public sealed class Account
 
     public Guid Id { get; private set; }
     public string DisplayName { get; private set; } = null!;
+    public string? AvatarFileName { get; private set; }
     public string? Email { get; private set; }
     public string? NormalizedEmail { get; private set; }
     public string? PasswordHash { get; private set; }
@@ -35,6 +36,20 @@ public sealed class Account
     public void Rename(string displayName)
     {
         DisplayName = ValidateDisplayName(displayName);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetAvatar(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || fileName.Length > 120 || Path.GetFileName(fileName) != fileName)
+            throw new ArgumentException("A referência da foto de perfil é inválida.", nameof(fileName));
+        AvatarFileName = fileName;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void RemoveAvatar()
+    {
+        AvatarFileName = null;
         UpdatedAt = DateTime.UtcNow;
     }
 

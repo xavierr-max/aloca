@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Aloca.Api.DTOs;
 
-public sealed record CurrentAccountDto(Guid Id, string DisplayName, string? Email, bool IsProtected, bool IsLocal);
+public sealed record CurrentAccountDto(Guid Id, string DisplayName, string? Email, bool IsProtected, bool IsLocal, string? AvatarUrl);
 public sealed record AccountListDto(IReadOnlyCollection<CurrentAccountDto> Accounts, CurrentAccountDto? Current, int Limit, bool RequiresLogin);
 
 public sealed record RenameAccountRequest(

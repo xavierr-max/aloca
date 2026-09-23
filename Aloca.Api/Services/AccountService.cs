@@ -35,6 +35,14 @@ public sealed class AccountService(
     public const string AuthScheme = "aloca.auth";
     private const string DeviceItemKey = "aloca.device.entity";
     private readonly PasswordHasher<Account> passwordHasher = new();
+    private readonly string avatarStoragePath = ResolveAvatarStoragePath(environment);
+    private const long MaxAvatarBytes = 5 * 1024 * 1024;
+
+    private static string ResolveAvatarStoragePath(IHostEnvironment hostEnvironment)
+    {
+        var configured = Environment.GetEnvironmentVariable("Account__AvatarStoragePath");
+        return string.IsNullOrWhiteSpace(configured) ? Path.Combine(hostEnvironment.ContentRootPath, "data", "avatars") : Path.GetFullPath(configured);
+    }
 
     public async Task EnsureSessionAsync(HttpContext httpContext, CancellationToken ct)
     {
@@ -218,6 +226,66 @@ public sealed class AccountService(
         return ToDto(account);
     }
 
+    public async Task<CurrentAccountDto> SetAvatarAsync(IFormFile? file, CancellationToken ct)
+    {
+        if (file is null || file.Length <= 0) throw new AccountConflictException("Selecione uma imagem válida.");
+        if (file.Length > MaxAvatarBytes) throw new AccountConflictException("A foto deve ter no máximo 5 MB.");
+        var contentType = file.ContentType?.Trim().ToLowerInvariant();
+        if (contentType is not ("image/jpeg" or "image/png" or "image/webp"))
+            throw new AccountConflictException("Use uma imagem JPEG, PNG ou WebP.");
+
+        await using var input = file.OpenReadStream();
+        var header = new byte[16];
+        var read = await input.ReadAsync(header, ct);
+        if (!IsSupportedImage(contentType, header, read))
+            throw new AccountConflictException("O arquivo não parece ser uma imagem válida.");
+
+        var account = await GetCurrentAccountAsync(ct);
+        Directory.CreateDirectory(avatarStoragePath);
+        var extension = contentType switch { "image/jpeg" => ".jpg", "image/png" => ".png", _ => ".webp" };
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var targetPath = GetAvatarPath(fileName);
+        await using (var output = new FileStream(targetPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 64 * 1024, FileOptions.Asynchronous))
+        {
+            input.Position = 0;
+            await input.CopyToAsync(output, ct);
+        }
+
+        var previous = account.AvatarFileName;
+        try
+        {
+            account.SetAvatar(fileName);
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            DeleteAvatarFile(fileName);
+            throw;
+        }
+
+        DeleteAvatarFile(previous);
+        return ToDto(account);
+    }
+
+    public async Task RemoveAvatarAsync(CancellationToken ct)
+    {
+        var account = await GetCurrentAccountAsync(ct);
+        var previous = account.AvatarFileName;
+        account.RemoveAvatar();
+        await db.SaveChangesAsync(ct);
+        DeleteAvatarFile(previous);
+    }
+
+    public async Task<(string Path, string ContentType)?> GetCurrentAvatarAsync(CancellationToken ct)
+    {
+        var account = await GetCurrentAccountAsync(ct);
+        if (string.IsNullOrWhiteSpace(account.AvatarFileName)) return null;
+        var path = GetAvatarPath(account.AvatarFileName);
+        if (!File.Exists(path)) return null;
+        var contentType = Path.GetExtension(path).ToLowerInvariant() switch { ".jpg" => "image/jpeg", ".png" => "image/png", ".webp" => "image/webp", _ => "application/octet-stream" };
+        return (path, contentType);
+    }
+
     public async Task<CurrentAccountDto?> SwitchAsync(HttpContext httpContext, Guid accountId, CancellationToken ct)
     {
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
@@ -265,6 +333,7 @@ public sealed class AccountService(
         }
 
         var userId = account.Id;
+        var avatarFileName = account.AvatarFileName;
         var occurrences = await db.RecurringIncomeOccurrences.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
         var recurring = await db.RecurringIncomes.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
         var transactions = await db.Transactions.IgnoreQueryFilters().Where(x => x.UserId == userId).ToListAsync(ct);
@@ -285,6 +354,7 @@ public sealed class AccountService(
         db.RemoveRange(deviceLinks);
         db.Accounts.Remove(account);
         await db.SaveChangesAsync(ct);
+        DeleteAvatarFile(avatarFileName);
 
         var orphanedDevices = await db.Devices
             .Where(x => deviceIds.Contains(x.Id) && !db.DeviceAccounts.Any(link => link.DeviceId == x.Id))
@@ -426,7 +496,26 @@ public sealed class AccountService(
         if (count >= MaxDeviceAccounts) throw new AccountLimitExceededException();
     }
 
-    private static CurrentAccountDto ToDto(Account account, bool includeEmail = true) => new(account.Id, account.DisplayName, includeEmail ? account.Email : null, !account.IsLocal, account.IsLocal);
+    private CurrentAccountDto ToDto(Account account, bool includeEmail = true)
+    {
+        var avatarUrl = string.IsNullOrWhiteSpace(account.AvatarFileName) ? null : $"/api/account/avatar?v={account.UpdatedAt.Ticks}";
+        return new(account.Id, account.DisplayName, includeEmail ? account.Email : null, !account.IsLocal, account.IsLocal, avatarUrl);
+    }
+
+    private string GetAvatarPath(string fileName) => Path.Combine(avatarStoragePath, Path.GetFileName(fileName));
+    private void DeleteAvatarFile(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName)) return;
+        try { File.Delete(GetAvatarPath(fileName)); } catch { }
+    }
+
+    private static bool IsSupportedImage(string contentType, byte[] header, int length) => contentType switch
+    {
+        "image/jpeg" => length >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF,
+        "image/png" => length >= 8 && header.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }),
+        "image/webp" => length >= 12 && header.AsSpan(0, 4).SequenceEqual("RIFF"u8) && header.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+        _ => false
+    };
 }
 
 public sealed class AccountSessionMiddleware(RequestDelegate next)
