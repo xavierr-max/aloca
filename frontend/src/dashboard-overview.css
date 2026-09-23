@@ -120,6 +120,80 @@
 .dashboard-month-commitment-progress { height: 4px; margin-top: 8px; overflow: hidden; border-radius: 999px; background: var(--bg-hover); }
 .dashboard-month-commitment-progress span { display: block; height: 100%; border-radius: inherit; background: var(--color-warning); }
 .dashboard-month-coverage.is-urgent .dashboard-month-commitment-progress span { background: var(--color-danger); }
+.dashboard-month-summary {
+  --summary-text-primary: #101416;
+  --summary-text-secondary: #667078;
+  --summary-text-muted: #63726e;
+  --summary-positive: #18864b;
+  --summary-negative: #c34444;
+}
+.dashboard-month-header { margin-bottom: 22px; }
+.dashboard-month-metric {
+  grid-template-rows: 32px 48px minmax(0, 1fr);
+  align-content: start;
+}
+.dashboard-month-metric-title {
+  align-items: center;
+  min-height: 48px;
+  gap: 6px;
+}
+.dashboard-month-label {
+  color: var(--summary-text-secondary);
+  line-height: 1.3;
+}
+.dashboard-month-metric-title .info-tooltip {
+  display: inline-flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+}
+.dashboard-month-metric strong { color: var(--summary-text-primary); }
+.dashboard-month-metric.is-income strong,
+.dashboard-month-metric.is-positive strong { color: var(--summary-positive); }
+.dashboard-month-metric.is-expense strong,
+.dashboard-month-metric.is-negative strong { color: var(--summary-negative); }
+.dashboard-month-metric:not(.dashboard-month-metric--solid-light):not(.dashboard-month-metric--solid-accent) .dashboard-month-icon { color: #aeb8b4; }
+.dashboard-month-metric:not(.dashboard-month-metric--solid-light):not(.dashboard-month-metric--solid-accent) .info-tooltip-trigger { color: var(--summary-text-muted); }
+.dashboard-month-metric--solid-light {
+  background: #f7f8f5;
+  border-color: color-mix(in srgb, #e7b347 35%, #e1e7e4);
+  color: #101416;
+}
+.dashboard-month-metric--solid-light .dashboard-month-label { color: #101416; }
+.dashboard-month-metric--solid-light > strong { color: #101416; }
+.dashboard-month-metric--solid-light .dashboard-month-icon { background: #eef2f0; color: #a56a12; }
+.dashboard-month-metric--solid-light .info-tooltip-trigger { color: #63726e; }
+.dashboard-month-metric--solid-accent {
+  background: #35a86c;
+  border-color: #35a86c;
+  color: #101514;
+}
+.dashboard-month-metric--solid-accent .dashboard-month-label { color: #101514; }
+.dashboard-month-metric--solid-accent > strong { color: #fff; }
+.dashboard-month-metric--solid-accent .dashboard-month-icon { background: color-mix(in srgb, #101514 14%, transparent); color: #101514; }
+.dashboard-month-metric--solid-accent .info-tooltip-trigger { color: #101514; }
+.info-tooltip-trigger { width: 16px; height: 16px; min-width: 16px; min-height: 16px; margin: 0; color: var(--summary-text-muted); cursor: help; }
+.info-tooltip-trigger:hover, .info-tooltip-trigger:focus-visible, .info-tooltip.is-open .info-tooltip-trigger { color: var(--summary-text-primary); }
+.dashboard-month-coverage-alert strong { color: var(--summary-text-primary); }
+.dashboard-month-coverage-alert > div > span { color: var(--summary-text-secondary); }
+ :root[data-theme="dark"] .dashboard-month-summary {
+  --summary-text-primary: #f5f7f6;
+  --summary-text-secondary: #b8c3be;
+  --summary-text-muted: #87938e;
+  --summary-positive: #4fd08a;
+  --summary-negative: #ff6673;
+}
+:root[data-theme="dark"] .dashboard-month-metric--solid-light {
+  background: #161c1a;
+  border-color: color-mix(in srgb, #e7b347 35%, #2a332f);
+  color: #f1f4f2;
+}
+:root[data-theme="dark"] .dashboard-month-metric--solid-light .dashboard-month-label { color: #f1f4f2; }
+:root[data-theme="dark"] .dashboard-month-metric--solid-light > strong { color: #fff; }
+:root[data-theme="dark"] .dashboard-month-metric--solid-light .dashboard-month-icon { background: #1b211f; color: #e7b347; }
+:root[data-theme="dark"] .dashboard-month-metric--solid-light .info-tooltip-trigger { color: #b3bdb8; }
 .month-decision .monthly-financial-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; min-width: 0; }
 .month-decision .monthly-financial-metrics > .monthly-metric { min-width: 0; box-sizing: border-box; }
 .dashboard-upcoming { width: 100%; min-width: 0; margin-top: 24px; }

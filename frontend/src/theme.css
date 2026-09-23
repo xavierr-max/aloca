@@ -432,7 +432,9 @@ body,button,input,select,textarea { font-family:Inter,system-ui,-apple-system,Bl
 /* Contrast pass: keep finance hierarchy independent from the active theme. */
 .metric,.movements-summary-card { color:var(--text-primary); }
 .metric:not(.dark):not(.green):not(.red) span,.movements-summary-label { color:#667570; }
-.metric:not(.dark):not(.green):not(.red) strong,.movements-summary-card.is-balance strong { color:#10181c; }
+.metric:not(.dark):not(.green):not(.red) strong { color:#10181c; }
+:root[data-theme="light"] .movements-summary-card.is-balance strong { color:#101416; }
+:root[data-theme="dark"] .movements-summary-card.is-balance strong { color:#f5f7f6; }
 .metric:not(.dark):not(.green):not(.red) small { color:#667570; }
 .metric .info-tooltip-trigger,.movements-summary-label svg { color:#63726e; }
 .metric.dark { background:#171d1b!important; border:1px solid rgba(214,171,72,.28)!important; color:#f3f6f4; }

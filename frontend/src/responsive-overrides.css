@@ -1,0 +1,93 @@
+/* Final responsive layer: keeps page layouts fluid without changing data or behavior. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { max-width: 100%; }
+img, svg, canvas { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+.app-mobile-menu-button { display: none; }
+.mobile-navigation-backdrop { position: fixed; inset: 0; z-index: var(--layer-drawer-backdrop, 800); background: var(--overlay); }
+.mobile-navigation { width: min(88vw, 340px); height: 100%; padding: 20px 16px; overflow-y: auto; background: var(--bg-elevated); box-shadow: var(--shadow-md); animation: mobile-navigation-in .18s ease both; }
+.mobile-navigation-header { display: flex; align-items: center; justify-content: space-between; min-height: 44px; margin-bottom: 18px; }
+.mobile-navigation nav { display: grid; gap: 6px; }
+.mobile-navigation nav a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; color: var(--text-secondary); text-decoration: none; }
+.mobile-navigation nav a:hover, .mobile-navigation nav a:focus-visible, .mobile-navigation nav a.is-active { background: var(--bg-hover); color: var(--color-success); }
+@keyframes mobile-navigation-in { from { transform: translateX(-12px); opacity: .7; } to { transform: translateX(0); opacity: 1; } }
+.page-content, .app-main, .dashboard-page, .dashboard-secondary-grid, .forecast-page, .movements-page, .commitments-page { min-width: 0; max-width: 100%; }
+.dashboard-balance-card, .dashboard-secondary-card, .dashboard-month-metric, .dashboard-upcoming-card, .movements-summary-card { width: 100%; }
+.dashboard-month-picker { max-width: 100%; }
+.dashboard-month-label, .dashboard-upcoming-title h3, .movement-main, .movement-description, .commitment-main, .card-title { overflow-wrap: anywhere; }
+.dashboard-month-metric strong, .movement-amount, .dashboard-recent-amount { max-width: 100%; overflow-wrap: anywhere; }
+.info-tooltip-popover { max-width: min(300px, calc(100vw - 24px)); }
+.modal-backdrop, .movement-modal-backdrop { padding: 12px; }
+.modal, .movement-modal { width: min(560px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.movement-modal-actions, .modal-actions { flex-wrap: wrap; }
+.movement-form input, .movement-form select, .movement-form textarea, .commitment-form-grid input, .commitment-form-grid select, .commitment-form-grid textarea { width: 100%; min-width: 0; }
+.app-drawer { width: min(92vw, 420px); max-width: calc(100vw - 8px); max-height: 100dvh; overflow-y: auto; }
+.filter-drawer { width: min(92vw, 380px); max-width: calc(100vw - 8px); max-height: calc(100dvh - 8px); overflow-y: auto; }
+.filter-drawer select, .filter-drawer input { width: 100%; min-width: 0; }
+.dashboard-month-metrics, .dashboard-month-loading, .monthly-financial-metrics { width: 100%; min-width: 0; }
+.forecast-kpi-grid, .forecast-balance-grid, .forecast-layout, .forecast-secondary-grid { min-width: 0; }
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-shell { width: calc(100% - 32px); margin: 16px auto; grid-template-columns: 72px minmax(0, 1fr); padding-inline: 10px; border-radius: 24px; }
+  .app-topbar { padding-right: 16px; }
+  .page-content { padding-inline: 20px; }
+  .dashboard-balance-grid, .forecast-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-month-metrics, .monthly-financial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767px) {
+  .app-shell { width: calc(100% - 16px); min-height: calc(100dvh - 16px); margin: 8px auto; border-radius: 18px; }
+  .app-topbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+  .app-mobile-menu-button { display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border-default); border-radius: 11px; background: var(--bg-subtle); color: var(--text-primary); }
+  .app-topbar-actions { gap: 6px; }
+  .app-create-button, .app-theme-toggle, .app-account-button { height: 44px; min-height: 44px; border-radius: 11px; }
+  .app-create-button { width: 44px; font-size: 0; }
+  .app-create-button svg { margin: 0; }
+  .app-create-menu { position: fixed; top: 60px; right: 12px; left: auto; width: min(220px, calc(100vw - 24px)); }
+  .app-theme-toggle { width: 44px; padding: 0; }
+  .app-theme-toggle > svg { display: none; }
+  .app-account-button { width: 44px; padding: 3px; justify-content: center; }
+  .app-account-button > span:nth-child(2), .app-account-button > svg { display: none; }
+  .app-account-avatar { width: 34px; height: 34px; flex-basis: 34px; }
+  .page-content { padding: 16px 12px 40px; }
+  .dashboard-header h1, .movements-header h1 { font-size: clamp(24px, 7vw, 30px); }
+  .dashboard-header p { margin-top: 8px; font-size: 14px; }
+  .dashboard-balance-grid, .dashboard-month-metrics, .dashboard-month-loading, .forecast-kpi-grid, .forecast-balance-grid, .monthly-financial-metrics { grid-template-columns: 1fr; gap: 10px; }
+  .dashboard-balance-card, .dashboard-month-metric, .dashboard-upcoming-card, .movements-summary-card { min-height: 0; padding: 16px; }
+  .dashboard-secondary-grid { gap: 12px; margin-top: 16px; }
+  .dashboard-month-summary { padding: 16px 12px; }
+  .dashboard-month-header { gap: 12px; margin-bottom: 16px; }
+  .dashboard-month-picker { width: 100%; flex-basis: auto; min-width: 0; }
+  .dashboard-month-metric { grid-template-rows: 32px 48px auto; }
+  .dashboard-upcoming-grid { grid-template-columns: 1fr; }
+  .dashboard-recent-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding-inline: 12px; }
+  .movements-summary { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .movements-summary-card { padding: 13px 12px; }
+  .movements-summary-card strong { font-size: clamp(20px, 6vw, 26px); }
+  .movements-filters { grid-template-columns: 1fr; gap: 8px; }
+  .movements-search { grid-column: auto; }
+  .movements-summary-card:last-child { grid-column: 1 / -1; }
+  .movement-row { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 8px; padding-inline: 10px; }
+  .movement-amount { grid-column: 2; grid-row: 2; justify-self: start; margin-top: 2px; }
+  .movement-actions { grid-column: 3; grid-row: 1; }
+  .movement-modal-actions, .modal-actions { flex-direction: column-reverse; align-items: stretch; }
+  .movement-modal-actions button, .modal-actions button, .commitment-drawer-action-buttons button { width: 100%; min-height: 44px; }
+  .commitment-form-grid, .form-grid, .commitment-drawer-facts { grid-template-columns: 1fr; }
+  .commitment-card, .commitment-card.commitment-card:hover { width: 100%; min-width: 0; }
+  .commitment-card .card-name-row h3 { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .commitment-card .commitment-overall, .commitment-card .commitment-next { width: 100%; }
+  .forecast-layout, .forecast-secondary-grid { grid-template-columns: 1fr; }
+  .forecast-main-chart, .forecast-coverage, .forecast-surface { width: 100%; min-width: 0; }
+  .app-footer { padding-inline: 12px; }
+}
+
+@media (max-width: 480px) {
+  .app-shell { width: calc(100% - 12px); margin: 6px auto; }
+  .app-topbar { padding-inline: 8px; }
+  .page-content { padding-inline: 10px; }
+  .movements-summary { grid-template-columns: 1fr; }
+  .movements-summary-card:last-child { grid-column: auto; }
+  .dashboard-month-label { font-size: 12px; }
+  .dashboard-month-metric strong { font-size: 18px; }
+  .app-drawer, .filter-drawer { width: calc(100vw - 8px); }
+}
