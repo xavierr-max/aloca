@@ -12,7 +12,7 @@ base="${SMOKE_BASE_URL%/}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/aloca-smoke.XXXXXX")"
 trap 'rm -rf -- "$work"' EXIT
 jar1="$work/a.cookies"; jar2="$work/b.cookies"
-today="$(date -u +%F)"; stamp="$(date -u +%Y%m%d%H%M%S)"; user1="smoke_a_$stamp"; pass='SmokeTest-9x!'
+today="$(date -u +%F)"; stamp="$(date -u +%Y%m%d%H%M%S)"; email1="smoke_a_$stamp@example.com"; pass='SmokeTest-9x!'
 fail() { echo "FAIL: $*" >&2; exit 1; }
 check() { [[ "$1" == "$2" ]] || fail "$3 (expected $2, got $1)"; }
 
@@ -37,11 +37,11 @@ curl --silent --show-error --head "$base/health" >"$work/head" || fail 'curl fai
 for h in strict-transport-security x-content-type-options referrer-policy permissions-policy content-security-policy x-frame-options; do grep -qi "^$h:" "$work/head" || fail "missing security header: $h"; done
 
 mutate "$jar1" POST /api/account/local "$(jq -nc --arg n "Smoke A $stamp" '{displayName:$n}')"; expect_json 200 'create account A'
-mutate "$jar1" POST /api/account/protect "$(jq -nc --arg u "$user1" --arg p "$pass" '{displayName:"Smoke A",username:$u,password:$p,confirmPassword:$p}')"; expect_json 200 'protect account A'
+mutate "$jar1" POST /api/account/protect "$(jq -nc --arg e "$email1" --arg p "$pass" '{displayName:"Smoke A",email:$e,password:$p,confirmPassword:$p}')"; expect_json 200 'protect account A'
 grep -q 'aloca.auth' "$jar1" || fail 'auth cookie missing'; grep -q 'aloca.device' "$jar1" || fail 'device cookie missing'
 mutate "$jar1" POST /api/account/logout '{}'; check "$RESPONSE_CODE" 204 'logout'
 request "$jar1" GET /api/categories; check "$RESPONSE_CODE" 401 'logout invalidates session'
-mutate "$jar1" POST /api/account/login "$(jq -nc --arg u "$user1" --arg p "$pass" '{username:$u,password:$p}')"; expect_json 200 'login'
+mutate "$jar1" POST /api/account/login "$(jq -nc --arg e "$email1" --arg p "$pass" '{email:$e,password:$p}')"; expect_json 200 'login'
 mutate "$jar1" POST /api/categories '{"name":"Smoke group"}'; expect_json 201 'create group'; category="$(jq -r .id <<<"$RESPONSE")"
 mutate "$jar1" PUT "/api/categories/$category" '{"name":"Smoke group updated"}'; expect_json 200 'update group'
 mutate "$jar1" POST /api/transactions "$(jq -nc --arg c "$category" --arg d "$today" '{description:"Smoke income",amount:100,type:"Income",date:$d,categoryId:$c}')"; expect_json 201 'income'

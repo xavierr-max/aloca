@@ -8,7 +8,7 @@ Este documento descreve o funcionamento técnico observado no Aloca. Ele não é
 
 | Grupo | Dados armazenados | Onde | Finalidade técnica | Retenção técnica atual |
 |---|---|---|---|---|
-| Conta | `DisplayName`, `Username`, `NormalizedUsername`, `IsLocal`, datas de criação/alteração | `accounts` | Identificar a conta e permitir login | Até a exclusão da conta; username normalizado é removido junto |
+| Conta | `DisplayName`, `Email`, `NormalizedEmail`, `IsLocal`, datas de criação/alteração | `accounts` | Identificar a conta e permitir login protegido por e-mail | Até a exclusão da conta; e-mail normalizado é removido junto |
 | Credencial derivada | `PasswordHash` produzido pelo `PasswordHasher`; `SecurityStamp` e `SessionVersion` | `accounts` | Verificar senha e invalidar sessões | Até a exclusão da conta ou troca/invalidação da credencial |
 | Dispositivo | Hash SHA-256 do token do cookie, `CreatedAt`, `LastSeenAt` e vínculos com contas | `devices`, `device_accounts` | Reconhecer o navegador/dispositivo e limitar contas locais | Vínculos são removidos ao excluir a conta; dispositivos sem vínculo e sem uso por 90 dias são removidos automaticamente |
 | Timestamps | `CreatedAt`, `UpdatedAt`, `LastSeenAt`, `AddedAt`, `LastUsedAt` e datas de domínio financeiro | tabelas de conta, dispositivo e domínio | Operação, auditoria funcional e cálculos financeiros | Junto do registro ao qual pertencem; a janela final é **decisão pendente** |
@@ -27,7 +27,7 @@ O código não tenta reescrever nem editar cópias já existentes em backups. Um
 - **Frequência:** diária, às 02:15 UTC pelo cron de `scripts/backup-postgres.cron.example`.
 - **Retenção:** 14 dias por padrão; ajustar com `BACKUP_RETENTION_DAYS` para um inteiro positivo. O script nunca deixa a limpeza remover o último dump encontrado.
 - **Armazenamento:** `BACKUP_DIR` (padrão `backups/postgres`), em armazenamento persistente separado do volume `aloca_postgres_data`. Manter uma segunda cópia em armazenamento externo, com criptografia em trânsito e em repouso quando disponível.
-- **Controle de acesso:** somente o operador autorizado de backup/restore e administradores de infraestrutura; não publicar o diretório nem conceder leitura a usuários da aplicação. Os dumps podem conter usernames, hashes de credenciais, dados de conta e informações financeiras.
+- **Controle de acesso:** somente o operador autorizado de backup/restore e administradores de infraestrutura; não publicar o diretório nem conceder leitura a usuários da aplicação. Os dumps podem conter e-mails, hashes de credenciais, dados de conta e informações financeiras.
 - **Limpeza:** automática ao final de cada backup; somente arquivos com o padrão esperado são candidatos, com registro de sucesso/falha e do nome do arquivo expirado, sem conteúdo sensível.
 - **Restore:** o script verifica o checksum quando disponível e restaura por padrão em `aloca_restore_test`; restore na produção exige `ALLOW_PRODUCTION_RESTORE=yes`. Testar periodicamente um restore em banco separado e verificar migrations e dados essenciais.
 

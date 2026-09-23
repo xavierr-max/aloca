@@ -8,6 +8,8 @@ public sealed class Account
 
     public Account(string displayName, bool isLocal = true, string? email = null)
     {
+        if (isLocal && !string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Contas locais não possuem e-mail.", nameof(email));
         Id = Guid.NewGuid();
         DisplayName = ValidateDisplayName(displayName);
         Email = email is null ? null : ValidateEmail(email);
@@ -21,8 +23,6 @@ public sealed class Account
 
     public Guid Id { get; private set; }
     public string DisplayName { get; private set; } = null!;
-    public string? Username { get; private set; }
-    public string? NormalizedUsername { get; private set; }
     public string? Email { get; private set; }
     public string? NormalizedEmail { get; private set; }
     public string? PasswordHash { get; private set; }
@@ -40,19 +40,18 @@ public sealed class Account
 
     public void SetEmail(string email)
     {
+        if (IsLocal) throw new InvalidOperationException("Contas locais não possuem e-mail.");
         Email = ValidateEmail(email);
         NormalizedEmail = NormalizeEmail(Email);
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Protect(string displayName, string username, string normalizedUsername, string passwordHash, string? email = null)
+    public void Protect(string displayName, string passwordHash, string email)
     {
         DisplayName = ValidateDisplayName(displayName);
-        Username = username.Trim();
-        NormalizedUsername = normalizedUsername;
         PasswordHash = passwordHash;
-        if (!string.IsNullOrWhiteSpace(email)) SetEmail(email);
         IsLocal = false;
+        SetEmail(email);
         TouchSecurity();
     }
 

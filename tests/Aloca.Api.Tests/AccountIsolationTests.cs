@@ -44,7 +44,7 @@ public sealed class AccountIsolationTests
         var context = NewHttpContext(provider);
 
         await service.EnsureSessionAsync(context, default);
-        await service.ProtectAsync(context, new("Protegida", "protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
         var protectedAccount = await db.Accounts.IgnoreQueryFilters().SingleAsync();
         protectedAccount.RevokeSessions();
         await db.SaveChangesAsync();
@@ -77,7 +77,7 @@ public sealed class AccountIsolationTests
         var oldId = account.Id;
         var oldSecurityStamp = account.SecurityStamp;
         var hasher = new Microsoft.AspNetCore.Identity.PasswordHasher<Account>();
-        account.Protect("Pessoal", "maxwell", AccountService.NormalizeUsername("maxwell"), hasher.HashPassword(account, "SenhaSegura9"));
+        account.Protect("Pessoal", hasher.HashPassword(account, "SenhaSegura9"), "pessoal@example.com");
         await db.SaveChangesAsync();
 
         Assert.Equal(oldId, account.Id);
@@ -154,7 +154,7 @@ public sealed class AccountIsolationTests
         var context = NewHttpContext(provider);
 
         await service.EnsureSessionAsync(context, default);
-        await service.ProtectAsync(context, new("Protegida", "protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
         var accountId = accessor.UserId!.Value;
         db.Transactions.Add(new Transaction("Privada", 90m, TransactionType.Income, DateOnly.FromDateTime(DateTime.UtcNow), null));
         await db.SaveChangesAsync();
@@ -204,7 +204,7 @@ public sealed class AccountIsolationTests
         var transaction = new Transaction("Preservada", 50m, TransactionType.Income, DateOnly.FromDateTime(DateTime.UtcNow), null);
         db.Transactions.Add(transaction);
         await db.SaveChangesAsync();
-        await service.ProtectAsync(context, new("Protegida", "protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "protegida@example.com"), default);
 
         await service.RemoveFromDeviceAsync(context, default);
 
@@ -238,12 +238,14 @@ public sealed class AccountIsolationTests
         var context = NewHttpContext(provider);
         await service.EnsureSessionAsync(context, default);
 
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "pessoa@example.com"), default);
         var current = await service.UpdateProfileAsync(new UpdateProfileRequest("  Atualizada ", " Pessoa@Example.com "), default);
         Assert.Equal("Atualizada", current.DisplayName);
         Assert.Equal("Pessoa@Example.com", current.Email);
         Assert.Equal("PESSOA@EXAMPLE.COM", await db.Accounts.Select(x => x.NormalizedEmail).SingleAsync());
 
-        var other = new Account("Outra", true, "outro@example.com");
+        var other = new Account("Outra");
+        other.Protect("Outra", new PasswordHasher<Account>().HashPassword(other, "SenhaSegura9"), "outro@example.com");
         db.Accounts.Add(other);
         await db.SaveChangesAsync();
         await Assert.ThrowsAsync<AccountConflictException>(() => service.UpdateProfileAsync(new("Atualizada", "OUTRO@example.com"), default));
@@ -251,7 +253,62 @@ public sealed class AccountIsolationTests
     }
 
     [Fact]
-    public async Task CreatingLocalAccountRequiresValidUniqueEmail()
+    public async Task ProtectedAccountLogsInWithEmailAndNormalizedWhitespaceOnly()
+    {
+        var accessor = new CurrentUserAccessor();
+        await using var db = CreateDb(accessor);
+        using var provider = CreateAuthProvider();
+        var service = new AccountService(db, accessor, provider.GetRequiredService<IHostEnvironment>());
+        var context = NewHttpContext(provider);
+
+        await service.EnsureSessionAsync(context, default);
+        var accountId = accessor.UserId!.Value;
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "Pessoa@Example.com"), default);
+        await service.LogoutAsync(context);
+
+        var result = await service.LoginAsync(context, new("  pessoa@example.COM  ", "SenhaSegura9"), default);
+
+        Assert.Equal(accountId, result.Id);
+        Assert.Equal(accountId, accessor.UserId);
+    }
+
+    [Fact]
+    public async Task ProtectedAccountRejectsUnknownEmailWrongPasswordAndUsernameCredential()
+    {
+        var accessor = new CurrentUserAccessor();
+        await using var db = CreateDb(accessor);
+        using var provider = CreateAuthProvider();
+        var service = new AccountService(db, accessor, provider.GetRequiredService<IHostEnvironment>());
+        var context = NewHttpContext(provider);
+
+        await service.EnsureSessionAsync(context, default);
+        await service.ProtectAsync(context, new("Protegida", "SenhaSegura9", "SenhaSegura9", "pessoa@example.com"), default);
+        await service.LogoutAsync(context);
+
+        await Assert.ThrowsAsync<AccountAuthenticationException>(() => service.LoginAsync(context, new("nao-existe@example.com", "SenhaSegura9"), default));
+        await Assert.ThrowsAsync<AccountAuthenticationException>(() => service.LoginAsync(context, new("pessoa@example.com", "SenhaErrada9"), default));
+        await Assert.ThrowsAsync<AccountAuthenticationException>(() => service.LoginAsync(context, new("Protegida", "SenhaSegura9"), default));
+    }
+
+    [Fact]
+    public async Task LocalAccountStateDoesNotContainAuthenticationData()
+    {
+        var accessor = new CurrentUserAccessor();
+        await using var db = CreateDb(accessor);
+        using var provider = CreateAuthProvider();
+        var service = new AccountService(db, accessor, provider.GetRequiredService<IHostEnvironment>());
+        var context = NewHttpContext(provider);
+
+        await service.EnsureSessionAsync(context, default);
+        var local = await db.Accounts.SingleAsync();
+
+        Assert.Null(local.Email);
+        Assert.Null(local.NormalizedEmail);
+        Assert.Null(local.PasswordHash);
+    }
+
+    [Fact]
+    public async Task CreatingLocalAccountRequiresNoAuthenticationData()
     {
         var accessor = new CurrentUserAccessor();
         await using var db = CreateDb(accessor);
@@ -260,10 +317,9 @@ public sealed class AccountIsolationTests
         var context = NewHttpContext(provider);
         await service.EnsureSessionAsync(context, default);
 
-        var created = await service.CreateLocalAsync(context, new("Nova", "novo@example.com"), default);
-        Assert.Equal("novo@example.com", created.Email);
-        await Assert.ThrowsAsync<AccountConflictException>(() => service.CreateLocalAsync(context, new("Duplicada", "NOVO@example.com"), default));
-        await Assert.ThrowsAsync<AccountConflictException>(() => service.CreateLocalAsync(context, new("Inválida", "sem-email"), default));
+        var created = await service.CreateLocalAsync(context, new("Nova"), default);
+        Assert.Null(created.Email);
+        Assert.Null(await db.Accounts.IgnoreQueryFilters().Where(x => x.Id == created.Id).Select(x => x.PasswordHash).SingleAsync());
     }
 
     private static AlocaDbContext CreateDb(ICurrentUserAccessor accessor) => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options, accessor);

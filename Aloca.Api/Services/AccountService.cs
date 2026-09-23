@@ -19,7 +19,7 @@ public sealed class AccountLimitExceededException : Exception
 
 public sealed class AccountAuthenticationException : Exception
 {
-    public AccountAuthenticationException() : base("Não foi possível autenticar. Confira o username e a senha.") { }
+    public AccountAuthenticationException() : base("Não foi possível autenticar. Confira o e-mail e a senha.") { }
 }
 
 public sealed class AccountConflictException(string message) : Exception(message);
@@ -132,11 +132,9 @@ public sealed class AccountService(
 
     public async Task<CurrentAccountDto> CreateLocalAsync(HttpContext httpContext, CreateLocalAccountRequest request, CancellationToken ct)
     {
-        var email = ValidateEmail(request.Email);
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
         EnsureCapacity(await DeviceAccountCountAsync(device.Id, ct));
-        await EnsureEmailAvailableAsync(email, null, ct);
-        var local = new Account(string.IsNullOrWhiteSpace(request.DisplayName) ? "Minha conta" : request.DisplayName!, true, email);
+        var local = new Account(string.IsNullOrWhiteSpace(request.DisplayName) ? "Minha conta" : request.DisplayName!);
         db.Accounts.Add(local);
         db.DeviceAccounts.Add(new DeviceAccount(device.Id, local.Id));
         await db.SaveChangesAsync(ct);
@@ -146,8 +144,8 @@ public sealed class AccountService(
 
     public async Task<CurrentAccountDto> LoginAsync(HttpContext httpContext, LoginRequest request, CancellationToken ct)
     {
-        var normalized = NormalizeUsername(request.Username);
-        var account = await db.Accounts.SingleOrDefaultAsync(x => x.NormalizedUsername == normalized && !x.IsLocal, ct);
+        var normalized = NormalizeEmail(request.Email);
+        var account = await db.Accounts.SingleOrDefaultAsync(x => x.NormalizedEmail == normalized && !x.IsLocal, ct);
         if (account is null || account.PasswordHash is null || passwordHasher.VerifyHashedPassword(account, account.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             throw new AccountAuthenticationException();
 
@@ -176,6 +174,13 @@ public sealed class AccountService(
     public async Task<CurrentAccountDto> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken ct)
     {
         var account = await GetCurrentAccountAsync(ct);
+        if (account.IsLocal)
+        {
+            account.Rename(request.DisplayName);
+            await db.SaveChangesAsync(ct);
+            return ToDto(account);
+        }
+
         var email = ValidateEmail(request.Email);
         await EnsureEmailAvailableAsync(email, account.Id, ct);
         account.Rename(request.DisplayName);
@@ -192,11 +197,7 @@ public sealed class AccountService(
         ValidatePassword(request.Password);
         var email = ValidateEmail(request.Email);
         await EnsureEmailAvailableAsync(email, account.Id, ct);
-        var username = NormalizeUsername(request.Username);
-        if (await db.Accounts.AnyAsync(x => x.NormalizedUsername == username && x.Id != account.Id, ct))
-            throw new AccountConflictException("Este username já está em uso.");
-
-        account.Protect(request.DisplayName, request.Username, username, passwordHasher.HashPassword(account, request.Password), email);
+        account.Protect(request.DisplayName, passwordHasher.HashPassword(account, request.Password), email);
         await db.SaveChangesAsync(ct);
         var device = await GetOrCreateDeviceAsync(httpContext, ct);
         await SignInAsync(httpContext, account, device, ct);
@@ -396,8 +397,6 @@ public sealed class AccountService(
     private static string CreateToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     private static string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-    public static string NormalizeUsername(string username) => username.Trim().ToUpperInvariant();
-
     public static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
 
     private static string ValidateEmail(string? email)
@@ -427,7 +426,7 @@ public sealed class AccountService(
         if (count >= MaxDeviceAccounts) throw new AccountLimitExceededException();
     }
 
-    private static CurrentAccountDto ToDto(Account account, bool includeEmail = true) => new(account.Id, account.DisplayName, account.Username, includeEmail ? account.Email : null, !account.IsLocal, account.IsLocal);
+    private static CurrentAccountDto ToDto(Account account, bool includeEmail = true) => new(account.Id, account.DisplayName, includeEmail ? account.Email : null, !account.IsLocal, account.IsLocal);
 }
 
 public sealed class AccountSessionMiddleware(RequestDelegate next)

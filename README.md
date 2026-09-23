@@ -134,7 +134,7 @@ As APIs atuais são `GET/POST/PUT/DELETE /api/categories`, `GET/POST/PUT/DELETE 
 
 ## Contas e isolamento
 
-O primeiro acesso usa o middleware de sessão para criar ou recuperar uma conta local no mesmo dispositivo e autenticá-la por cookie. A conta é uma entidade persistente; proteger a conta apenas preenche `Username` e `PasswordHash` na mesma linha e preserva o `Id` e os dados financeiros.
+O primeiro acesso usa o middleware de sessão para criar ou recuperar uma conta local no mesmo dispositivo e autenticá-la por cookie. A conta é uma entidade persistente; proteger a conta preenche e-mail e `PasswordHash` na mesma linha e preserva o `Id` e os dados financeiros. O login de contas protegidas utiliza e-mail e senha.
 
 O cookie `aloca.device` contém somente um token aleatório bruto no navegador; o banco guarda apenas seu hash em `devices`. O cookie `aloca.auth` é um cookie ASP.NET Core protegido por Data Protection, com validade de 14 dias e verificação de `SecurityStamp`/`SessionVersion` a cada request. As chaves de Data Protection ficam em `DataProtection:KeysPath`, que deve apontar para um volume persistente em produção.
 
@@ -237,7 +237,7 @@ Variáveis opcionais:
 - `BACKUP_RETENTION_DAYS`: retenção em dias, padrão `14`;
 - `BACKUP_LOG_FILE`: log do script, padrão `BACKUP_DIR/backup.log`; registra apenas metadados e resultados.
 
-A senha não fica no script: o comando lê `/run/secrets/postgres_password`, montado pelo Compose. O diretório de backups recebe `0700` e dumps/checksums recebem `0600`; conceda acesso somente ao operador autorizado de backup/restore e administradores de infraestrutura. Como os dumps podem conter usernames, dados de conta e informações financeiras, mantenha uma segunda cópia em armazenamento externo com criptografia em trânsito e em repouso.
+A senha não fica no script: o comando lê `/run/secrets/postgres_password`, montado pelo Compose. O diretório de backups recebe `0700` e dumps/checksums recebem `0600`; conceda acesso somente ao operador autorizado de backup/restore e administradores de infraestrutura. Como os dumps podem conter e-mails, hashes de credenciais, dados de conta e informações financeiras, mantenha uma segunda cópia em armazenamento externo com criptografia em trânsito e em repouso.
 
 Para agendar diariamente às 02:15 UTC, copie [scripts/backup-postgres.cron.example](scripts/backup-postgres.cron.example) para o crontab do usuário responsável, ajustando `/opt/aloca` para o diretório real:
 
