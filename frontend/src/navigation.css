@@ -1,6 +1,14 @@
 .app-shell { width: min(calc(100% - 48px), 1500px); min-width: 0; min-height: calc(100dvh - 48px); margin: 24px auto; display: grid; grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: 78px minmax(0, 1fr) auto; column-gap: 18px; align-items: stretch; overflow: visible; border: 1px solid color-mix(in srgb, var(--border-default) 55%, transparent); border-radius: 30px; background: var(--bg-card); padding: 0 14px; }
-.app-logo-slot { grid-column: 1; grid-row: 1; display: grid; place-items: center; }
+.app-logo-slot { grid-column: 1; grid-row: 1; position: relative; display: grid; place-items: center; }
 .app-logo-slot img { width: 42px; height: 42px; object-fit: contain; }
+.app-logo-beta { position: absolute; left: calc(50% + 52px); padding: 4px 7px; border: 1px solid #39a96b; border-radius: 6px; background: #e4f4e9; color: #197346; font-family: 'Trebuchet MS', Arial, sans-serif; font-size: 11px; font-weight: 900; letter-spacing: .08em; line-height: 1; white-space: nowrap; text-transform: uppercase; animation: beta-pulse 2.8s ease-in-out infinite; }
+@keyframes beta-pulse {
+  0%, 100% { opacity: .82; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-logo-beta { animation: none; }
+}
 .app-topbar { grid-column: 2; grid-row: 1; min-width: 0; display: flex; align-items: center; padding: 10px clamp(24px, 4vw, 56px) 10px 0; }
 .app-topbar-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }
 .app-create-wrap { position: relative; }
