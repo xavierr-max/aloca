@@ -30,6 +30,7 @@ public sealed class RecurringIncome
     public bool AutomaticProcessing { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public DateTime? DeletedAt { get; private set; }
     public ICollection<RecurringIncomeOccurrence> Occurrences { get; private set; } = new List<RecurringIncomeOccurrence>();
 
     public void Update(string description, decimal amount, Guid? categoryId, RecurringIncomeFrequency frequency, DateOnly startDate, DateOnly? endDate, int? dayOfMonth, bool automaticProcessing = false)
@@ -38,4 +39,10 @@ public sealed class RecurringIncome
         Description = description.Trim(); Amount = amount; CategoryId = categoryId; Frequency = frequency; StartDate = startDate; EndDate = endDate; DayOfMonth = dayOfMonth; AutomaticProcessing = automaticProcessing; UpdatedAt = DateTime.UtcNow;
     }
     public void SetActive(bool active) { IsActive = active; UpdatedAt = DateTime.UtcNow; }
+    public void Archive()
+    {
+        IsActive = false;
+        DeletedAt = DateTime.UtcNow;
+        UpdatedAt = DeletedAt.Value;
+    }
 }

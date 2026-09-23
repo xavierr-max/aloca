@@ -15,19 +15,20 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
     public async Task<IReadOnlyCollection<RecurringIncomeResponse>> GetAllAsync(CancellationToken ct)
     {
         await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
-        var rows = await db.RecurringIncomes.AsNoTracking().Include(x => x.Category)
+        await ProcessDueAsync(Clock.Today, ct);
+        var rows = await db.RecurringIncomes.AsNoTracking().Where(x => x.DeletedAt == null).Include(x => x.Category)
             .Include(x => x.Occurrences.OrderByDescending(o => o.ScheduledDate).ThenByDescending(o => o.Id).Take(MaxHistoryOccurrences))
             .OrderBy(x => x.Description).ThenBy(x => x.Id).ToListAsync(ct);
         return rows.Select(Map).ToList();
     }
 
     public async Task<RecurringIncomeResponse?> GetAsync(Guid id, CancellationToken ct)
-    { await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); var x = await db.RecurringIncomes.Include(x => x.Category).Include(x => x.Occurrences.OrderByDescending(o => o.ScheduledDate).ThenByDescending(o => o.Id).Take(MaxHistoryOccurrences)).SingleOrDefaultAsync(x => x.Id == id, ct); return x is null ? null : Map(x); }
+    { await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); await ProcessDueAsync(Clock.Today, ct); var x = await db.RecurringIncomes.Include(x => x.Category).Include(x => x.Occurrences.OrderByDescending(o => o.ScheduledDate).ThenByDescending(o => o.Id).Take(MaxHistoryOccurrences)).SingleOrDefaultAsync(x => x.Id == id, ct); return x is null ? null : Map(x); }
 
     public async Task<RecurringIncomeResponse?> CreateAsync(RecurringIncomeRequest request, CancellationToken ct)
     {
         if (request.CategoryId.HasValue && !await db.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, ct)) return null;
-        var item = new RecurringIncome(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth, request.AutomaticProcessing); db.RecurringIncomes.Add(item); await db.SaveChangesAsync(ct); await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); return await GetAsync(item.Id, ct);
+        var item = new RecurringIncome(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth, request.AutomaticProcessing); db.RecurringIncomes.Add(item); await db.SaveChangesAsync(ct); await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); await ProcessDueAsync(Clock.Today, ct); return await GetAsync(item.Id, ct);
     }
 
     public async Task<RecurringIncomeResponse?> UpdateAsync(Guid id, RecurringIncomeRequest request, CancellationToken ct)
@@ -39,12 +40,13 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
         item.Update(request.Description, request.Amount, request.CategoryId, request.Frequency, request.StartDate, request.EndDate, request.DayOfMonth, request.AutomaticProcessing);
         await ReconcileFutureOccurrencesAsync(item, today.AddMonths(24), ct);
         await db.SaveChangesAsync(ct);
+        await ProcessDueAsync(today, ct);
         return await GetAsync(id, ct);
     }
 
     public async Task<bool> SetActiveAsync(Guid id, bool active, CancellationToken ct)
     {
-        var item = await db.RecurringIncomes.Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id, ct);
+        var item = await db.RecurringIncomes.Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
         if (item is null) return false;
 
         var today = Clock.Today;
@@ -74,13 +76,12 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
         var item = await db.RecurringIncomes.Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return false;
 
-        var transactionIds = item.Occurrences.Where(x => x.TransactionId.HasValue).Select(x => x.TransactionId!.Value).ToList();
-        var transactions = await db.Transactions.Where(x => transactionIds.Contains(x.Id)).ToListAsync(ct);
-        foreach (var transaction in transactions) transaction.DetachRecurringIncomeOccurrence();
-
-        db.RecurringIncomeOccurrences.RemoveRange(item.Occurrences);
-        db.RecurringIncomes.Remove(item);
+        await using var dbTransaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+        var pending = item.Occurrences.Where(x => x.Status is RecurringIncomeOccurrenceStatus.Planned or RecurringIncomeOccurrenceStatus.Paused or RecurringIncomeOccurrenceStatus.Cancelled).ToList();
+        db.RecurringIncomeOccurrences.RemoveRange(pending);
+        item.Archive();
         await db.SaveChangesAsync(ct);
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(ct);
         return true;
     }
 
@@ -133,7 +134,9 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
 
     public async Task<int> ProcessDueAsync(DateOnly today, CancellationToken ct)
     {
-        await EnsureOccurrencesAsync(today, ct);
+        // Keep the normal forecast horizon intact while adding/reconciling the
+        // overdue portion. Using `today` here would delete valid future rows.
+        await EnsureOccurrencesAsync(today.AddMonths(24), ct);
         var due = await db.RecurringIncomeOccurrences
             .Include(x => x.RecurringIncome)
             .Where(x => x.ScheduledDate <= today && x.Status == RecurringIncomeOccurrenceStatus.Planned && x.RecurringIncome.IsActive && x.RecurringIncome.AutomaticProcessing)
@@ -148,7 +151,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
 
     public async Task<IReadOnlyCollection<ProjectionMonthResponse>> ProjectionAsync(CancellationToken ct)
     {
-        await EnsureOccurrencesAsync(Clock.Today.AddMonths(12), ct); var today = Clock.Today; var end = today.AddMonths(12); var income = await db.Transactions.Where(x => x.Type == TransactionType.Income && x.Date <= end).ToListAsync(ct); var expenses = await db.Transactions.Where(x => x.Type == TransactionType.Expense && x.Date <= end).ToListAsync(ct); var planned = await db.RecurringIncomeOccurrences.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate >= today && x.ScheduledDate <= end).ToListAsync(ct); var initial = await db.FinancialSettings.Select(x => (decimal?)x.InitialBalance).SingleOrDefaultAsync(ct) ?? 0m; var result = new List<ProjectionMonthResponse>(); var balance = initial + income.Where(x => x.Date < today).Sum(x => x.Type == TransactionType.Income ? x.Amount : -x.Amount);
+        await EnsureOccurrencesAsync(Clock.Today.AddMonths(12), ct); var today = Clock.Today; var end = today.AddMonths(12); var income = await db.Transactions.Where(x => x.Type == TransactionType.Income && x.Date <= end).ToListAsync(ct); var expenses = await db.Transactions.Where(x => x.Type == TransactionType.Expense && x.Date <= end).ToListAsync(ct); var planned = await db.RecurringIncomeOccurrences.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.RecurringIncome.IsActive && x.RecurringIncome.DeletedAt == null && x.ScheduledDate >= today && x.ScheduledDate <= end).ToListAsync(ct); var initial = await db.FinancialSettings.Select(x => (decimal?)x.InitialBalance).SingleOrDefaultAsync(ct) ?? 0m; var result = new List<ProjectionMonthResponse>(); var balance = initial + income.Where(x => x.Date < today).Sum(x => x.Type == TransactionType.Income ? x.Amount : -x.Amount);
         for (var month = new DateOnly(today.Year, today.Month, 1); month <= new DateOnly(end.Year, end.Month, 1); month = month.AddMonths(1)) { var next = month.AddMonths(1); var real = income.Where(x => x.Date >= month && x.Date < next).Sum(x => x.Amount); var future = planned.Where(x => x.ScheduledDate >= month && x.ScheduledDate < next).Sum(x => x.Amount); var outgo = expenses.Where(x => x.Date >= month && x.Date < next).Sum(x => x.Amount); balance += real + future - outgo; result.Add(new(month, real, future, outgo, balance)); } return result;
     }
 
@@ -162,11 +165,25 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
         await gate.WaitAsync(ct);
         try
         {
-        var today = Clock.Today; var items = await db.RecurringIncomes.Include(x => x.Occurrences).Where(x => x.IsActive && x.StartDate <= horizon && (!x.EndDate.HasValue || x.EndDate >= today)).ToListAsync(ct);
-        foreach (var item in items) await ReconcileFutureOccurrencesAsync(item, horizon, ct);
+        var today = Clock.Today; var items = await db.RecurringIncomes.Include(x => x.Occurrences).Where(x => x.IsActive && x.StartDate <= horizon && (!x.EndDate.HasValue || x.EndDate >= today || x.AutomaticProcessing)).ToListAsync(ct);
+        foreach (var item in items)
+        {
+            if (item.AutomaticProcessing) ReconcileDueOccurrences(item, today);
+            await ReconcileFutureOccurrencesAsync(item, horizon, ct);
+        }
         await db.SaveChangesAsync(ct);
         }
         finally { gate.Release(); }
+    }
+    private void ReconcileDueOccurrences(RecurringIncome item, DateOnly today)
+    {
+        foreach (var date in GenerateDates(item, today).Where(x => x <= today))
+        {
+            // Cancelled user occurrences are durable tombstones. Keeping the row
+            // means a later synchronization cannot recreate the transaction.
+            if (item.Occurrences.Any(x => x.ScheduledDate == date)) continue;
+            db.RecurringIncomeOccurrences.Add(new RecurringIncomeOccurrence(item, date));
+        }
     }
     private async Task ReconcileFutureOccurrencesAsync(RecurringIncome item, DateOnly horizon, CancellationToken ct)
     {
@@ -191,6 +208,7 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
 
             if (existing.Status == RecurringIncomeOccurrenceStatus.Paused && item.IsActive)
                 existing.RestoreAfterPause();
+            existing.UpdateForecastAmount(item.Amount);
         }
     }
     private static HashSet<DateOnly> GenerateDates(RecurringIncome item, DateOnly horizon)

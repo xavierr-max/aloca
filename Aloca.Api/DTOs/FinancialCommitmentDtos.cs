@@ -46,7 +46,13 @@ public sealed record FinancialCommitmentResponse(
     bool IsRecurring = false, bool IsOpenEnded = false,
     decimal AllocatedForNextInstallment = 0m, decimal RemainingForNextInstallment = 0m,
     decimal CoveragePercentage = 0m, bool CanPay = false,
-    decimal AvailableToAllocate = 0m, bool CanAllocate = false)
+    decimal AvailableToAllocate = 0m, bool CanAllocate = false,
+    IReadOnlyCollection<FinancialCommitmentOccurrenceResponse>? Occurrences = null)
 {
     public string CoverageStatus => IsCompleted ? "full" : CoveragePercentage >= 100m ? "next" : CoveragePercentage <= 0m ? "none" : "partial";
 }
+
+public sealed record FinancialCommitmentOccurrenceResponse(
+    Guid Id, DateOnly ScheduledDate, int InstallmentNumber, decimal Amount,
+    FinancialCommitmentOccurrenceStatus Status, Guid? CommitmentPaymentId,
+    DateTime? ProcessedAt);

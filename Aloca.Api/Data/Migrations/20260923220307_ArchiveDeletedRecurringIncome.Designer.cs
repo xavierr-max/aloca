@@ -3,6 +3,7 @@ using System;
 using Aloca.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Aloca.Api.Data.Migrations
 {
     [DbContext(typeof(AlocaDbContext))]
-    partial class AlocaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260923220307_ArchiveDeletedRecurringIncome")]
+    partial class ArchiveDeletedRecurringIncome
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -110,9 +113,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<Guid>("FinancialCommitmentId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("FinancialCommitmentOccurrenceId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("InstallmentNumber")
                         .HasColumnType("integer");
 
@@ -126,9 +126,6 @@ namespace Aloca.Api.Data.Migrations
                         .HasColumnType("boolean");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FinancialCommitmentOccurrenceId")
-                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -270,54 +267,6 @@ namespace Aloca.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" >= 0");
                         });
-                });
-
-            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentOccurrence", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid?>("CommitmentPaymentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("FinancialCommitmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("InstallmentNumber")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly>("ScheduledDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CommitmentPaymentId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("FinancialCommitmentId", "ScheduledDate")
-                        .IsUnique();
-
-                    b.ToTable("financial_commitment_occurrences", (string)null);
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialSettings", b =>
@@ -547,11 +496,6 @@ namespace Aloca.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Aloca.Api.Models.FinancialCommitmentOccurrence", "FinancialCommitmentOccurrence")
-                        .WithMany()
-                        .HasForeignKey("FinancialCommitmentOccurrenceId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Aloca.Api.Models.Account", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -559,8 +503,6 @@ namespace Aloca.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("FinancialCommitment");
-
-                    b.Navigation("FinancialCommitmentOccurrence");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.DeviceAccount", b =>
@@ -596,30 +538,6 @@ namespace Aloca.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentOccurrence", b =>
-                {
-                    b.HasOne("Aloca.Api.Models.CommitmentPayment", "CommitmentPayment")
-                        .WithMany()
-                        .HasForeignKey("CommitmentPaymentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("Aloca.Api.Models.FinancialCommitment", "FinancialCommitment")
-                        .WithMany("Occurrences")
-                        .HasForeignKey("FinancialCommitmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Aloca.Api.Models.Account", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("CommitmentPayment");
-
-                    b.Navigation("FinancialCommitment");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialSettings", b =>
@@ -695,11 +613,6 @@ namespace Aloca.Api.Data.Migrations
             modelBuilder.Entity("Aloca.Api.Models.Device", b =>
                 {
                     b.Navigation("Accounts");
-                });
-
-            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitment", b =>
-                {
-                    b.Navigation("Occurrences");
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.RecurringIncome", b =>

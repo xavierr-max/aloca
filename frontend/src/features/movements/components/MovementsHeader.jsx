@@ -1,9 +1,6 @@
 import React from 'react'
+import PageHeader from '../../../components/PageHeader.jsx'
 
 export default function MovementsHeader() {
-  return <header className="movements-header">
-    <span className="eyebrow">MOVIMENTAÇÕES</span>
-    <h1 id="movements-page-title">Movimentações</h1>
-    <p>Entradas, saídas e recorrências em um só lugar.</p>
-  </header>
+  return <PageHeader className="movements-header" eyebrow="MOVIMENTAÇÕES" title="Movimentações" description="Entradas, saídas e recorrências em um só lugar." titleId="movements-page-title" />
 }

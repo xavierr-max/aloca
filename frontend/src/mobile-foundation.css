@@ -303,6 +303,107 @@
 /* Mobile forecast presentation. Forecast data, chart interaction and month
  * details remain owned by the existing forecast components. */
 @media (max-width: 767px) {
+  /* Shared mobile page header rhythm. Individual pages keep their content
+   * and actions, while this block owns the common hierarchy and spacing. */
+  .page-header {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .page-header-eyebrow {
+    display: block;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .page-header h1 {
+    max-width: 100%;
+    margin: 7px 0 0;
+    color: var(--text-primary);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -.04em;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .page-header p {
+    max-width: 42ch;
+    margin: 7px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .movements-header,
+  .commitments-page-heading,
+  .groups-page .page-heading,
+  .profile-page .page-heading,
+  .support-page .page-heading,
+  .forecast-planning-header {
+    margin-top: 0;
+  }
+
+  .movements-header { margin-bottom: 22px; }
+  .commitments-page-heading { margin-bottom: 0; }
+  .groups-page .page-heading { gap: 0; margin-bottom: 22px; }
+  .profile-page .page-heading { margin-bottom: 22px; }
+  .support-page .page-heading { margin-bottom: 22px; }
+
+  .groups-page .page-heading > .primary,
+  .commitments-page-header .commitments-create-button {
+    margin-top: 22px;
+  }
+
+  .groups-page .page-heading > .primary,
+  .commitments-page-header .commitments-create-button {
+    width: 100%;
+  }
+
+  .forecast-planning-header {
+    gap: 22px;
+    margin-bottom: 0;
+  }
+
+  .forecast-planning-copy {
+    align-self: flex-start;
+    width: 100%;
+    text-align: left;
+  }
+
+  .forecast-planning-copy .page-header h1 {
+    font-size: 28px;
+  }
+
+  .forecast-planning-header > label {
+    margin: 0;
+  }
+}
+
+@media (max-width: 390px) {
+  .page-header h1,
+  .forecast-planning-copy .page-header h1 {
+    font-size: 27px;
+  }
+
+  .page-header p { max-width: 36ch; }
+}
+
+@media (min-width: 768px) {
+  .page-header-eyebrow { display: block; }
+  .page-header h1 { margin: 7px 0 5px; }
+  .page-header p { margin: 0; }
+}
+
+@media (max-width: 767px) {
   .forecast-page-shell {
     min-height: 0;
     padding-bottom: 104px;
@@ -1514,4 +1615,76 @@
   .account-summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* Shared header base for the extracted PageHeader component. */
+.page-header h1 {
+  margin: 7px 0 5px;
+  color: var(--text-primary);
+  font: 600 30px 'Space Grotesk', sans-serif;
+  letter-spacing: -.04em;
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.forecast-planning-copy.page-header h1 {
+  font-size: 22px;
+}
+
+@media (max-width: 767px) {
+  .page-header h1,
+  .forecast-planning-copy.page-header h1 {
+    margin-top: 7px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.12;
+  }
+
+  .page-header p {
+    margin-top: 7px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .movements-header { margin: 0 0 22px; }
+  .commitments-page-header { gap: 0; }
+  .groups-page .page-heading { margin-bottom: 22px; }
+  .groups-page .page-heading > .primary,
+  .commitments-page-header .commitments-create-button { margin-top: 22px; }
+  .forecast-planning-header { gap: 22px; margin-bottom: 0; }
+}
+
+@media (max-width: 390px) {
+  .page-header h1,
+  .forecast-planning-copy.page-header h1 { font-size: 27px; }
+}
+
+/* Shared page-title scale: all top-level pages use the same hierarchy. */
+.page-header h1,
+.forecast-planning-copy.page-header h1,
+.movements-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -.04em;
+}
+
+@media (max-width: 767px) {
+  .page-header h1,
+  .forecast-planning-copy.page-header h1,
+  .movements-header h1 {
+    font-size: 28px;
+    line-height: 1.12;
+  }
+}
+
+@media (max-width: 390px) {
+  .page-header h1,
+  .forecast-planning-copy.page-header h1,
+  .movements-header h1 { font-size: 27px; }
 }

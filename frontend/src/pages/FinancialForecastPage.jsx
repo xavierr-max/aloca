@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../services/api'
+import PageHeader from '../components/PageHeader.jsx'
 import { ForecastBalanceCard as BalanceCard } from '../components/forecast/ForecastBalanceCard.jsx'
 import ForecastCoverage from '../components/forecast/ForecastCoverage.jsx'
 import ForecastKpiCard from '../components/forecast/ForecastKpiCard.jsx'
@@ -37,7 +38,7 @@ export default function FinancialForecastPage() {
   const expenseSecondary = summary ? 'Total do período' : null
   return <div className="forecast-page-shell">
     <div className="forecast-page-content">
-      <section className="forecast-planning-header"><div className="forecast-planning-copy"><span className="forecast-eyebrow">PREVISÕES E DADOS</span><h2 className="forecast-planning-title">Planejamento financeiro</h2></div><label>Período<select value={months} onChange={event => setMonths(Number(event.target.value))}><option value="3">3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option></select></label></section>
+      <section className="forecast-planning-header"><PageHeader className="forecast-planning-copy" eyebrow="ANÁLISE" title="Previsões" description="Visualize entradas, saídas e o saldo projetado para os próximos meses." /><label>Período<select value={months} onChange={event => setMonths(Number(event.target.value))}><option value="3">3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option></select></label></section>
       {error && <div className="forecast-inline-error" role="status">{error}</div>}
       {!data && !error ? <ForecastLoading /> : <>
         <section className="forecast-kpi-grid"><ForecastKpiCard kind="income" label="Entradas previstas" value={money(summary?.totalIncome)} secondary={incomeSecondary} tone="positive" /><ForecastKpiCard kind="expense" label="Saídas previstas" value={money(summary?.totalExpense)} secondary={expenseSecondary} tone="negative" /><ForecastKpiCard kind="result" label="Resultado do período" value={money(summary?.totalResult)} tone={Number(summary?.totalResult) < 0 ? 'negative' : 'positive'} /><ForecastKpiCard kind="balance" label="Saldo projetado" value={money(summary?.projectedClosingBalance)} secondary={data ? `Saldo final (${monthKey(data.months?.[data.months.length - 1])})` : null} /></section>

@@ -81,10 +81,24 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
+    [HttpPost("{id:guid}/occurrences/{occurrenceId:guid}/payment")]
+    public async Task<ActionResult<FinancialCommitmentResponse>> PayOccurrence(Guid id, Guid occurrenceId, CancellationToken ct)
+    {
+        try { var item = await service.RegisterPaymentAsync(id, ct, occurrenceId: occurrenceId); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
+    }
+
     [HttpDelete("{id:guid}/payments/latest")]
     public async Task<ActionResult<FinancialCommitmentResponse>> ReversePayment(Guid id, CancellationToken ct)
     {
         try { var item = await service.ReverseLatestPaymentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    [HttpDelete("{id:guid}/occurrences/{occurrenceId:guid}/payment")]
+    public async Task<ActionResult<FinancialCommitmentResponse>> ReverseOccurrencePayment(Guid id, Guid occurrenceId, CancellationToken ct)
+    {
+        try { var item = await service.ReverseLatestPaymentAsync(id, ct, occurrenceId); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 

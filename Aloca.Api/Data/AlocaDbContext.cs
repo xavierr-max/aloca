@@ -30,6 +30,7 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
     public DbSet<FinancialSettings> FinancialSettings => Set<FinancialSettings>();
 
     public DbSet<CommitmentPayment> CommitmentPayments => Set<CommitmentPayment>();
+    public DbSet<FinancialCommitmentOccurrence> FinancialCommitmentOccurrences => Set<FinancialCommitmentOccurrence>();
 
     public DbSet<RecurringIncome> RecurringIncomes => Set<RecurringIncome>();
 
@@ -44,6 +45,7 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
         modelBuilder.Entity<FinancialCommitment>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
         modelBuilder.Entity<FinancialSettings>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
         modelBuilder.Entity<CommitmentPayment>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
+        modelBuilder.Entity<FinancialCommitmentOccurrence>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
         modelBuilder.Entity<RecurringIncome>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
         modelBuilder.Entity<RecurringIncomeOccurrence>().HasQueryFilter(x => !TenantFilteringEnabled || x.UserId == CurrentUserId);
 
@@ -52,6 +54,7 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
         modelBuilder.Entity<FinancialCommitment>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<FinancialSettings>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<CommitmentPayment>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<FinancialCommitmentOccurrence>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<RecurringIncome>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<RecurringIncomeOccurrence>().HasOne<Account>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }

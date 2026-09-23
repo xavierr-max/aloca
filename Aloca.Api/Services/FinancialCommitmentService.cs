@@ -13,7 +13,8 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, balanceService);
     public async Task<IReadOnlyCollection<FinancialCommitmentResponse>> GetAllAsync(bool? isCompleted, bool? isFullyCommitted, CancellationToken ct)
     {
-        var query = dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).AsQueryable();
+        await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
+        var query = dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).AsQueryable();
         if (isCompleted.HasValue)
             query = isCompleted.Value
                 ? query.Where(x => x.TotalInstallments > 0 && x.PaidInstallments == x.TotalInstallments)
@@ -24,24 +25,25 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         return items.Select(x => ToResponse(x, available)).ToList();
     }
 
-    public async Task<FinancialCommitmentResponse?> GetByIdAsync(Guid id, CancellationToken ct) =>
-        await dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).SingleOrDefaultAsync(x => x.Id == id, ct) is { } item
+    public async Task<FinancialCommitmentResponse?> GetByIdAsync(Guid id, CancellationToken ct)
+    {
+        await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
+        return await dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id, ct) is { } item
             ? ToResponse(item, (await balanceService.GetAsync(ct)).SaldoNaoAlocado)
             : null;
+    }
 
     public async Task<FinancialCommitment> CreateAsync(FinancialCommitmentCreateRequest request, CancellationToken ct)
     {
         await ValidateCategoryAsync(request.CategoryId, ct);
         var dueDate = request.DueDate ?? Clock.Today;
-        if (dueDate < Clock.Today)
-            throw new InvalidOperationException("The first due date cannot be earlier than today for a new commitment.");
         FinancialCommitment item;
         if (request.Frequency.HasValue)
             item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.Frequency.Value, dueDate, request.EndDate, request.Priority, request.IsFullyCommitted ?? true, request.Objective, request.Urgent, request.AutomaticProcessing);
         else
             item = new FinancialCommitment(request.Name, request.InstallmentAmount, request.TotalInstallments ?? throw new ArgumentException("Informe o total de parcelas ou a frequência."), 0, 0m, request.Priority, request.IsFullyCommitted ?? true, dueDate, request.Objective, request.Urgent, request.AutomaticProcessing);
         item.SetCategory(request.CategoryId);
-        dbContext.FinancialCommitments.Add(item); await dbContext.SaveChangesAsync(ct); logger?.LogInformation("Commitment created commitment_id={CommitmentId}", item.Id); return item;
+        dbContext.FinancialCommitments.Add(item); await dbContext.SaveChangesAsync(ct); await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); logger?.LogInformation("Commitment created commitment_id={CommitmentId}", item.Id); return item;
     }
 
     public async Task<FinancialCommitment?> UpdateAsync(Guid id, FinancialCommitmentUpdateRequest request, CancellationToken ct)
@@ -52,7 +54,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
             item.UpdateSchedule(request.Name, request.InstallmentAmount, request.Frequency.Value, request.DueDate ?? item.DueDate, request.EndDate, request.Priority, request.IsFullyCommitted ?? item.IsFullyCommitted, request.CategoryId, request.Objective, request.Urgent, request.AutomaticProcessing);
         else
             item.UpdateDetails(request.Name, request.InstallmentAmount, request.TotalInstallments ?? throw new ArgumentException("Informe o total de parcelas ou a frequência."), request.Priority, request.IsFullyCommitted ?? item.IsFullyCommitted, request.CategoryId, request.DueDate, request.Objective, request.Urgent, request.AutomaticProcessing);
-        await dbContext.SaveChangesAsync(ct); await Reconciliation.ReconcileAsync(ct); logger?.LogInformation("Commitment changed commitment_id={CommitmentId}", item.Id); return item;
+        await dbContext.SaveChangesAsync(ct); await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); await Reconciliation.ReconcileAsync(ct); logger?.LogInformation("Commitment changed commitment_id={CommitmentId}", item.Id); return item;
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct) { var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return false; dbContext.Remove(item); await dbContext.SaveChangesAsync(ct); logger?.LogInformation("Commitment deleted commitment_id={CommitmentId}", id); return true; }
@@ -60,7 +62,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     public async Task<FinancialCommitment?> MutateAsync(Guid id, Action<FinancialCommitment> mutation, CancellationToken ct)
     { var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null; mutation(item); await dbContext.SaveChangesAsync(ct); return item; }
 
-    public async Task<FinancialCommitment?> RegisterPaymentAsync(Guid id, CancellationToken ct, bool automatic = false)
+    public async Task<FinancialCommitment?> RegisterPaymentAsync(Guid id, CancellationToken ct, bool automatic = false, Guid? occurrenceId = null)
     {
         var gate = paymentLocks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
@@ -70,6 +72,20 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
             ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct) : null;
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return null;
+        await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
+        var occurrence = occurrenceId.HasValue
+            ? await dbContext.FinancialCommitmentOccurrences.SingleOrDefaultAsync(x => x.Id == occurrenceId.Value && x.FinancialCommitmentId == id, ct)
+            : await dbContext.FinancialCommitmentOccurrences.Where(x => x.FinancialCommitmentId == id && x.Status != FinancialCommitmentOccurrenceStatus.Paid && x.Status != FinancialCommitmentOccurrenceStatus.Cancelled).OrderBy(x => x.InstallmentNumber).FirstOrDefaultAsync(ct);
+        if (occurrence is null && !occurrenceId.HasValue)
+        {
+            var first = FinancialCommitmentSchedule.GetPendingInstallments(item, Clock.Today).FirstOrDefault();
+            if (first is not null)
+            {
+                occurrence = new FinancialCommitmentOccurrence(item, first.DueDate, first.Number);
+                dbContext.FinancialCommitmentOccurrences.Add(occurrence);
+            }
+        }
+        if (occurrence?.Status == FinancialCommitmentOccurrenceStatus.Paid) return item;
         if (item.IsCompleted) return item;
         var allocatedForInstallment = Math.Min(Math.Max(item.AllocatedAmount, 0m), item.InstallmentAmount);
         var missing = Math.Max(0m, item.InstallmentAmount - allocatedForInstallment);
@@ -77,10 +93,11 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var amount = item.RegisterPayment();
         if (amount <= 0m) throw new InvalidOperationException("O valor da cobrança deve ser maior que zero.");
         item.SetAutomaticProcessingWarning(null);
-        var payment = new CommitmentPayment(item.Id, amount, item.PaidInstallments, Clock.UtcNow, automatic);
+        var payment = new CommitmentPayment(item.Id, amount, occurrence?.InstallmentNumber ?? item.PaidInstallments, Clock.UtcNow, automatic, occurrence?.Id);
         dbContext.CommitmentPayments.Add(payment);
         dbContext.Transactions.Add(new Transaction(item.Name, amount, TransactionType.Expense, Clock.Today, item.CategoryId,
             financialCommitmentId: item.Id, wasAutomatic: automatic, commitmentPaymentId: payment.Id));
+        occurrence?.MarkPaid(payment.Id);
         try
         {
             await dbContext.SaveChangesAsync(ct);
@@ -103,6 +120,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
 
     public async Task<int> ProcessDueAsync(DateOnly today, CancellationToken ct)
     {
+        await EnsureOccurrencesAsync(today.AddMonths(24), ct);
         var items = await dbContext.FinancialCommitments.Where(x => x.AutomaticProcessing && (x.TotalInstallments == 0 || x.PaidInstallments < x.TotalInstallments)).ToListAsync(ct);
         var processed = 0;
         foreach (var item in items)
@@ -114,7 +132,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
                     item.SetAutomaticProcessingWarning($"Pagamento automático não realizado: faltam {(item.InstallmentAmount - item.AllocatedAmount):C}.");
                     break;
                 }
-                await RegisterPaymentAsync(item.Id, ct, automatic: true);
+                await RegisterPaymentAsync(item.Id, ct, automatic: true, occurrenceId: await GetOccurrenceIdAsync(item.Id, due.Number, ct));
                 processed++;
             }
         }
@@ -122,7 +140,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         return processed;
     }
 
-    public async Task<FinancialCommitment?> ReverseLatestPaymentAsync(Guid id, CancellationToken ct)
+    public async Task<FinancialCommitment?> ReverseLatestPaymentAsync(Guid id, CancellationToken ct, Guid? occurrenceId = null)
     {
         var gate = paymentLocks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
@@ -131,10 +149,12 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         await using var transaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(ct) : null;
         var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return null;
-        var payment = await dbContext.CommitmentPayments.Where(x => x.FinancialCommitmentId == id)
+        var payment = await dbContext.CommitmentPayments.Where(x => x.FinancialCommitmentId == id && (!occurrenceId.HasValue || x.FinancialCommitmentOccurrenceId == occurrenceId))
             .OrderByDescending(x => x.InstallmentNumber).ThenByDescending(x => x.PaidAt).FirstOrDefaultAsync(ct);
         if (payment is null) throw new InvalidOperationException("There are no payments to reverse.");
         item.ReverseLatestPayment(payment.Amount);
+        var paidOccurrence = await dbContext.FinancialCommitmentOccurrences.SingleOrDefaultAsync(x => x.Id == payment.FinancialCommitmentOccurrenceId, ct);
+        paidOccurrence?.RestoreAfterPayment();
         var paymentMovement = await dbContext.Transactions.SingleOrDefaultAsync(x => x.CommitmentPaymentId == payment.Id, ct);
         if (paymentMovement is not null) dbContext.Transactions.Remove(paymentMovement);
         dbContext.CommitmentPayments.Remove(payment);
@@ -270,6 +290,31 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var coverage = x.InstallmentAmount <= 0m ? 0m : Math.Min(100m, allocatedForNext / x.InstallmentAmount * 100m);
         var canPay = !x.IsCompleted && x.InstallmentAmount > 0m && remainingForNext == 0m;
         var canAllocate = !x.IsCompleted && x.AmountNeededForFullCoverage > 0m && availableToAllocate > 0m;
-        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention, x.AutomaticProcessing, x.AutomaticProcessingWarning, x.Frequency, x.EndDate, x.IsRecurring, x.IsOpenEnded, allocatedForNext, remainingForNext, coverage, canPay, availableToAllocate, canAllocate);
+        var occurrences = x.Occurrences.OrderBy(o => o.ScheduledDate).Select(o => new FinancialCommitmentOccurrenceResponse(o.Id, o.ScheduledDate, o.InstallmentNumber, o.Amount, o.Status, o.CommitmentPaymentId, o.ProcessedAt)).ToList();
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention, x.AutomaticProcessing, x.AutomaticProcessingWarning, x.Frequency, x.EndDate, x.IsRecurring, x.IsOpenEnded, allocatedForNext, remainingForNext, coverage, canPay, availableToAllocate, canAllocate, occurrences);
+    }
+
+    private async Task<Guid?> GetOccurrenceIdAsync(Guid commitmentId, int installmentNumber, CancellationToken ct) =>
+        (await dbContext.FinancialCommitmentOccurrences.SingleOrDefaultAsync(x => x.FinancialCommitmentId == commitmentId && x.InstallmentNumber == installmentNumber, ct))?.Id;
+
+    public async Task EnsureOccurrencesAsync(DateOnly horizon, CancellationToken ct)
+    {
+        var today = Clock.Today;
+        var items = await dbContext.FinancialCommitments.Include(x => x.Occurrences).ToListAsync(ct);
+        foreach (var item in items)
+        {
+            var schedule = FinancialCommitmentSchedule.GetInstallments(item, today, horizon);
+            foreach (var installment in schedule)
+            {
+                var existing = item.Occurrences.FirstOrDefault(x => x.ScheduledDate == installment.DueDate);
+                if (existing is null)
+                    dbContext.FinancialCommitmentOccurrences.Add(new FinancialCommitmentOccurrence(item, installment.DueDate, installment.Number));
+                else if (installment.Number > item.PaidInstallments)
+                    existing.UpdateForecastAmount(item.InstallmentAmount);
+            }
+            foreach (var occurrence in item.Occurrences.Where(x => x.ScheduledDate >= today && x.Status is FinancialCommitmentOccurrenceStatus.Planned or FinancialCommitmentOccurrenceStatus.Pending))
+                if (!schedule.Any(x => x.DueDate == occurrence.ScheduledDate)) occurrence.Cancel();
+        }
+        await dbContext.SaveChangesAsync(ct);
     }
 }

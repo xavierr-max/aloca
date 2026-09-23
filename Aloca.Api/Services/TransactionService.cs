@@ -136,8 +136,12 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         if (transaction.RecurringIncomeOccurrenceId is { } occurrenceId)
         {
             var occurrence = await dbContext.RecurringIncomeOccurrences
+                .Include(x => x.RecurringIncome)
                 .SingleOrDefaultAsync(x => x.Id == occurrenceId, cancellationToken);
-            occurrence?.RestoreAfterTransactionDeletion();
+            if (occurrence is not null)
+            {
+                occurrence.MarkDeletedByUser();
+            }
         }
 
         dbContext.Transactions.Remove(transaction);
@@ -157,6 +161,11 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, cancellationToken);
         if (!categoryExists) return new(TransactionWriteStatus.CategoryNotFound, null);
         transaction.UpdateDetails(request.Description, request.Amount, request.Date, request.CategoryId);
+        if (transaction.RecurringIncomeOccurrenceId is { } occurrenceId)
+        {
+            var occurrence = await dbContext.RecurringIncomeOccurrences.SingleOrDefaultAsync(x => x.Id == occurrenceId, cancellationToken);
+            occurrence?.UpdateReceivedAmount(request.Amount);
+        }
         await dbContext.SaveChangesAsync(cancellationToken);
         await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);

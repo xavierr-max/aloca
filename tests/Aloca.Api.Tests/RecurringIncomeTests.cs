@@ -9,6 +9,76 @@ namespace Aloca.Api.Tests;
 public sealed class RecurringIncomeTests
 {
     [Fact]
+    public async Task UpdatePreservesCreateFieldsAndRegeneratesOnlyFutureOccurrences()
+    {
+        await using var db = CreateDbContext();
+        var service = new RecurringIncomeService(db);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Mesada",
+            Amount = 80m,
+            CategoryId = null,
+            Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = today,
+            DayOfMonth = today.Day,
+            AutomaticProcessing = true,
+        }, CancellationToken.None);
+        Assert.NotNull(created);
+        var received = created!.Occurrences.Single(x => x.ScheduledDate == today);
+        await service.ReceiveAsync(received.Id, CancellationToken.None);
+
+        var updated = await service.UpdateAsync(created.Id, new RecurringIncomeRequest
+        {
+            Description = "Mesada atualizada",
+            Amount = 120m,
+            CategoryId = null,
+            Frequency = RecurringIncomeFrequency.Weekly,
+            StartDate = today.AddDays(2),
+            EndDate = today.AddMonths(2),
+            DayOfMonth = null,
+            AutomaticProcessing = false,
+        }, CancellationToken.None);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Mesada atualizada", updated!.Description);
+        Assert.Equal(120m, updated.Amount);
+        Assert.Equal(RecurringIncomeFrequency.Weekly, updated.Frequency);
+        Assert.Equal(today.AddDays(2), updated.StartDate);
+        Assert.Equal(today.AddMonths(2), updated.EndDate);
+        Assert.False(updated.AutomaticProcessing);
+        Assert.Contains(updated.Occurrences, x => x.Id == received.Id && x.Status == RecurringIncomeOccurrenceStatus.Received && x.Amount == 80m);
+        Assert.Contains(updated.Occurrences, x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate == today.AddDays(2) && x.Amount == 120m);
+        Assert.All(updated.Occurrences.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned), x => Assert.Equal(120m, x.Amount));
+    }
+
+    [Fact]
+    public async Task GetAllReturnsActiveRecurringDefinitionWithoutCurrentMonthOccurrence()
+    {
+        await using var db = CreateDbContext();
+        var service = new RecurringIncomeService(db);
+
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Mesada",
+            Amount = 80m,
+            CategoryId = null,
+            Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(1),
+            DayOfMonth = 1,
+        }, CancellationToken.None);
+        Assert.NotNull(created);
+
+        var definitions = await service.GetAllAsync(CancellationToken.None);
+
+        var definition = Assert.Single(definitions, x => x.Id == created.Id);
+        Assert.True(definition.IsActive);
+        Assert.Equal(created.StartDate, definition.NextOccurrence);
+        Assert.DoesNotContain(definition.Occurrences, x => x.TransactionId.HasValue);
+    }
+
+    [Fact]
     public async Task RecurringIncomeWithoutCategoryIsPersistedAndReturnedAsUncategorized()
     {
         await using var db = CreateDbContext();
@@ -181,6 +251,72 @@ public sealed class RecurringIncomeTests
         await service.ReceiveAsync(first.Id, CancellationToken.None);
         Assert.Single(await db.Transactions.ToListAsync());
         Assert.Equal(80m, (await new FinancialBalanceService(db).GetAsync(CancellationToken.None)).SaldoReal);
+    }
+
+    [Fact]
+    public async Task CreatingAutomaticRecurringIncomeWithPastStartReceivesAllDueOccurrencesOnce()
+    {
+        await using var db = CreateDbContext();
+        var today = new DateOnly(2026, 9, 23);
+        var service = new RecurringIncomeService(db, clock: new FixedClock(today));
+
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Teste", Amount = 55m, Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = new DateOnly(2026, 6, 21), DayOfMonth = 21, AutomaticProcessing = true
+        }, default);
+
+        var due = (await service.GetAsync(created!.Id, default))!.Occurrences;
+        Assert.Equal(4, due.Count(x => x.Status == RecurringIncomeOccurrenceStatus.Received));
+        Assert.Equal(4, await db.Transactions.CountAsync());
+        Assert.Equal(220m, (await new FinancialBalanceService(db, new FixedClock(today)).GetAsync(default)).SaldoReal);
+        await service.ProcessDueAsync(today, default);
+        Assert.Equal(4, await db.Transactions.CountAsync());
+    }
+
+    [Fact]
+    public async Task AutomaticFalseKeepsPastOccurrencePlanned()
+    {
+        await using var db = CreateDbContext();
+        var today = new DateOnly(2026, 9, 23);
+        var service = new RecurringIncomeService(db, clock: new FixedClock(today));
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Manual", Amount = 55m, Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = new DateOnly(2026, 9, 21), DayOfMonth = 21, AutomaticProcessing = false
+        }, default);
+
+        Assert.Equal(0, await db.Transactions.CountAsync());
+        Assert.DoesNotContain((await service.GetAsync(created!.Id, default))!.Occurrences,
+            x => x.ScheduledDate < today && x.Status == RecurringIncomeOccurrenceStatus.Received);
+    }
+
+    [Fact]
+    public async Task EditingAndDeletingRecurringTransactionUpdatesOccurrenceAndLeavesUserTombstone()
+    {
+        await using var db = CreateDbContext();
+        var today = new DateOnly(2026, 9, 23);
+        var service = new RecurringIncomeService(db, clock: new FixedClock(today));
+        var created = await service.CreateAsync(new RecurringIncomeRequest
+        {
+            Description = "Mesada", Amount = 55m, Frequency = RecurringIncomeFrequency.Monthly,
+            StartDate = new DateOnly(2026, 9, 21), DayOfMonth = 21, AutomaticProcessing = true
+        }, default);
+        var transaction = await db.Transactions.SingleAsync();
+        var transactionService = new TransactionService(db);
+
+        await transactionService.UpdateAsync(transaction.Id, new TransactionRequest
+        {
+            Description = "Mesada", Amount = 40m, Type = TransactionType.Income, Date = transaction.Date
+        }, default);
+        Assert.Equal(40m, (await new FinancialBalanceService(db, new FixedClock(today)).GetAsync(default)).SaldoReal);
+
+        await transactionService.DeleteAsync(transaction.Id, default);
+        await service.ProcessDueAsync(today, default);
+        var occurrence = await db.RecurringIncomeOccurrences.SingleAsync(x => x.ScheduledDate == new DateOnly(2026, 9, 21));
+        Assert.Equal(RecurringIncomeOccurrenceStatus.Cancelled, occurrence.Status);
+        Assert.Equal(RecurringIncomeOccurrenceCancellationSource.User, occurrence.CancellationSource);
+        Assert.Empty(await db.Transactions.ToListAsync());
     }
 
     [Fact]
@@ -416,7 +552,7 @@ public sealed class RecurringIncomeTests
     }
 
     [Fact]
-    public async Task DeleteRemovesRecurringIncomeAndOccurrencesButKeepsReceivedTransaction()
+    public async Task DeleteArchivesRecurringIncomeAndKeepsReceivedTransactionLinkedToHistory()
     {
         await using var db = CreateDbContext();
         var category = new Category("Renda"); db.Categories.Add(category); await db.SaveChangesAsync();
@@ -427,15 +563,20 @@ public sealed class RecurringIncomeTests
 
         Assert.True(await service.DeleteAsync(created.Id, CancellationToken.None));
 
-        Assert.Equal(0, await db.RecurringIncomes.CountAsync());
-        Assert.Equal(0, await db.RecurringIncomeOccurrences.CountAsync());
+        var archived = await db.RecurringIncomes.SingleAsync();
+        Assert.False(archived.IsActive);
+        Assert.NotNull(archived.DeletedAt);
+        var historicalOccurrence = await db.RecurringIncomeOccurrences.SingleAsync();
+        Assert.Equal(RecurringIncomeOccurrenceStatus.Received, historicalOccurrence.Status);
         var transaction = await db.Transactions.SingleAsync();
         Assert.Equal(received!.TransactionId, transaction.Id);
-        Assert.Null(transaction.RecurringIncomeOccurrenceId);
+        Assert.Equal(historicalOccurrence.Id, transaction.RecurringIncomeOccurrenceId);
+        Assert.DoesNotContain((await service.GetAllAsync(CancellationToken.None)), x => x.Id == created.Id);
+        Assert.All(await service.ProjectionAsync(CancellationToken.None), month => Assert.Equal(0m, month.PlannedIncome));
     }
 
     [Fact]
-    public async Task DeletingReceivedOccurrenceTransactionRestoresPlannedOccurrence()
+    public async Task DeletingReceivedOccurrenceTransactionLeavesUserCancelledTombstone()
     {
         await using var db = CreateDbContext();
         var category = new Category("Renda"); db.Categories.Add(category); await db.SaveChangesAsync();
@@ -451,7 +592,8 @@ public sealed class RecurringIncomeTests
         Assert.True(await new TransactionService(db).DeleteAsync(received!.TransactionId!.Value, CancellationToken.None));
 
         var restored = await db.RecurringIncomeOccurrences.SingleAsync(x => x.Id == occurrence.Id);
-        Assert.Equal(RecurringIncomeOccurrenceStatus.Planned, restored.Status);
+        Assert.Equal(RecurringIncomeOccurrenceStatus.Cancelled, restored.Status);
+        Assert.Equal(RecurringIncomeOccurrenceCancellationSource.User, restored.CancellationSource);
         Assert.Null(restored.TransactionId);
         Assert.Equal(0, await db.Transactions.CountAsync());
     }
@@ -459,4 +601,11 @@ public sealed class RecurringIncomeTests
     private static AlocaDbContext CreateDbContext() => CreateDbContext($"recurring-tests-{Guid.NewGuid()}");
 
     private static AlocaDbContext CreateDbContext(string databaseName) => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(databaseName).Options);
+
+    private sealed class FixedClock(DateOnly today) : IBusinessClock
+    {
+        public DateTime UtcNow => today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        public DateTime LocalNow => UtcNow;
+        public DateOnly Today => today;
+    }
 }

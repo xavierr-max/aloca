@@ -17,10 +17,12 @@ public sealed class AutomaticProcessingTests
         var service = new RecurringIncomeService(db);
         var item = await service.CreateAsync(new RecurringIncomeRequest { Description = "Salário", Amount = 100m, CategoryId = category.Id, Frequency = RecurringIncomeFrequency.Monthly, StartDate = today, DayOfMonth = today.Day, AutomaticProcessing = true }, default);
 
-        Assert.Equal(1, await service.ProcessDueAsync(today, default));
+        // Creation materializes and receives a due automatic occurrence. A later
+        // processor pass remains idempotent.
+        Assert.Equal(0, await service.ProcessDueAsync(today, default));
         Assert.Equal(0, await service.ProcessDueAsync(today, default));
         Assert.Equal(1, await db.Transactions.CountAsync());
-        Assert.Equal(RecurringIncomeOccurrenceStatus.Received, (await db.RecurringIncomeOccurrences.SingleAsync()).Status);
+        Assert.Equal(RecurringIncomeOccurrenceStatus.Received, (await db.RecurringIncomeOccurrences.SingleAsync(x => x.Status == RecurringIncomeOccurrenceStatus.Received)).Status);
 
         await service.UpdateAsync(item!.Id, new RecurringIncomeRequest { Description = "Salário", Amount = 100m, CategoryId = category.Id, Frequency = RecurringIncomeFrequency.Monthly, StartDate = today, DayOfMonth = today.Day, AutomaticProcessing = false }, default);
         Assert.False((await db.RecurringIncomes.SingleAsync()).AutomaticProcessing);

@@ -94,3 +94,187 @@ button, input, select, textarea { max-width: 100%; }
   .dashboard-month-metric strong { font-size: 18px; }
   .app-drawer, .filter-drawer { width: calc(100vw - 8px); }
 }
+/* Shared form and overlay contrast system. Keep all surfaces theme driven. */
+.modal,
+.commitment-form-modal {
+  background: var(--surface-modal) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}
+.modal h2,
+.modal .modal-head h2,
+.commitment-form-modal h2 { color: var(--text-primary) !important; }
+.modal .eyebrow,
+.modal label,
+.commitment-form-modal label { color: var(--text-secondary) !important; }
+.modal input:not([type="checkbox"]),
+.modal select,
+.modal textarea,
+.commitment-form-modal input,
+.commitment-form-modal select,
+.commitment-form-modal textarea,
+.app-drawer-form input:not([type="checkbox"]),
+.app-drawer-form select {
+  background: var(--surface-field) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+  color-scheme: inherit;
+}
+.modal input:not([type="checkbox"])::placeholder,
+.modal textarea::placeholder,
+.commitment-form-modal input::placeholder,
+.commitment-form-modal textarea::placeholder { color: var(--text-muted) !important; opacity: 1; }
+.modal input:not([type="checkbox"]):hover,
+.modal select:hover,
+.modal textarea:hover,
+.commitment-form-modal input:hover,
+.commitment-form-modal select:hover,
+.commitment-form-modal textarea:hover { border-color: var(--text-icon) !important; }
+.modal input:not([type="checkbox"]):focus,
+.modal select:focus,
+.modal textarea:focus,
+.commitment-form-modal input:focus,
+.commitment-form-modal select:focus,
+.commitment-form-modal textarea:focus,
+.app-drawer-form input:not([type="checkbox"]):focus,
+.app-drawer-form select:focus {
+  border-color: var(--color-success) !important;
+  outline: 0 !important;
+  box-shadow: var(--focus-ring);
+}
+.modal input:disabled,
+.modal select:disabled,
+.modal textarea:disabled,
+.commitment-form-modal input:disabled,
+.commitment-form-modal select:disabled,
+.commitment-form-modal textarea:disabled {
+  background: var(--bg-subtle) !important;
+  color: var(--text-disabled) !important;
+  border-color: var(--border-disabled) !important;
+}
+.modal .icon-button { color: var(--text-secondary) !important; }
+.modal .icon-button:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+.modal .secondary,
+.commitment-form-modal .secondary { background: var(--bg-subtle) !important; color: var(--text-primary) !important; border-color: var(--border-default) !important; }
+.modal .secondary:hover,
+.commitment-form-modal .secondary:hover { background: var(--bg-hover) !important; border-color: var(--border-strong) !important; }
+.modal .primary,
+.commitment-form-modal .primary { background: var(--brand-green) !important; color: var(--text-on-green) !important; }
+.modal .primary:hover,
+.commitment-form-modal .primary:hover { background: var(--brand-green-hover) !important; }
+.modal button:disabled,
+.commitment-form-modal button:disabled { background: var(--bg-subtle) !important; color: var(--text-disabled) !important; border-color: var(--border-disabled) !important; opacity: 1; }
+
+.recurring-panel,
+.recurring-row,
+.detail-drawer,
+.detail-drawer-head,
+.detail-drawer-actions { background: var(--surface-card) !important; color: var(--text-primary); border-color: var(--border-default) !important; }
+.recurring-panel { border-color: var(--border-default) !important; }
+.recurring-row { border-bottom-color: var(--border-default) !important; }
+.recurring-row:hover,
+.recurring-row:focus-visible { background: var(--bg-hover) !important; }
+.recurring-tools input,
+.recurring-tools select { background: var(--surface-field) !important; color: var(--text-primary) !important; border-color: var(--border-strong) !important; }
+.recurring-main span,
+.recurring-next small,
+.recurring-detail-hero span,
+.detail-facts dt,
+.history-item small,
+.drawer-section-heading span,
+.drawer-empty { color: var(--text-secondary) !important; }
+.recurring-detail-hero { background: var(--success-surface) !important; border-color: color-mix(in srgb, var(--color-success) 28%, var(--border-default)) !important; }
+.recurring-detail-hero strong { color: var(--color-success) !important; }
+.detail-facts { border-color: var(--border-default) !important; }
+.detail-facts div { background: var(--surface-card-muted) !important; }
+.detail-facts dd,
+.history-item strong { color: var(--text-primary) !important; }
+.history-list,
+.history-item { border-color: var(--border-default) !important; }
+.history-item b { color: var(--color-success) !important; }
+.history-item .tertiary { background: var(--success-surface) !important; color: var(--color-success) !important; border: 1px solid color-mix(in srgb, var(--color-success) 25%, var(--border-default)); }
+.history-item .tertiary:hover { background: var(--bg-hover) !important; }
+.danger-button { background: var(--danger-surface) !important; color: var(--color-danger) !important; border-color: color-mix(in srgb, var(--color-danger) 35%, var(--border-default)) !important; }
+.danger-button:hover { background: color-mix(in srgb, var(--color-danger) 22%, var(--bg-card)) !important; }
+
+.commitment-form-modal .checkbox-option,
+.commitment-setting-form .checkbox-option { background: var(--surface-card-muted) !important; border-color: var(--border-default) !important; color: var(--text-primary); }
+.commitment-form-modal .checkbox-option:hover,
+.commitment-setting-form .checkbox-option:hover { background: var(--bg-hover) !important; }
+.commitment-form-modal .checkbox-option-description,
+.commitment-form-modal .commitment-form-hint,
+.commitment-form-modal .field-hint { color: var(--text-secondary) !important; }
+
+/* Keep the two creation flows aligned: one content column, grouped sections,
+   and grids that collapse before labels become cramped. */
+.commitment-setting-form {
+  width: min(100%, 620px) !important;
+  max-height: min(760px, calc(100dvh - 32px));
+  overflow-y: auto;
+}
+.commitment-setting-form > label,
+.commitment-setting-form > .recurring-form-section,
+.commitment-setting-form > .modal-copy { margin-inline: 0; }
+.recurring-form-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-default);
+}
+.recurring-form-section:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.recurring-form-section h3 { margin: 0 0 12px; color: var(--text-primary); font-size: 15px; font-weight: 650; }
+.recurring-form-section > label { margin-top: 12px; }
+.recurring-form-section .form-grid { gap: 12px; }
+.recurring-form-options .checkbox-option { margin-top: 0; }
+.recurring-form-options .modal-copy { margin: 12px 0 0; }
+.commitment-form-modal .modal-head,
+.commitment-setting-form .modal-head { margin-bottom: 4px; }
+.commitment-form-modal .modal-actions,
+.commitment-setting-form .modal-actions { padding-top: 4px; }
+
+@media (min-width: 701px) {
+  .commitment-form-modal .commitment-form-section,
+  .commitment-setting-form .recurring-form-section { scroll-margin-top: 16px; }
+  .commitment-form-modal .commitment-form-options { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+  .commitment-setting-form { max-height: calc(100dvh - 24px); }
+  .recurring-form-section { margin-top: 18px; padding-top: 16px; }
+  .recurring-form-section .form-grid { grid-template-columns: 1fr; gap: 0; }
+  .commitment-form-modal .commitment-form-section { margin-top: 18px; padding-top: 16px; }
+}
+
+/* Recurrences use fixed semantic columns so descriptions and metadata cannot
+   move the amount or the actions between rows. */
+.movements-page .movement-row.is-recurring-definition {
+  grid-template-columns: 34px minmax(0, 1fr) minmax(110px, auto) 34px;
+}
+.movements-page .movement-row.is-recurring-definition .movement-amount {
+  min-width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.movements-page .movement-row.is-recurring-definition .movement-actions {
+  width: 34px;
+  justify-self: end;
+}
+@media (max-width: 560px) {
+  .movements-page .movement-row.is-recurring-definition {
+    grid-template-columns: 30px minmax(0, 1fr) 34px;
+  }
+  .movements-page .movement-row.is-recurring-definition .movement-amount {
+    grid-column: 2;
+    min-width: 0;
+    margin-top: -2px;
+    text-align: left;
+  }
+  .movements-page .movement-row.is-recurring-definition .movement-actions {
+    grid-column: 3;
+    grid-row: 1;
+    width: 34px;
+  }
+}
+
+@media (max-width: 700px) {
+  .modal { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+}

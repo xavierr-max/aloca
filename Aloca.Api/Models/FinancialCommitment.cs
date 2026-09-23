@@ -154,6 +154,7 @@ public sealed class FinancialCommitment
     public decimal ExcessAllocatedAmount => decimal.Max(AllocatedAmount - (IsOpenEnded ? InstallmentAmount : RemainingAmount), 0m);
 
     public bool IsCompleted => !IsOpenEnded && PaidInstallments == TotalInstallments;
+    public ICollection<FinancialCommitmentOccurrence> Occurrences { get; private set; } = new List<FinancialCommitmentOccurrence>();
 
     public bool RequiresAttention => Urgent && !IsCompleted && OverallRemainingAmount > 0m;
 

@@ -200,6 +200,7 @@
 /* Final compact header: the forecast stepper is no longer part of the page. */
 .forecast-planning-header { align-items: end; margin-bottom: 18px; }
 .forecast-planning-title { margin: 7px 0 0; color: var(--text-primary); font-size: 22px; letter-spacing: -.035em; }
+.forecast-planning-title-mobile { display: none; }
 .forecast-balance-grid { align-items: stretch; }
 .forecast-balance-card { min-width: 0; }
 .forecast-balance-card > strong { white-space: nowrap; font-size: clamp(24px, 2.8vw, 40px); }
@@ -207,6 +208,8 @@
 @media (max-width: 780px) {
   .forecast-planning-header { gap: 14px; margin-bottom: 16px; }
   .forecast-planning-title { font-size: 20px; }
+  .forecast-planning-title-desktop { display: none; }
+  .forecast-planning-title-mobile { display: inline; }
 }
 
 /* Final visual hierarchy: solid semantic surfaces, without changing data or layout. */

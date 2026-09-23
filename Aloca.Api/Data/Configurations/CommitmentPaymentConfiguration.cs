@@ -20,5 +20,10 @@ public sealed class CommitmentPaymentConfiguration : IEntityTypeConfiguration<Co
             .HasForeignKey(x => x.FinancialCommitmentId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(x => new { x.FinancialCommitmentId, x.InstallmentNumber }).IsUnique();
+        builder.HasOne(x => x.FinancialCommitmentOccurrence)
+            .WithMany()
+            .HasForeignKey(x => x.FinancialCommitmentOccurrenceId)
+            .OnDelete(DeleteBehavior.SetNull);
+        builder.HasIndex(x => x.FinancialCommitmentOccurrenceId).IsUnique();
     }
 }

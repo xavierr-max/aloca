@@ -42,6 +42,21 @@ public sealed class RecurringIncomeOccurrence
             ProcessedAt = null;
         }
     }
+    public void MarkDeletedByUser()
+    {
+        if (Status == RecurringIncomeOccurrenceStatus.Received)
+        {
+            TransactionId = null;
+            Status = RecurringIncomeOccurrenceStatus.Cancelled;
+            CancellationSource = RecurringIncomeOccurrenceCancellationSource.User;
+            ProcessedAt = DateTime.UtcNow;
+        }
+    }
+    public void UpdateReceivedAmount(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount));
+        if (Status == RecurringIncomeOccurrenceStatus.Received) Amount = amount;
+    }
     public void Cancel(RecurringIncomeOccurrenceCancellationSource source = RecurringIncomeOccurrenceCancellationSource.User)
     {
         if (Status == RecurringIncomeOccurrenceStatus.Planned)
@@ -67,6 +82,11 @@ public sealed class RecurringIncomeOccurrence
             Status = RecurringIncomeOccurrenceStatus.Planned;
             CancellationSource = null;
         }
+    }
+    public void UpdateForecastAmount(decimal amount)
+    {
+        if (Status is RecurringIncomeOccurrenceStatus.Planned or RecurringIncomeOccurrenceStatus.Paused)
+            Amount = amount;
     }
     public void Expire()
     {

@@ -4,7 +4,7 @@ public sealed class CommitmentPayment
 {
     private CommitmentPayment() { }
 
-    public CommitmentPayment(Guid financialCommitmentId, decimal amount, int installmentNumber, DateTime paidAt, bool wasAutomatic = false)
+    public CommitmentPayment(Guid financialCommitmentId, decimal amount, int installmentNumber, DateTime paidAt, bool wasAutomatic = false, Guid? financialCommitmentOccurrenceId = null)
     {
         Id = Guid.NewGuid();
         FinancialCommitmentId = financialCommitmentId;
@@ -12,6 +12,7 @@ public sealed class CommitmentPayment
         InstallmentNumber = installmentNumber;
         PaidAt = paidAt;
         WasAutomatic = wasAutomatic;
+        FinancialCommitmentOccurrenceId = financialCommitmentOccurrenceId;
     }
 
     public Guid Id { get; private set; }
@@ -21,5 +22,7 @@ public sealed class CommitmentPayment
     public int InstallmentNumber { get; private set; }
     public DateTime PaidAt { get; private set; }
     public bool WasAutomatic { get; private set; }
+    public Guid? FinancialCommitmentOccurrenceId { get; private set; }
+    public FinancialCommitmentOccurrence? FinancialCommitmentOccurrence { get; private set; }
     public FinancialCommitment FinancialCommitment { get; private set; } = null!;
 }

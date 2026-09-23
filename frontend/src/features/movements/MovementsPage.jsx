@@ -46,7 +46,7 @@ const dateValue = value => {
   return new Date(year, month - 1, day)
 }
 
-export default function MovementsPage({ incomes = [], expenses = [], recurringIncomes = [], summary = null, categories = [], onEdit, onDelete }) {
+export default function MovementsPage({ incomes = [], expenses = [], recurringIncomes = [], summary = null, categories = [], onEdit, onDelete, onManage }) {
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -112,8 +112,28 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
     ...filteredIncomes.map(item => ({ ...item, movementType: 'income' })),
     ...filteredExpenses.map(item => ({ ...item, movementType: 'expense' })),
   ], [filteredIncomes, filteredExpenses])
+  const recurringMovements = useMemo(() => recurringIncomes.map(item => ({
+    id: item.id,
+    description: item.description,
+    amount: item.amount,
+    type: 'Income',
+    movementType: 'income',
+    categoryId: item.categoryId,
+    categoryName: item.categoryName,
+    date: item.nextOccurrence || item.startDate,
+    isRecurring: true,
+    isRecurringDefinition: true,
+    recurringStatus: item.isActive ? 'active' : 'paused',
+    nextOccurrence: item.nextOccurrence,
+    startDate: item.startDate,
+    endDate: item.endDate,
+    automaticProcessing: item.automaticProcessing,
+    dayOfMonth: item.dayOfMonth,
+    occurrences: item.occurrences,
+    frequency: item.frequency,
+  })), [recurringIncomes])
   const visibleMovements = useMemo(() => movements
-    .filter(item => activeTab === 'all' || (activeTab === 'income' && item.movementType === 'income') || (activeTab === 'expense' && item.movementType === 'expense') || (activeTab === 'recurring' && item.isRecurring))
+    .filter(item => activeTab !== 'recurring' && (activeTab === 'all' || (activeTab === 'income' && item.movementType === 'income') || (activeTab === 'expense' && item.movementType === 'expense')))
     .filter(item => {
       const query = search.trim().toLocaleLowerCase('pt-BR')
       return !query || `${item.description || ''} ${item.categoryName || ''}`.toLocaleLowerCase('pt-BR').includes(query)
@@ -126,9 +146,23 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
       const rightDate = String(right.date || '')
       return sort === 'date-asc' ? leftDate.localeCompare(rightDate) : rightDate.localeCompare(leftDate)
     }), [movements, activeTab, search, category, sort])
+  const visibleRecurringMovements = useMemo(() => recurringMovements
+    .filter(item => {
+      const query = search.trim().toLocaleLowerCase('pt-BR')
+      return !query || `${item.description || ''} ${item.categoryName || ''}`.toLocaleLowerCase('pt-BR').includes(query)
+    })
+    .filter(item => !category || item.categoryId === category)
+    .sort((left, right) => {
+      if (sort === 'amount-desc') return Number(right.amount) - Number(left.amount)
+      if (sort === 'amount-asc') return Number(left.amount) - Number(right.amount)
+      const leftDate = String(left.date || '')
+      const rightDate = String(right.date || '')
+      return sort === 'date-asc' ? leftDate.localeCompare(rightDate) : rightDate.localeCompare(leftDate)
+    }), [recurringMovements, activeTab, search, category, sort])
+  const displayedMovements = activeTab === 'recurring' ? visibleRecurringMovements : visibleMovements
   const pageSize = 15
-  const totalPages = Math.max(1, Math.ceil(visibleMovements.length / pageSize))
-  const pageItems = visibleMovements.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.max(1, Math.ceil(displayedMovements.length / pageSize))
+  const pageItems = displayedMovements.slice((page - 1) * pageSize, page * pageSize)
   const resetPage = () => setPage(1)
 
   useEffect(() => { resetPage() }, [activeTab, search, category, period, sort])
@@ -139,6 +173,6 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
     <MovementsSummary values={visibleSummary} periodLabel={periodLabel} />
     <MovementsTabs activeTab={activeTab} onChange={setActiveTab} />
     <MovementsFilters search={search} onSearchChange={setSearch} category={category} onCategoryChange={setCategory} period={period} periodOptions={periodOptions} onPeriodChange={setPeriod} sort={sort} sortOptions={sortOptions} onSortChange={setSort} categories={categories} />
-    <MovementsContent activeTab={activeTab} items={pageItems} totalItems={visibleMovements.length} hasItemsBeforeFilters={movements.length > 0} page={page} totalPages={totalPages} onPageChange={setPage} loading={loading} error={error} onRetry={() => setRetryToken(value => value + 1)} onEdit={onEdit} onDelete={onDelete} />
+    <MovementsContent activeTab={activeTab} items={pageItems} totalItems={displayedMovements.length} hasItemsBeforeFilters={(activeTab === 'recurring' ? recurringMovements : movements).length > 0} page={page} totalPages={totalPages} onPageChange={setPage} loading={loading} error={error} onRetry={() => setRetryToken(value => value + 1)} onEdit={onEdit} onDelete={onDelete} onManage={onManage} />
   </section>
 }
