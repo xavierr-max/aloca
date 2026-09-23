@@ -43,6 +43,7 @@ button, input, select, textarea { max-width: 100%; }
   .app-create-button, .app-theme-toggle, .app-account-button { height: 44px; min-height: 44px; border-radius: 11px; }
   .app-create-button { width: 44px; font-size: 0; }
   .app-create-button svg { margin: 0; }
+  .app-create-menu { position: fixed; top: 60px; right: 12px; left: auto; width: min(220px, calc(100vw - 24px)); }
   .app-theme-toggle { width: 44px; padding: 0; }
   .app-theme-toggle > svg { display: none; }
   .app-account-button { width: 44px; padding: 3px; justify-content: center; }
