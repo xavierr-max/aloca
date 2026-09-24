@@ -18,6 +18,8 @@ function ForecastLoading() { return <div className="forecast-loading" aria-label
 
 export default function FinancialForecastPage({ businessDate: referenceDate }) {
   const [months, setMonths] = useState(6)
+  const [customizingMonths, setCustomizingMonths] = useState(false)
+  const [customMonths, setCustomMonths] = useState('6')
   const [data, setData] = useState(null)
   const [selectedMonthKey, setSelectedMonthKey] = useState('')
   const [error, setError] = useState('')
@@ -39,7 +41,7 @@ export default function FinancialForecastPage({ businessDate: referenceDate }) {
   const expenseSecondary = summary ? 'Total do período' : null
   return <div className="forecast-page-shell">
     <div className="forecast-page-content">
-      <section className="forecast-planning-header"><PageHeader className="forecast-planning-copy" eyebrow="ANÁLISE" title="Previsões" description="Visualize entradas, saídas e o saldo projetado para os próximos meses." /><label>Período<select value={months} onChange={event => setMonths(Number(event.target.value))}><option value="3">3 meses</option><option value="6">6 meses</option><option value="12">12 meses</option></select></label></section>
+      <section className="forecast-planning-header"><PageHeader className="forecast-planning-copy" eyebrow="ANÁLISE" title="Previsões" description="Visualize entradas, saídas e o saldo projetado para os próximos meses." /><div className="forecast-period-control"><span>Período</span><div className="forecast-period-presets" role="group" aria-label="Horizonte da previsão">{[1, 3, 6, 12, 24, 36].map(option => <button type="button" key={option} className={!customizingMonths && months === option ? 'is-selected' : ''} onClick={() => { setCustomizingMonths(false); setMonths(option) }}>{option} meses</button>)}<button type="button" className={customizingMonths ? 'is-selected' : ''} onClick={() => { setCustomMonths(String(months)); setCustomizingMonths(true) }}>Personalizado</button></div>{customizingMonths && <label className="forecast-custom-period">Quantidade de meses<input type="number" min="1" max="36" step="1" value={customMonths} onChange={event => { const raw = event.target.value; setCustomMonths(raw); if (raw === '') return; if (/^\d+$/.test(raw)) { const value = Number(raw); if (value >= 1 && value <= 36) setMonths(value) } }} /></label>}</div></section>
       {error && <div className="forecast-inline-error" role="status">{error}</div>}
       {!data && !error ? <ForecastLoading /> : <>
         <section className="forecast-kpi-grid"><ForecastKpiCard kind="income" label="Entradas totais" value={money(summary?.totalIncome)} secondary={summary ? `Realizadas ${money(summary.realizedIncome)} · Previstas ${money(summary.plannedIncome)}` : incomeSecondary} tone="positive" /><ForecastKpiCard kind="expense" label="Saídas totais" value={money(summary?.totalExpense)} secondary={summary ? `Realizadas ${money(summary.realizedExpense)} · Previstas ${money(summary.plannedExpense)}` : expenseSecondary} tone="negative" /><ForecastKpiCard kind="result" label="Resultado previsto" value={money(summary?.forecastResult)} secondary={summary ? `Realizado ${money(summary.realResult)}` : null} tone={Number(summary?.forecastResult) < 0 ? 'negative' : 'positive'} /><ForecastKpiCard kind="balance" label="Saldo projetado" value={money(summary?.projectedClosingBalance)} secondary={data ? `Saldo de fechamento (${monthKey(data.months?.[data.months.length - 1])})` : null} /></section>

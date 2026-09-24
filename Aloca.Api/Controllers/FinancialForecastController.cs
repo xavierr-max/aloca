@@ -18,8 +18,8 @@ public sealed class FinancialForecastController(
         CancellationToken cancellationToken)
     {
         var period = months ?? 6;
-        if (period is not (3 or 6 or 12))
-            return BadRequest(new { message = "months deve ser 3, 6 ou 12." });
+        if (period is < 1 or > 36)
+            return BadRequest(new { message = "months deve estar entre 1 e 36." });
 
         var start = from ?? new DateOnly(clock.Today.Year, clock.Today.Month, 1);
         if (start.Day != 1)

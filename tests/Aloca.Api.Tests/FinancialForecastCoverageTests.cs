@@ -209,6 +209,28 @@ public sealed class FinancialForecastCoverageTests
         Assert.Equal(projection.Summary.ProjectedClosingBalance, summary.EstimatedFinalBalance);
     }
 
+    [Fact]
+    public async Task ForecastSupportsThirtySixMonthsAndCarriesEachClosingBalanceForward()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var today = new DateOnly(2026, 9, 15);
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        db.Transactions.Add(new Transaction("Entrada futura", 100m, TransactionType.Income, today.AddDays(1), null));
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(today);
+        var service = new FinancialForecastService(new ForecastEventNormalizer(db, clock), new ForecastCalculator(), new FinancialBalanceService(db, clock), clock);
+
+        var result = await service.GetAsync(new DateOnly(2026, 9, 1), 36, CancellationToken.None);
+        var months = result.Months.ToList();
+
+        Assert.Equal(36, months.Count);
+        Assert.Equal(1100m, months[0].ClosingBalance);
+        Assert.Equal(1100m, months[1].OpeningBalance);
+        Assert.Equal(1100m, months[^1].ClosingBalance);
+        Assert.Equal(new DateOnly(2029, 8, 31), result.To);
+    }
+
     private sealed class FixedForecastClock(DateOnly today) : IBusinessClock
     {
         public DateTime UtcNow => today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);

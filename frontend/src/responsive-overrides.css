@@ -70,7 +70,224 @@ button, input, select, textarea { max-width: 100%; }
   .monthly-financial-metrics { grid-template-columns: 1fr; }
   .monthly-financial-metrics .balance-metric { grid-column: auto; }
   .monthly-financial-metrics > .monthly-metric { min-height: 132px; }
-.monthly-breakdown { max-width: 260px; }
+  .monthly-breakdown { max-width: 260px; }
+}
+
+@media (max-width: 639px) {
+  .mobile-dashboard .month-decision {
+    margin: 14px 0 18px;
+    padding: 16px 12px;
+    border-radius: 18px;
+  }
+  .mobile-dashboard .month-decision-heading {
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .mobile-dashboard .month-decision-heading h2 { margin-bottom: 3px; font-size: 19px; }
+  .mobile-dashboard .month-decision-heading p { margin: 0; font-size: 11px; line-height: 1.35; }
+  .mobile-dashboard .month-decision-heading .month-summary-sentence { margin-top: 5px !important; font-size: 12px; line-height: 1.35; }
+  .mobile-dashboard .month-heading-actions { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .mobile-dashboard .month-picker { flex: 1 1 auto; min-width: 0; }
+  .mobile-dashboard .month-picker input { width: 100%; min-height: 38px; }
+  .mobile-dashboard .month-heading-actions > .secondary { flex: 0 0 auto; min-height: 38px; padding: 8px 10px; font-size: 11px; white-space: nowrap; }
+  .mobile-dashboard .monthly-financial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 14px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric { min-height: 142px; padding: 12px 10px; border-radius: 12px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-icon { width: 25px; height: 25px; margin-bottom: 6px; border-radius: 7px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-icon svg { width: 14px; height: 14px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > span:not(.monthly-metric-icon) { min-height: 18px; font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong { min-height: 30px; margin-top: 4px; font-size: 17px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown { min-height: 38px; gap: 2px; margin-top: 0; padding-top: 5px; font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown span { min-height: 17px; padding: 1px 3px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > small { min-height: 30px; font-size: 10px; line-height: 1.25; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-footer { min-height: 38px; gap: 2px; font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics .balance-metric { grid-column: auto; }
+  .mobile-dashboard .monthly-insight { margin: 0 0 12px; padding: 10px 11px; }
+  .mobile-dashboard .month-details { gap: 0; }
+  .mobile-dashboard .month-details summary { padding: 10px 0; font-size: 11px; }
+  .mobile-dashboard .month-decision + .mobile-dashboard-section { margin-top: 12px; }
+  .mobile-dashboard { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 359px) {
+  .mobile-dashboard .month-heading-actions { align-items: stretch; flex-direction: column; }
+  .mobile-dashboard .month-heading-actions > .secondary { width: fit-content; }
+  .mobile-dashboard .monthly-financial-metrics { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 639px) {
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric {
+    min-height: 156px;
+    padding: 13px 12px;
+    border-radius: 16px;
+    box-shadow: 0 6px 14px color-mix(in srgb, var(--text-primary) 9%, transparent);
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+    background: var(--metric-accent, var(--color-info));
+    opacity: .85;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 7px;
+    border-radius: 8px;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-icon svg { width: 15px; height: 15px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > span:not(.monthly-metric-icon) {
+    min-height: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary) !important;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong {
+    min-height: 36px;
+    margin-top: 6px;
+    font-size: clamp(17px, 5vw, 21px);
+    font-weight: 700;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown {
+    min-height: 40px;
+    gap: 3px;
+    padding-top: 6px;
+    font-size: 10px;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown span {
+    min-height: 18px;
+    padding: 2px 4px;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown b { font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > small,
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-footer {
+    min-height: 36px;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .forecast-result-metric,
+  .mobile-dashboard .monthly-financial-metrics > .balance-metric { min-height: 160px; }
+}
+
+@media (max-width: 359px) {
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric { min-height: 150px; padding-inline: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > span:not(.monthly-metric-icon) { font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong { font-size: 16px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown,
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown b { font-size: 9px; }
+}
+
+/* Dashboard mobile: acabamento visual do resumo mensal alinhado ao desktop. */
+@media (max-width: 639px) {
+  .mobile-dashboard .month-decision {
+    margin: 0;
+    padding: 17px 14px 15px;
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    background: var(--bg-card);
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--text-primary) 7%, transparent);
+  }
+
+  .mobile-dashboard .month-decision-heading {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .mobile-dashboard .month-decision-heading h2 {
+    margin: 2px 0 4px;
+    color: var(--text-primary);
+    font-size: clamp(18px, 5.3vw, 22px);
+    letter-spacing: -.02em;
+  }
+
+  .mobile-dashboard .month-decision-heading p {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .mobile-dashboard .month-heading-actions {
+    gap: 8px;
+  }
+
+  .mobile-dashboard .month-picker input,
+  .mobile-dashboard .month-heading-actions > .secondary {
+    min-height: 40px;
+    border-radius: 10px;
+  }
+
+  .mobile-dashboard .monthly-financial-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 15px;
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric {
+    position: relative;
+    min-height: 154px;
+    padding: 13px 12px 12px;
+    overflow: hidden;
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    background: var(--bg-subtle) !important;
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--text-primary) 6%, transparent);
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric::before {
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+    opacity: .9;
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong {
+    color: var(--text-primary);
+    font-size: clamp(17px, 5vw, 21px);
+    letter-spacing: -.025em;
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .forecast-result-metric {
+    background: color-mix(in srgb, var(--color-info) 7%, var(--bg-card)) !important;
+    border-color: color-mix(in srgb, var(--color-info) 25%, var(--border-default));
+    box-shadow: 0 7px 16px color-mix(in srgb, var(--color-info) 12%, transparent);
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .balance-metric {
+    background: var(--success-surface) !important;
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--border-default));
+    box-shadow: 0 7px 16px color-mix(in srgb, var(--color-success) 12%, transparent);
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown {
+    padding-top: 7px;
+    border-top-color: color-mix(in srgb, var(--border-default) 80%, transparent);
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown span {
+    border-radius: 6px;
+    color: var(--text-secondary);
+  }
+
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown b {
+    color: var(--text-primary);
+    font-weight: 750;
+  }
+
+  .mobile-dashboard .monthly-insight {
+    margin: 0;
+    border: 1px solid var(--border-default);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--text-primary) 5%, transparent);
+  }
+}
+
+@media (max-width: 359px) {
+  .mobile-dashboard .month-decision { padding-inline: 11px; }
+  .mobile-dashboard .monthly-financial-metrics { gap: 8px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric {
+    min-height: 148px;
+    padding-inline: 9px;
+  }
 }
 
 /* Estrutura vertical comum: ícone, título, valor e rodapé fixo. */
@@ -371,4 +588,38 @@ button, input, select, textarea { max-width: 100%; }
 
 @media (max-width: 700px) {
   .modal { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+}
+
+/* Mobile: resumo mensal em grade 2x2 compacta, sem alterar o desktop. */
+@media (max-width: 639px) {
+  .mobile-dashboard .monthly-financial-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(148px, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric {
+    width: 100%;
+    min-height: 148px;
+    margin-top: 0;
+    padding: 10px 9px;
+    border-radius: 14px;
+  }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-icon { margin-bottom: 4px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > span:not(.monthly-metric-icon) { font-size: 10px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong { min-height: 30px; font-size: clamp(14px, 4.4vw, 18px); overflow-wrap: anywhere; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown { min-height: 36px; gap: 2px; padding-top: 4px; font-size: 9px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown span { min-height: 16px; padding: 1px 2px; gap: 2px; white-space: nowrap; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > small,
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-metric-footer { min-height: 34px; font-size: 9px; line-height: 1.2; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric:nth-child(n) { z-index: auto; box-shadow: 0 4px 10px color-mix(in srgb, var(--text-primary) 7%, transparent); }
+  .mobile-dashboard .monthly-financial-metrics > .forecast-result-metric { box-shadow: 0 5px 12px color-mix(in srgb, var(--color-info) 14%, transparent); }
+  .mobile-dashboard .monthly-financial-metrics > .balance-metric { box-shadow: 0 5px 12px color-mix(in srgb, var(--color-success) 16%, transparent); }
+}
+@media (max-width: 359px) {
+  .mobile-dashboard .monthly-financial-metrics { gap: 6px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric { min-height: 142px; padding-inline: 7px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > strong { font-size: 14px; }
+  .mobile-dashboard .monthly-financial-metrics > .monthly-metric > .monthly-breakdown { font-size: 8px; }
 }

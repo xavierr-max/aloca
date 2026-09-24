@@ -137,8 +137,8 @@ public sealed class FinancialForecastService(
         int months,
         CancellationToken cancellationToken)
     {
-        if (months is < 1 or > 24)
-            throw new ArgumentOutOfRangeException(nameof(months), "O período deve estar entre 1 e 24 meses.");
+        if (months is < 1 or > 36)
+            throw new ArgumentOutOfRangeException(nameof(months), "O período deve estar entre 1 e 36 meses.");
 
         var start = new DateOnly(from.Year, from.Month, 1);
         var end = start.AddMonths(months).AddDays(-1);

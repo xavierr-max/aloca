@@ -21,17 +21,17 @@
 /* The account modal intentionally stays light in dark mode. */
 :root[data-theme="dark"] .modal .account-switch-item,
 :root[data-theme="dark"] .modal .account-switch-item:disabled {
-  color: #17201c !important;
+  color: #f3f6f4 !important;
 }
 
 :root[data-theme="dark"] .modal .account-switch-item strong,
 :root[data-theme="dark"] .modal .account-switch-item:disabled strong {
-  color: #17201c !important;
+  color: #f3f6f4 !important;
 }
 
 :root[data-theme="dark"] .modal .account-switch-item small,
 :root[data-theme="dark"] .modal .account-switch-item:disabled small {
-  color: #66756f !important;
+  color: #aebab5 !important;
 }
 
 :root[data-theme="dark"] .modal .account-switch-item:hover,

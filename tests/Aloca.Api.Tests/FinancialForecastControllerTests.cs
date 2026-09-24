@@ -11,6 +11,10 @@ public sealed class FinancialForecastControllerTests
     [InlineData(3)]
     [InlineData(6)]
     [InlineData(12)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(24)]
+    [InlineData(36)]
     public async Task AcceptsSupportedPeriods(int months)
     {
         var service = new SpyForecastService();
@@ -29,10 +33,24 @@ public sealed class FinancialForecastControllerTests
         var service = new SpyForecastService();
         var controller = new FinancialForecastController(service, new TestClock());
 
-        var result = await controller.Get(new DateOnly(2026, 10, 1), 5, CancellationToken.None);
+        var result = await controller.Get(new DateOnly(2026, 10, 1), 37, CancellationToken.None);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Equal(400, badRequest.StatusCode);
+        Assert.Null(service.Months);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(37)]
+    public async Task RejectsPeriodsOutsideOneToThirtySixMonths(int months)
+    {
+        var service = new SpyForecastService();
+        var controller = new FinancialForecastController(service, new TestClock());
+
+        var result = await controller.Get(new DateOnly(2026, 10, 1), months, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Null(service.Months);
     }
 
