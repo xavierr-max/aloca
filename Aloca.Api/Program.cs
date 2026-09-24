@@ -32,6 +32,18 @@ builder.Services.AddProblemDetails(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", tags: new[] { "ready" });
+var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IBusinessClock, SystemBusinessClock>();
 builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
@@ -207,6 +219,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseMiddleware<AccountSessionMiddleware>();
 app.Use(async (context, next) =>
