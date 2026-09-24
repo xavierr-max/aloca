@@ -12,14 +12,14 @@ public sealed class FinancialCommitmentOccurrence
 {
     private FinancialCommitmentOccurrence() { }
 
-    public FinancialCommitmentOccurrence(FinancialCommitment commitment, DateOnly scheduledDate, int installmentNumber)
+    public FinancialCommitmentOccurrence(FinancialCommitment commitment, DateOnly scheduledDate, int installmentNumber, DateOnly? businessToday = null)
     {
         Id = Guid.NewGuid();
         FinancialCommitmentId = commitment.Id;
         ScheduledDate = scheduledDate;
         InstallmentNumber = installmentNumber;
         Amount = commitment.InstallmentAmount;
-        Status = scheduledDate < DateOnly.FromDateTime(DateTime.UtcNow) ? FinancialCommitmentOccurrenceStatus.Pending : FinancialCommitmentOccurrenceStatus.Planned;
+        Status = scheduledDate < (businessToday ?? DateOnly.FromDateTime(DateTime.UtcNow)) ? FinancialCommitmentOccurrenceStatus.Pending : FinancialCommitmentOccurrenceStatus.Planned;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -51,10 +51,10 @@ public sealed class FinancialCommitmentOccurrence
         ProcessedAt = DateTime.UtcNow;
     }
 
-    public void RestoreAfterPayment()
+    public void RestoreAfterPayment(DateOnly? businessToday = null)
     {
         if (Status != FinancialCommitmentOccurrenceStatus.Paid) return;
-        Status = ScheduledDate < DateOnly.FromDateTime(DateTime.UtcNow) ? FinancialCommitmentOccurrenceStatus.Pending : FinancialCommitmentOccurrenceStatus.Planned;
+        Status = ScheduledDate < (businessToday ?? DateOnly.FromDateTime(DateTime.UtcNow)) ? FinancialCommitmentOccurrenceStatus.Pending : FinancialCommitmentOccurrenceStatus.Planned;
         CommitmentPaymentId = null;
         ProcessedAt = null;
     }

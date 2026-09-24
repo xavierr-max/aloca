@@ -5,6 +5,20 @@ namespace Aloca.Api.Tests;
 public sealed class FinancialCommitmentTests
 {
     [Fact]
+    public void OccurrenceStatusUsesBusinessDateInsteadOfUtcDate()
+    {
+        var commitment = CreateCommitment(totalInstallments: 1, installmentAmount: 100m);
+        var occurrence = new FinancialCommitmentOccurrence(commitment, new DateOnly(2026, 9, 24), 1, new DateOnly(2026, 9, 24));
+
+        Assert.Equal(FinancialCommitmentOccurrenceStatus.Planned, occurrence.Status);
+
+        occurrence.MarkPaid(Guid.NewGuid());
+        occurrence.RestoreAfterPayment(new DateOnly(2026, 9, 25));
+
+        Assert.Equal(FinancialCommitmentOccurrenceStatus.Pending, occurrence.Status);
+    }
+
+    [Fact]
     public void TotalPaidAmountUsesPersistedPaymentAmountsAfterFutureInstallmentEdit()
     {
         var commitment = CreateCommitment(totalInstallments: 3, installmentAmount: 300m);

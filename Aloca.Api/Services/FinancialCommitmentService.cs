@@ -91,7 +91,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
             var first = FinancialCommitmentSchedule.GetPendingInstallments(item, Clock.Today).FirstOrDefault();
             if (first is not null)
             {
-                occurrence = new FinancialCommitmentOccurrence(item, first.DueDate, first.Number);
+                occurrence = new FinancialCommitmentOccurrence(item, first.DueDate, first.Number, Clock.Today);
                 dbContext.FinancialCommitmentOccurrences.Add(occurrence);
             }
         }
@@ -164,7 +164,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         if (payment is null) throw new InvalidOperationException("There are no payments to reverse.");
         item.ReverseLatestPayment(payment.Amount);
         var paidOccurrence = await dbContext.FinancialCommitmentOccurrences.SingleOrDefaultAsync(x => x.Id == payment.FinancialCommitmentOccurrenceId, ct);
-        paidOccurrence?.RestoreAfterPayment();
+        paidOccurrence?.RestoreAfterPayment(Clock.Today);
         var paymentMovement = await dbContext.Transactions.SingleOrDefaultAsync(x => x.CommitmentPaymentId == payment.Id, ct);
         if (paymentMovement is not null) dbContext.Transactions.Remove(paymentMovement);
         dbContext.CommitmentPayments.Remove(payment);
@@ -318,7 +318,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
             {
                 var existing = item.Occurrences.FirstOrDefault(x => x.ScheduledDate == installment.DueDate);
                 if (existing is null)
-                    dbContext.FinancialCommitmentOccurrences.Add(new FinancialCommitmentOccurrence(item, installment.DueDate, installment.Number));
+                    dbContext.FinancialCommitmentOccurrences.Add(new FinancialCommitmentOccurrence(item, installment.DueDate, installment.Number, today));
                 else if (installment.Number > item.PaidInstallments)
                     existing.UpdateForecastAmount(item.InstallmentAmount);
             }
