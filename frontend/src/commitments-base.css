@@ -490,14 +490,18 @@
 .commitment-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .commitment-form-hint { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; line-height: 1.4; }
 .commitment-form-optional { color: var(--text-muted); font-size: 11px; font-weight: 400; }
-.commitment-form-disclosure { padding-top: 12px; }
-.commitment-form-disclosure-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 42px; padding: 0; border: 0; background: transparent; color: var(--text-primary); cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; text-align: left; }
-.commitment-form-disclosure-toggle span:last-child { color: var(--text-secondary); font-size: 20px; font-weight: 400; }
-.commitment-form-options { display: grid; gap: 12px; margin-top: 12px; }
+.commitment-form-disclosure { padding: 18px; border: 1px solid var(--border-strong); border-radius: 16px; background: color-mix(in srgb, var(--bg-subtle) 72%, var(--bg-card)); }
+.commitment-form-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.commitment-form-section-heading h3 { margin-bottom: 5px; }
+.commitment-form-section-description { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.commitment-form-options { display: grid; gap: 12px; margin-top: 16px; }
+.commitment-form-option { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-card); color: var(--text-primary); }
+.commitment-form-option > span { font-size: 14px; font-weight: 600; }
+.commitment-form-option select { margin-top: 0; }
 .commitment-form-options .checkbox-option { min-height: 0; }
 .commitment-form-options .checkbox-option,
 .commitment-form-modal .checkbox-option { border-radius: 12px; background: var(--bg-subtle); box-shadow: none; }
-.commitment-form-modal .checkbox-option-title { font-weight: 500; }
+.commitment-form-modal .checkbox-option-title { font-weight: 700; }
 .commitment-form-modal .checkbox-option-description { color: var(--text-secondary); }
 .commitment-setting-form .checkbox-option,
 .commitment-form-modal .checkbox-option { grid-template-columns: minmax(0, 1fr) 20px; align-items: center; gap: 12px; min-height: 0; padding: 14px 16px; }
@@ -534,8 +538,11 @@
 .form-callout--warning { background: var(--warning-surface); }
 .form-callout--error { border-color: var(--color-danger); background: var(--danger-surface); color: var(--color-danger); }
 .commitment-form-modal .recurrence-preview { margin-top: 12px; }
-.commitment-form-disclosure-toggle:hover { color: var(--color-success); background: var(--bg-hover); }
-.commitment-form-disclosure-toggle:focus-visible { outline: 3px solid var(--color-info); outline-offset: 3px; border-radius: 10px; }
+.commitment-form-disclosure .checkbox-option { border-color: var(--border-strong); background: var(--bg-card); box-shadow: 0 4px 14px color-mix(in srgb, #000 14%, transparent); }
+.commitment-form-disclosure .checkbox-option:hover { border-color: var(--color-success); background: var(--bg-hover); }
+.commitment-form-disclosure .checkbox-option-description { color: var(--text-secondary); }
+.commitment-form-disclosure .checkbox-option-box { width: 22px; height: 22px; border-width: 2px; }
+.commitment-form-disclosure .checkbox-option.is-checked { box-shadow: 0 5px 18px color-mix(in srgb, var(--color-success) 18%, transparent); }
 .commitment-drawer-controls input { width: 100%; padding: 0 12px; margin-top: 0; }
 .commitment-drawer-controls input:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }
 

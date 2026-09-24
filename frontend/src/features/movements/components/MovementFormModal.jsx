@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, X } from 'lucide-react'
 import { api } from '../../../services/api.js'
+import { businessDate } from '../../../utils/businessDate.js'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = referenceDate => businessDate(referenceDate)
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0)
 const parseAmount = value => { const normalized = String(value).trim().replace(',', '.'); if (!normalized || !/^\d+(\.\d{1,2})?$/.test(normalized)) return NaN; return Number(normalized) }
 const errorText = error => error?.message || 'Não foi possível concluir a operação.'
@@ -24,11 +25,11 @@ function InsufficientBalanceModal({ amount, balance, onCancel, onConfirm, busy }
   return <PortalModal title="Saldo insuficiente" labelledBy="insufficient-balance-title" onClose={onCancel}><div className="movement-confirm-copy"><AlertTriangle size={20} aria-hidden="true" /><p>O valor desta saída é maior que o saldo disponível. Deseja registrar mesmo assim?</p></div><dl className="movement-confirm-values"><div><dt>Valor da saída</dt><dd>{money(amount)}</dd></div><div><dt>Saldo disponível</dt><dd>{money(balance)}</dd></div></dl><div className="movement-modal-actions"><button type="button" className="secondary" onClick={onCancel} disabled={busy}>Cancelar</button><button type="button" className="danger-button" onClick={onConfirm} disabled={busy}>{busy ? 'Registrando…' : 'Registrar mesmo assim'}</button></div></PortalModal>
 }
 
-export default function MovementFormModal({ mode, item, categories, currentBalance, onClose, onSaved }) {
+export default function MovementFormModal({ mode, item, categories, currentBalance, businessDate: referenceDate, onClose, onSaved }) {
   const isEdit = Boolean(item)
   const type = item?.type || (mode === 'create-expense' ? 'Expense' : 'Income')
   const isExpense = type === 'Expense'
-  const [form, setForm] = useState(() => ({ description: item?.description || '', amount: item ? String(item.amount).replace('.', ',') : '', categoryId: item?.categoryId || '', date: item?.date?.slice(0, 10) || today() }))
+  const [form, setForm] = useState(() => ({ description: item?.description || '', amount: item ? String(item.amount).replace('.', ',') : '', categoryId: item?.categoryId || '', date: item?.date?.slice(0, 10) || today(referenceDate) }))
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)

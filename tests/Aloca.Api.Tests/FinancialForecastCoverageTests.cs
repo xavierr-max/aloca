@@ -140,6 +140,75 @@ public sealed class FinancialForecastCoverageTests
         Assert.Equal(100m, month.Coverage);
     }
 
+    [Fact]
+    public async Task ForecastStartsAtCurrentBalanceAndDoesNotRecountRealizedTransactions()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var today = new DateOnly(2026, 9, 15);
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        db.Transactions.Add(new Transaction("Entrada realizada", 500m, TransactionType.Income, today, null));
+        db.Transactions.Add(new Transaction("Saída realizada", 200m, TransactionType.Expense, today, null));
+        db.Transactions.Add(new Transaction("Entrada futura", 300m, TransactionType.Income, today.AddDays(1), null));
+        db.Transactions.Add(new Transaction("Saída futura", 400m, TransactionType.Expense, today.AddDays(2), null));
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(today);
+        var service = new FinancialForecastService(new ForecastEventNormalizer(db, clock), new ForecastCalculator(), new FinancialBalanceService(db, clock), clock);
+
+        var result = await service.GetAsync(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), default);
+
+        var month = Assert.Single(result.Months);
+        Assert.Equal(1300m, month.OpeningBalance);
+        Assert.Equal(300m, month.PlannedIncome);
+        Assert.Equal(400m, month.PlannedExpense);
+        Assert.Equal(1200m, month.ClosingBalance);
+        Assert.Equal(1300m, result.Summary.InitialBalance);
+        Assert.Equal(1200m, result.Summary.ProjectedClosingBalance);
+    }
+
+    [Fact]
+    public async Task ForecastCarriesClosingBalanceIntoTheNextMonth()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var today = new DateOnly(2026, 9, 15);
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        db.Transactions.Add(new Transaction("Entrada setembro", 500m, TransactionType.Income, new(2026, 9, 20), null));
+        db.Transactions.Add(new Transaction("Saída setembro", 300m, TransactionType.Expense, new(2026, 9, 21), null));
+        db.Transactions.Add(new Transaction("Entrada outubro", 100m, TransactionType.Income, new(2026, 10, 5), null));
+        db.Transactions.Add(new Transaction("Saída outubro", 400m, TransactionType.Expense, new(2026, 10, 6), null));
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(today);
+        var service = new FinancialForecastService(new ForecastEventNormalizer(db, clock), new ForecastCalculator(), new FinancialBalanceService(db, clock), clock);
+
+        var result = await service.GetAsync(new DateOnly(2026, 9, 1), new DateOnly(2026, 10, 31), default);
+        var months = result.Months.ToList();
+
+        Assert.Equal(1200m, months[0].ClosingBalance);
+        Assert.Equal(1200m, months[1].OpeningBalance);
+        Assert.Equal(900m, months[1].ClosingBalance);
+    }
+
+    [Fact]
+    public async Task MonthlySummaryEstimatedBalanceMatchesForecastClosingBalance()
+    {
+        await using var db = new AlocaDbContext(new DbContextOptionsBuilder<AlocaDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var today = new DateOnly(2026, 9, 15);
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        db.Transactions.Add(new Transaction("Entrada futura", 300m, TransactionType.Income, today.AddDays(1), null));
+        db.Transactions.Add(new Transaction("Saída futura", 400m, TransactionType.Expense, today.AddDays(2), null));
+        await db.SaveChangesAsync();
+        var clock = new FixedForecastClock(today);
+        var balance = new FinancialBalanceService(db, clock);
+        var forecast = new FinancialForecastService(new ForecastEventNormalizer(db, clock), new ForecastCalculator(), balance, clock);
+
+        var projection = await forecast.GetAsync(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), default);
+        var summary = await new FinancialSummaryService(db, balance, clock).GetMonthlyAsync(new DateOnly(2026, 9, 1), default);
+
+        Assert.Equal(projection.Summary.ProjectedClosingBalance, summary.EstimatedFinalBalance);
+    }
+
     private sealed class FixedForecastClock(DateOnly today) : IBusinessClock
     {
         public DateTime UtcNow => today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);

@@ -17,4 +17,17 @@ public sealed class FinancialSettingsController(FinancialSettingsService service
         try { return Ok(await service.UpdateAsync(request.InitialBalance, ct)); }
         catch (ArgumentOutOfRangeException ex) { return BadRequest(new { message = ex.Message }); }
     }
+
+    [HttpPost("current-balance-adjustment")]
+    public async Task<ActionResult<FinancialSummaryResponse>> AdjustCurrentBalance(
+        CurrentBalanceAdjustmentRequest request, IBusinessClock clock, CancellationToken ct)
+    {
+        try
+        {
+            var balance = await service.AdjustCurrentBalanceAsync(request.NewBalance, clock, ct);
+            return Ok(new FinancialSummaryResponse(balance.InitialBalance, balance.TotalIncome, balance.TotalExpense,
+                balance.SaldoReal, balance.TotalReservado, balance.SaldoNaoAlocado, balance.SaldoLivre, balance.DeficitCobertura));
+        }
+        catch (ArgumentOutOfRangeException ex) { return BadRequest(new { message = ex.Message }); }
+    }
 }

@@ -70,7 +70,13 @@ public sealed record ForecastSummaryResponse(
     decimal FreeBalance,
     decimal RequiredAmount,
     decimal CoveragePercentage,
-    IReadOnlyCollection<ForecastCommitmentResponse> Commitments);
+    IReadOnlyCollection<ForecastCommitmentResponse> Commitments,
+    decimal RealizedIncome = 0m,
+    decimal PlannedIncome = 0m,
+    decimal RealizedExpense = 0m,
+    decimal PlannedExpense = 0m,
+    decimal RealResult = 0m,
+    decimal ForecastResult = 0m);
 
 public sealed record FinancialForecastResponse(
     DateOnly From,

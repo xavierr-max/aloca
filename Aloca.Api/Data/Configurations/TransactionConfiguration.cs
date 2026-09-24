@@ -36,6 +36,10 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.Property(transaction => transaction.CreatedAt)
             .IsRequired();
 
+        builder.Property(transaction => transaction.IsBalanceAdjustment)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.HasIndex(transaction => new { transaction.CategoryId, transaction.Date });
         builder.HasIndex(transaction => transaction.Date);
         builder.HasIndex(transaction => new { transaction.FinancialCommitmentId, transaction.Date });

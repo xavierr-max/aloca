@@ -14,7 +14,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     public async Task<IReadOnlyCollection<FinancialCommitmentResponse>> GetAllAsync(bool? isCompleted, bool? isFullyCommitted, CancellationToken ct)
     {
         await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
-        var query = dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).AsQueryable();
+        var query = dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).Include(x => x.CommitmentPayments).AsQueryable();
         if (isCompleted.HasValue)
             query = isCompleted.Value
                 ? query.Where(x => x.TotalInstallments > 0 && x.PaidInstallments == x.TotalInstallments)
@@ -28,7 +28,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
     public async Task<FinancialCommitmentResponse?> GetByIdAsync(Guid id, CancellationToken ct)
     {
         await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct);
-        return await dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).SingleOrDefaultAsync(x => x.Id == id, ct) is { } item
+        return await dbContext.FinancialCommitments.AsNoTracking().Include(x => x.Category).Include(x => x.Occurrences).Include(x => x.CommitmentPayments).SingleOrDefaultAsync(x => x.Id == id, ct) is { } item
             ? ToResponse(item, (await balanceService.GetAsync(ct)).SaldoNaoAlocado)
             : null;
     }
@@ -57,7 +57,17 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         await dbContext.SaveChangesAsync(ct); await EnsureOccurrencesAsync(Clock.Today.AddMonths(24), ct); await Reconciliation.ReconcileAsync(ct); logger?.LogInformation("Commitment changed commitment_id={CommitmentId}", item.Id); return item;
     }
 
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct) { var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return false; dbContext.Remove(item); await dbContext.SaveChangesAsync(ct); logger?.LogInformation("Commitment deleted commitment_id={CommitmentId}", id); return true; }
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct)
+    {
+        var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (item is null) return false;
+        if (await dbContext.CommitmentPayments.AnyAsync(x => x.FinancialCommitmentId == id, ct))
+            throw new InvalidOperationException("Compromissos com pagamentos históricos não podem ser excluídos. Desfaça os pagamentos antes de remover o compromisso.");
+        dbContext.Remove(item);
+        await dbContext.SaveChangesAsync(ct);
+        logger?.LogInformation("Commitment deleted commitment_id={CommitmentId}", id);
+        return true;
+    }
 
     public async Task<FinancialCommitment?> MutateAsync(Guid id, Action<FinancialCommitment> mutation, CancellationToken ct)
     { var item = await dbContext.FinancialCommitments.SingleOrDefaultAsync(x => x.Id == id, ct); if (item is null) return null; mutation(item); await dbContext.SaveChangesAsync(ct); return item; }
@@ -291,7 +301,7 @@ public sealed class FinancialCommitmentService(AlocaDbContext dbContext, Financi
         var canPay = !x.IsCompleted && x.InstallmentAmount > 0m && remainingForNext == 0m;
         var canAllocate = !x.IsCompleted && x.AmountNeededForFullCoverage > 0m && availableToAllocate > 0m;
         var occurrences = x.Occurrences.OrderBy(o => o.ScheduledDate).Select(o => new FinancialCommitmentOccurrenceResponse(o.Id, o.ScheduledDate, o.InstallmentNumber, o.Amount, o.Status, o.CommitmentPaymentId, o.ProcessedAt)).ToList();
-        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention, x.AutomaticProcessing, x.AutomaticProcessingWarning, x.Frequency, x.EndDate, x.IsRecurring, x.IsOpenEnded, allocatedForNext, remainingForNext, coverage, canPay, availableToAllocate, canAllocate, occurrences);
+        return new(x.Id, x.Name, x.InstallmentAmount, x.TotalInstallments, x.PaidInstallments, x.RemainingInstallments, x.TotalAmount, x.RemainingAmount, x.AllocatedAmount, x.CoveredInstallments, x.AmountNeededForNextInstallment, x.AmountNeededForFullCoverage, x.ExcessAllocatedAmount, x.Priority, x.Priority.Label(), x.IsFullyCommitted, x.IsCompleted, x.CategoryId, x.Category?.Name, x.DueDate, nextDueDate, x.Objective, x.Urgent, x.TotalPaidAmount, x.TotalAllocatedAmount, x.OverallRemainingAmount, x.OverallCoveragePercentage, x.RequiresAttention, x.AutomaticProcessing, x.AutomaticProcessingWarning, x.Frequency, x.EndDate, x.IsRecurring, x.IsOpenEnded, allocatedForNext, remainingForNext, coverage, canPay, availableToAllocate, canAllocate, occurrences);
     }
 
     private async Task<Guid?> GetOccurrenceIdAsync(Guid commitmentId, int installmentNumber, CancellationToken ct) =>

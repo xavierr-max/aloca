@@ -40,7 +40,7 @@ public sealed record FinancialCommitmentResponse(
     int CoveredInstallments, decimal MissingForNextInstallment, decimal MissingForFullCoverage,
     decimal ExcessAllocatedAmount, int? Priority, string? PriorityLabel, bool IsFullyCommitted, bool IsCompleted,
     Guid? CategoryId, string? CategoryName, DateOnly DueDate, DateOnly? NextDueDate, string? Objective, bool Urgent,
-    decimal TotalAllocatedAmount, decimal OverallRemainingAmount, decimal OverallCoveragePercentage,
+    decimal TotalPaidAmount, decimal TotalAllocatedAmount, decimal OverallRemainingAmount, decimal OverallCoveragePercentage,
     bool RequiresAttention, bool AutomaticProcessing, string? AutomaticProcessingWarning,
     RecurringIncomeFrequency Frequency = RecurringIncomeFrequency.Monthly, DateOnly? EndDate = null,
     bool IsRecurring = false, bool IsOpenEnded = false,

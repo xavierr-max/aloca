@@ -9,7 +9,8 @@ public sealed class FinancialAllocationService(AlocaDbContext dbContext, Financi
     public async Task<AllocationPreviewResponse> PreviewAsync(CancellationToken ct)
     {
         var plan = await BuildPlanAsync(ct);
-        return new(plan.UnallocatedBalance, plan.Total, plan.UnallocatedBalance - plan.Total, plan.Changes);
+        return new(plan.UnallocatedBalance, plan.Total,
+            Math.Max(0m, plan.UnallocatedBalance - plan.Total), plan.Changes);
     }
 
     public async Task<AllocationDistributionResponse> DistributeAsync(CancellationToken ct)

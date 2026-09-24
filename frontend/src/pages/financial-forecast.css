@@ -71,15 +71,23 @@
 @media(max-width:1100px){.forecast-page-content{width:min(calc(100% - 48px),1000px)}}
 @media(max-width:780px){.forecast-page-content{width:min(calc(100% - 24px),680px)}.forecast-planning-header{align-items:stretch;flex-direction:column}.forecast-planning-row{align-items:flex-start;flex-direction:column}.forecast-progress{width:100%}.forecast-progress-label{margin-left:0}.forecast-planning-header>label{width:100%}}
 .forecast-chart-frame{position:relative;margin-top:10px}
-.forecast-line-chart{display:block;width:100%;height:auto;overflow:visible}
+.forecast-chart-hint{margin:0 0 2px;color:var(--text-secondary);font-size:11px}
+.forecast-chart-hint-mobile{display:none}
+.forecast-selected-month{display:block;margin-top:4px;color:var(--text-secondary);font-size:11px}
+.forecast-selected-month strong{color:var(--color-success);font-weight:650}
+.forecast-line-chart{display:block;width:100%;height:auto;min-height:220px;overflow:visible}
 .forecast-grid-line{stroke:var(--border-default);stroke-opacity:.42;stroke-dasharray:2 4;vector-effect:non-scaling-stroke}
 .forecast-grid-zero{stroke:var(--border-strong);stroke-opacity:.7;vector-effect:non-scaling-stroke}
 .forecast-axis-label,.forecast-month-label{fill:var(--text-muted);font-size:10px;font-family:var(--font-ui);font-variant-numeric:tabular-nums}
 .forecast-line{fill:none;stroke:var(--color-success);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .forecast-area{fill:url(#forecast-area-gradient);stroke:none}
-.forecast-point{fill:var(--bg-card);stroke:var(--color-success);stroke-width:2.5;cursor:pointer;vector-effect:non-scaling-stroke}
-.forecast-point:hover,.forecast-point:focus-visible{fill:var(--success-surface);stroke-width:3.5;outline:none}
+.forecast-point-group{cursor:pointer}
+.forecast-point-hitbox{fill:transparent;stroke:transparent;cursor:pointer}
+.forecast-point{fill:var(--bg-card);stroke:var(--color-success);stroke-width:2.5;cursor:pointer;vector-effect:non-scaling-stroke;transition:fill .16s ease,stroke-width .16s ease,filter .16s ease}
+.forecast-point-group:hover .forecast-point,.forecast-point:focus-visible{fill:var(--success-surface);stroke-width:4;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--color-success) 45%,transparent));outline:none}
+.forecast-point-group:focus-within .forecast-point{stroke:var(--text-primary);stroke-width:3.5}
 .forecast-point.is-selected{fill:var(--color-success);stroke:var(--color-success);stroke-width:2;outline:none}
+.forecast-point-group.is-selected .forecast-month-label{fill:var(--text-primary);font-weight:700}
 .forecast-selected-value{fill:var(--text-primary);font-size:11px;font-weight:700;font-family:var(--font-ui);font-variant-numeric:tabular-nums;paint-order:stroke;stroke:var(--bg-card);stroke-width:4px;stroke-linejoin:round}
 .forecast-chart-accessible-summary{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .forecast-chart-empty{display:grid;place-items:center;min-height:150px;margin-top:10px;color:var(--text-muted);font-size:12px}
@@ -89,7 +97,10 @@
 .forecast-recommendation-card strong{overflow:hidden;color:var(--text-primary);font-size:14px;text-overflow:ellipsis;white-space:nowrap}
 .forecast-recommendation-card small{overflow:hidden;color:var(--text-secondary);font-size:10px;text-overflow:ellipsis;white-space:nowrap}
 .forecast-recommendation-card.is-warning>span{color:var(--color-warning)}
-.forecast-details-trigger{display:block;margin:5px 0 0 auto;padding:3px 0;border:0;background:transparent;color:var(--color-success);font:inherit;font-size:11px;cursor:pointer}
+.forecast-details-trigger{display:block;margin:5px 0 0 auto;padding:5px 0;border:0;background:transparent;color:var(--color-success);font:inherit;font-size:11px;font-weight:650;cursor:pointer}
+.forecast-details-trigger:hover{text-decoration:underline;text-underline-offset:3px}
+.forecast-details-trigger:focus-visible{outline:2px solid var(--color-success);outline-offset:4px;border-radius:4px}
+.forecast-mobile-month-selector{display:none}
 .forecast-drawer-backdrop{position:fixed;inset:0;z-index:30;display:flex;justify-content:flex-end;background:rgba(35,48,41,.18)}
 .forecast-month-drawer{width:min(460px,100%);height:100%;overflow-y:auto;padding:24px;background:var(--bg-card);border-left:1px solid var(--border-default);color:var(--text-primary)}
 .forecast-drawer-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--border-default)}
@@ -160,7 +171,7 @@
   .forecast-kpi-card>strong, .forecast-balance-card>strong, .forecast-mini-card strong { white-space: nowrap; }
   .forecast-main-chart { min-height: 0; }
   .forecast-chart-frame { min-width: 0; }
-  .forecast-line-chart { width: 100%; max-width: 100%; }
+  .forecast-line-chart { width: 100%; max-width: 100%; min-height: 0; height: clamp(180px, 42vw, 260px); }
   .forecast-donut-placeholder { width: 108px; height: 108px; margin: 12px auto 10px; }
   .forecast-donut-placeholder::before { width: 78px; height: 78px; }
   .forecast-side-column { gap: 10px; }
@@ -182,6 +193,21 @@
   .forecast-recommendation-list { grid-template-columns: 1fr; }
   .forecast-point-group:nth-last-of-type(2n) .forecast-month-label { display: none; }
   .forecast-drawer-header { gap: 10px; }
+}
+
+@media (max-width: 600px) {
+  .forecast-chart-hint-desktop { display: none; }
+  .forecast-chart-hint-mobile { display: inline; }
+  .forecast-selected-month { font-size: 10px; }
+  .forecast-mobile-month-selector{display:flex;align-items:center;gap:4px;margin-top:10px;min-width:0}
+  .forecast-month-options{display:flex;align-items:center;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain;touch-action:pan-x}
+  .forecast-month-options::-webkit-scrollbar{display:none}
+  .forecast-month-option,.forecast-month-nav{display:grid;place-items:center;flex:0 0 auto;min-width:44px;min-height:44px;padding:0 8px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--text-secondary);font:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+  .forecast-month-option.is-selected{border-color:var(--color-success);background:var(--color-success);color:var(--text-inverse);font-weight:700}
+  .forecast-month-option:focus-visible,.forecast-month-nav:focus-visible{outline:2px solid var(--color-success);outline-offset:1px}
+  .forecast-month-nav{padding:0;color:var(--text-primary);font-size:25px;line-height:1}
+  .forecast-month-nav:disabled{color:var(--text-muted);cursor:default;opacity:.45}
+  .forecast-details-trigger{margin-top:10px}
 }
 
 @media (max-width: 340px) {

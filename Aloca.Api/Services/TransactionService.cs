@@ -77,7 +77,9 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
                 transaction.CreatedAt,
                 transaction.RecurringIncomeOccurrenceId != null,
                 transaction.FinancialCommitmentId,
-                transaction.WasAutomatic))
+                transaction.WasAutomatic,
+                transaction.Date <= BusinessClock.Today(),
+                transaction.IsBalanceAdjustment))
             .ToListAsync(cancellationToken);
 
         return new PagedResponse<TransactionResponse>(items, page, pageSize, totalCount);
@@ -98,7 +100,9 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
                 transaction.CreatedAt,
                 transaction.RecurringIncomeOccurrenceId != null,
                 transaction.FinancialCommitmentId,
-                transaction.WasAutomatic))
+                transaction.WasAutomatic,
+                transaction.Date <= BusinessClock.Today(),
+                transaction.IsBalanceAdjustment))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<TransactionWriteResult> CreateAsync(TransactionRequest request, CancellationToken cancellationToken)
@@ -133,6 +137,11 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
             return false;
         }
 
+        if (transaction.CommitmentPaymentId.HasValue)
+        {
+            throw new InvalidOperationException("A transação de pagamento não pode ser excluída diretamente. Use 'Desfazer pagamento' no compromisso.");
+        }
+
         if (transaction.RecurringIncomeOccurrenceId is { } occurrenceId)
         {
             var occurrence = await dbContext.RecurringIncomeOccurrences
@@ -157,6 +166,8 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
         var transaction = await dbContext.Transactions.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (transaction is null) return new(TransactionWriteStatus.NotFound, null);
+        if (transaction.CommitmentPaymentId.HasValue)
+            throw new InvalidOperationException("A transação de pagamento não pode ser editada diretamente. Use o fluxo do compromisso.");
         if (request.Type != transaction.Type) return new(TransactionWriteStatus.CategoryNotFound, null);
         var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, cancellationToken);
         if (!categoryExists) return new(TransactionWriteStatus.CategoryNotFound, null);

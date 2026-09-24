@@ -27,7 +27,9 @@
 .dashboard-balance-card.is-highlighted { border-color: color-mix(in srgb, var(--color-success) 58%, var(--border-default)); }
 .dashboard-balance-card.is-highlighted .dashboard-card-value { color: var(--color-success); }
 .dashboard-balance-card.is-highlighted .dashboard-card-icon { background: var(--success-surface); color: var(--color-success); }
-.dashboard-secondary-grid { display: grid; grid-template-columns: minmax(320px, .75fr) minmax(0, 1.45fr); gap: 16px; margin-top: 24px; align-items: start; }
+.dashboard-secondary-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; align-items: stretch; }
+.dashboard-secondary-grid .dashboard-month-summary { order: 1; }
+.dashboard-secondary-grid .dashboard-objective-card { order: 2; }
 .dashboard-secondary-card { min-width: 0; border: 1px solid var(--border-default); border-radius: 16px; background: var(--bg-card); }
 .dashboard-objective-content { display: flex; flex-direction: column; width: 100%; min-width: 0; gap: 16px; padding: 22px 24px; box-sizing: border-box; }
 .dashboard-objective-heading h3 { margin: 6px 0 0; color: var(--text-primary); font-size: 18px; font-weight: 600; letter-spacing: -.025em; }
@@ -195,7 +197,7 @@
 :root[data-theme="dark"] .dashboard-month-metric--solid-light > strong { color: #fff; }
 :root[data-theme="dark"] .dashboard-month-metric--solid-light .dashboard-month-icon { background: #1b211f; color: #e7b347; }
 :root[data-theme="dark"] .dashboard-month-metric--solid-light .info-tooltip-trigger { color: #b3bdb8; }
-.month-decision .monthly-financial-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); width: 100%; min-width: 0; }
+.month-decision .monthly-financial-metrics { grid-template-columns: repeat(6, minmax(0, 1fr)); width: 100%; min-width: 0; }
 .month-decision .monthly-financial-metrics > .monthly-metric { min-width: 0; box-sizing: border-box; }
 .dashboard-upcoming { width: 100%; min-width: 0; margin-top: 24px; }
 .dashboard-upcoming-header, .dashboard-recent-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
@@ -252,8 +254,10 @@
 .info-tooltip-popover span { display: block; color: var(--text-secondary); }
 @media (max-width: 1100px) { .dashboard-balance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 1200px) { .dashboard-month-metrics, .dashboard-month-loading { grid-template-columns: repeat(3, minmax(0, 1fr)); } .month-decision .monthly-financial-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 1100px) { .dashboard-secondary-grid { grid-template-columns: 1fr; } }
 @media (max-width: 800px) { .dashboard-month-metrics, .dashboard-month-loading { grid-template-columns: repeat(2, minmax(0, 1fr)); } .month-decision .monthly-financial-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) { .dashboard-upcoming-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-recent-row { grid-template-columns: 36px minmax(0, 1fr) minmax(112px, auto); } .dashboard-recent-row time { grid-column: 2; grid-row: 2; } .dashboard-recent-amount { grid-column: 3; grid-row: 1 / span 2; } }
 @media (max-width: 639px) { .app-shell:has(.dashboard-page) { min-height: auto; grid-template-rows: auto auto auto; } .app-shell:has(.dashboard-page) .page-content { padding-bottom: 24px; } .dashboard-header { margin-top: 8px; margin-bottom: 24px; } .dashboard-balance-grid { grid-template-columns: 1fr; gap: 12px; } .dashboard-balance-card { min-height: 152px; } .dashboard-secondary-grid { grid-template-columns: 1fr; margin-top: 20px; gap: 12px; } .dashboard-objective-content, .dashboard-month-summary { padding: 20px 16px; } .dashboard-objective-box { grid-template-columns: auto minmax(0, 1fr); } .dashboard-objective-edit, .dashboard-objective-empty-action { grid-column: 2; justify-self: start; } .dashboard-month-header { align-items: stretch; flex-direction: column; } .dashboard-month-picker { flex-basis: 38px; width: 100%; } .dashboard-month-popover { width: min(248px, calc(100vw - 32px)); } .dashboard-month-metrics, .dashboard-month-loading, .month-decision .monthly-financial-metrics { grid-template-columns: 1fr; } .dashboard-upcoming, .dashboard-recent { margin-top: 20px; } .dashboard-upcoming-grid { grid-template-columns: 1fr; } .dashboard-upcoming-header, .dashboard-recent-header { align-items: flex-start; } .dashboard-recent-row { grid-template-columns: 36px minmax(0, 1fr) auto; gap: 8px 10px; min-height: 64px; padding: 8px 12px; } .dashboard-recent-row time { grid-column: 2; grid-row: 2; } .dashboard-recent-amount { grid-column: 3; grid-row: 1 / span 2; } .dashboard-month-commitment-meta strong { margin-left: 0; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-balance-card { transition: none; } }
+.dashboard-card-actions { display: inline-flex; align-items: center; gap: 6px; }
+.dashboard-balance-edit { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid currentColor; border-radius: 10px; background: transparent; color: inherit; opacity: .72; cursor: pointer; }
+.dashboard-balance-edit:hover, .dashboard-balance-edit:focus-visible { opacity: 1; background: rgba(255,255,255,.12); }

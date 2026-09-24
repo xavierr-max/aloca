@@ -35,7 +35,11 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) => await service.DeleteAsync(id, ct) ? NoContent() : NotFound();
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        try { return await service.DeleteAsync(id, ct) ? NoContent() : NotFound(); }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
+    }
 
     [HttpPost("{id:guid}/allocations")]
     public async Task<ActionResult<FinancialCommitmentResponse>> Allocate(Guid id, AmountRequest request, CancellationToken ct)

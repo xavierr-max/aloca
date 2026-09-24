@@ -32,16 +32,16 @@ public static class FinancialCalculations
         entradasConfirmadas - saidasEfetivamentePagas;
 
     public static decimal TotalReservado(IEnumerable<decimal> reservasNaoConsumidas) =>
-        reservasNaoConsumidas.Sum(x => Math.Max(0m, x));
+        FinancialDomainCalculator.Reserved(reservasNaoConsumidas);
 
     public static decimal SaldoNaoAlocado(decimal saldoReal, decimal totalReservado) =>
-        Math.Max(0m, saldoReal - totalReservado);
+        FinancialDomainCalculator.Unallocated(saldoReal, totalReservado);
 
     public static decimal DeficitCobertura(decimal valorNecessarioParaCobertura, decimal totalReservado) =>
-        Math.Max(0m, valorNecessarioParaCobertura - totalReservado);
+        FinancialDomainCalculator.CoverageDeficit(valorNecessarioParaCobertura, totalReservado);
 
     public static decimal SaldoLivre(decimal saldoNaoAlocado, decimal deficitCobertura) =>
-        Math.Max(0m, saldoNaoAlocado - deficitCobertura);
+        FinancialDomainCalculator.Free(saldoNaoAlocado, deficitCobertura);
 }
 
 public sealed class FinancialBalanceService(AlocaDbContext dbContext, IBusinessClock? clock = null)
@@ -61,9 +61,8 @@ public sealed class FinancialBalanceService(AlocaDbContext dbContext, IBusinessC
         var initialBalance = await dbContext.FinancialSettings.Select(x => (decimal?)x.InitialBalance).SingleOrDefaultAsync(cancellationToken) ?? 0m;
         var saldoReal = FinancialCalculations.SaldoReal(initialBalance + totalIncome, totalExpense);
         var requiredCoverage = activeCommitments.Sum(x => x.RemainingAmount);
-        var saldoNaoAlocado = FinancialCalculations.SaldoNaoAlocado(saldoReal, totalReserved);
-        var deficitCobertura = FinancialCalculations.DeficitCobertura(requiredCoverage, totalReserved);
-        var saldoLivre = FinancialCalculations.SaldoLivre(saldoNaoAlocado, deficitCobertura);
-        return new(initialBalance, totalIncome, totalExpense, saldoReal, totalReserved, saldoNaoAlocado, saldoLivre, deficitCobertura);
+        var metrics = FinancialDomainCalculator.CalculateReserveMetrics(saldoReal, totalReserved, requiredCoverage);
+        return new(initialBalance, totalIncome, totalExpense, saldoReal,
+            metrics.Reserved, metrics.Unallocated, metrics.Free, metrics.UncoveredCommitments);
     }
 }

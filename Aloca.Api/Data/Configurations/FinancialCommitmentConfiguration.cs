@@ -52,6 +52,11 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.Ignore(commitment => commitment.TotalAmount);
+        builder.Ignore(commitment => commitment.TotalPaidAmount);
+        builder.Ignore(commitment => commitment.TotalAllocatedAmount);
+        builder.Ignore(commitment => commitment.OverallRemainingAmount);
+        builder.Ignore(commitment => commitment.OverallCoveragePercentage);
+        builder.Ignore(commitment => commitment.RequiresAttention);
         builder.Ignore(commitment => commitment.RemainingInstallments);
         builder.Ignore(commitment => commitment.RemainingAmount);
         builder.Ignore(commitment => commitment.CoveredInstallments);

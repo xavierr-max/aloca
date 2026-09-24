@@ -44,7 +44,14 @@ public sealed class FinancialForecastService(
         // all realized expenses dated up to that date. Therefore `from` is
         // expected to be the first month projected from the current state.
         var openingBalance = (await balanceService.GetAsync(cancellationToken)).SaldoReal;
-        var forecast = calculator.Calculate(from, to, events, openingBalance);
+        var today = clock.Today;
+        // The opening balance already contains every realized transaction up
+        // to today. Only planned events may change the future projection.
+        // Overdue unpaid commitments remain economically pending, so project
+        // them from today instead of dropping them because their due date is
+        // in the past.
+        var projectionEvents = ForecastProjectionRules.FutureEvents(events, today);
+        var forecast = calculator.Calculate(from, to, projectionEvents, openingBalance);
         var balance = await balanceService.GetAsync(cancellationToken);
         var commitments = await balanceService.DbContext.FinancialCommitments
             .AsNoTracking()
@@ -84,19 +91,17 @@ public sealed class FinancialForecastService(
 
         var requiredAmount = commitments.Sum(x => Math.Max(0m, x.RemainingAmount));
         var totalAllocated = FinancialCalculations.TotalReservado(commitments.Select(x => x.AllocatedAmount));
-        var unallocated = FinancialCalculations.SaldoNaoAlocado(balance.SaldoReal, totalAllocated);
-        var deficit = FinancialCalculations.DeficitCobertura(requiredAmount, totalAllocated);
-        var free = FinancialCalculations.SaldoLivre(unallocated, deficit);
+        var metrics = FinancialDomainCalculator.CalculateReserveMetrics(balance.SaldoReal, totalAllocated, requiredAmount);
         var coverage = requiredAmount <= 0m
             ? 100m
             : Math.Min(100m, Math.Max(0m, totalAllocated / requiredAmount * 100m));
         var summary = forecast.Summary with
         {
             TotalCommitted = requiredAmount,
-            TotalAllocated = totalAllocated,
-            UnallocatedBalance = unallocated,
-            CoverageDeficit = deficit,
-            FreeBalance = free,
+            TotalAllocated = metrics.Reserved,
+            UnallocatedBalance = metrics.Unallocated,
+            CoverageDeficit = metrics.UncoveredCommitments,
+            FreeBalance = metrics.Free,
             RequiredAmount = requiredAmount,
             CoveragePercentage = coverage,
             Commitments = details
@@ -112,17 +117,16 @@ public sealed class FinancialForecastService(
                 ? 100m
                 : Math.Min(100m, Math.Max(0m, allocated / committed * 100m));
             var monthDeficit = Math.Max(0m, committed - allocated);
-            var monthUnallocated = FinancialCalculations.SaldoNaoAlocado(balance.SaldoReal, allocated);
-            var monthFree = FinancialCalculations.SaldoLivre(monthUnallocated, monthDeficit);
+            var monthMetrics = FinancialDomainCalculator.CalculateReserveMetrics(balance.SaldoReal, allocated, committed);
             return month with
             {
                 Committed = committed,
-                Allocated = allocated,
+                Allocated = monthMetrics.Reserved,
                 ConsideredBalance = balance.SaldoReal,
-                FreeBalance = monthFree,
+                FreeBalance = monthMetrics.Free,
                 Coverage = monthCoverage,
                 Commitments = monthCommitments,
-                CoverageDeficit = monthDeficit
+                CoverageDeficit = monthMetrics.UncoveredCommitments
             };
         }).ToList();
         return forecast with { Summary = summary, Months = monthsWithCoverage };
@@ -133,8 +137,8 @@ public sealed class FinancialForecastService(
         int months,
         CancellationToken cancellationToken)
     {
-        if (months is not (3 or 6 or 12))
-            throw new ArgumentOutOfRangeException(nameof(months), "O período deve ser de 3, 6 ou 12 meses.");
+        if (months is < 1 or > 24)
+            throw new ArgumentOutOfRangeException(nameof(months), "O período deve estar entre 1 e 24 meses.");
 
         var start = new DateOnly(from.Year, from.Month, 1);
         var end = start.AddMonths(months).AddDays(-1);

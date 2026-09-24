@@ -7,6 +7,7 @@ import MovementsFilters from './components/MovementsFilters.jsx'
 import MovementsContent from './components/MovementsContent.jsx'
 import './movements.css'
 import './movement-crud.css'
+import { businessDate } from '../../utils/businessDate.js'
 
 const periodOptions = [
   { value: 'current', label: 'Este mês' },
@@ -92,8 +93,9 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
   useEffect(() => { setLoadedIncomes(incomes); setLoadedExpenses(expenses) }, [incomes, expenses])
 
   const periodLabel = periodOptions.find(option => option.value === period)?.label || 'Este mês'
-  const periodStart = dateFromPeriod(period)
-  const periodEnd = dateToPeriod(period)
+  const referenceDate = dateValue(businessDate(summary?.businessDate)) || new Date()
+  const periodStart = dateFromPeriod(period, referenceDate)
+  const periodEnd = dateToPeriod(period, referenceDate)
 
   const inPeriod = item => {
     const date = dateValue(item.date)
@@ -103,9 +105,9 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
   const filteredIncomes = useMemo(() => loadedIncomes.filter(inPeriod), [loadedIncomes, period])
   const filteredExpenses = useMemo(() => loadedExpenses.filter(inPeriod), [loadedExpenses, period])
   const visibleSummary = useMemo(() => ({
-    income: filteredIncomes.reduce((total, item) => total + Number(item.amount || 0), 0),
-    expense: filteredExpenses.reduce((total, item) => total + Number(item.amount || 0), 0),
-    currentBalance: Number(summary?.currentBalance ?? summary?.saldoReal ?? 0),
+    income: filteredIncomes.filter(item => item.isRealized !== false && !item.isBalanceAdjustment).reduce((total, item) => total + Number(item.amount || 0), 0),
+    expense: filteredExpenses.filter(item => item.isRealized !== false && !item.isBalanceAdjustment).reduce((total, item) => total + Number(item.amount || 0), 0),
+    currentBalance: Number(summary?.currentBalance ?? 0),
   }), [filteredIncomes, filteredExpenses, summary])
 
   const movements = useMemo(() => [

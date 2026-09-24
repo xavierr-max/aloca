@@ -25,6 +25,25 @@ public sealed class FinancialSettingsService(AlocaDbContext dbContext, Financial
         return new(settings.InitialBalance);
     }
 
+    public async Task<FinancialBalanceSnapshot> AdjustCurrentBalanceAsync(decimal newBalance, IBusinessClock clock, CancellationToken ct)
+    {
+        if (newBalance < 0m) throw new ArgumentOutOfRangeException(nameof(newBalance));
+        await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct) : null;
+        var balance = await new FinancialBalanceService(dbContext, clock).GetAsync(ct);
+        var difference = decimal.Round(newBalance - balance.SaldoReal, 2, MidpointRounding.ToEven);
+        if (difference != 0m)
+        {
+            dbContext.Transactions.Add(new Transaction(
+                "Ajuste manual de saldo", Math.Abs(difference),
+                difference > 0m ? TransactionType.Income : TransactionType.Expense,
+                clock.Today, null, isBalanceAdjustment: true));
+            await dbContext.SaveChangesAsync(ct);
+            await Reconciliation.ReconcileAsync(ct);
+        }
+        if (dbTransaction is not null) await dbTransaction.CommitAsync(ct);
+        return await new FinancialBalanceService(dbContext, clock).GetAsync(ct);
+    }
+
     private async Task<FinancialSettings> GetOrCreateAsync(CancellationToken ct)
     {
         var settings = await dbContext.FinancialSettings.SingleOrDefaultAsync(ct);

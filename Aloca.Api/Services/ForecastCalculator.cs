@@ -75,6 +75,9 @@ public sealed class ForecastCalculator : IForecastCalculator
 
         var totalIncomeAmount = months.Sum(x => x.TotalIncome);
         var totalExpenseAmount = months.Sum(x => x.TotalExpense);
+        var periodMetrics = FinancialDomainCalculator.CalculatePeriodMetrics(
+            months.Sum(x => x.RealizedIncome), months.Sum(x => x.PlannedIncome),
+            months.Sum(x => x.RealizedExpense), months.Sum(x => x.PlannedExpense));
         var summary = new ForecastSummaryResponse(
             openingBalance,
             balance,
@@ -89,7 +92,10 @@ public sealed class ForecastCalculator : IForecastCalculator
             0m,
             0m,
             100m,
-            Array.Empty<ForecastCommitmentResponse>());
+            Array.Empty<ForecastCommitmentResponse>(),
+            periodMetrics.RealizedIncome, periodMetrics.PlannedIncome,
+            periodMetrics.RealizedExpense, periodMetrics.PlannedExpense,
+            periodMetrics.RealResult, periodMetrics.ForecastResult);
         return new FinancialForecastResponse(
             normalizedFrom,
             new DateOnly(normalizedTo.Year, normalizedTo.Month, DateTime.DaysInMonth(normalizedTo.Year, normalizedTo.Month)),

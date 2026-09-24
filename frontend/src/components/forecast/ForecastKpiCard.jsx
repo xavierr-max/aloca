@@ -3,7 +3,7 @@ import FinancialInfoTooltip from './FinancialInfoTooltip.jsx'
 
 const icons = { income: ArrowDownLeft, expense: ArrowUpRight, result: BarChart3, balance: WalletCards }
 
-const descriptions = { income: 'Total de entradas esperadas dentro do período selecionado, incluindo recebimentos futuros considerados pela projeção.', expense: 'Total de saídas esperadas dentro do período selecionado.', result: 'Diferença entre as entradas e saídas previstas no período selecionado.', balance: 'Estimativa de quanto restará ao final do período considerando as movimentações previstas.' }
+const descriptions = { income: 'Soma das entradas realizadas e previstas no período selecionado. Valores já recebidos e ainda esperados aparecem separados no detalhamento.', expense: 'Soma das saídas realizadas e previstas no período selecionado. Valores já pagos e ainda esperados aparecem separados no detalhamento.', result: 'Diferença entre todas as entradas e saídas do período, considerando o que já aconteceu e o que ainda está previsto.', balance: 'Valor estimado ao final do período depois de considerar apenas os eventos futuros que ainda não estão incorporados ao saldo atual.' }
 
 export default function ForecastKpiCard({ kind, label, value, secondary, tone = 'neutral' }) {
   const Icon = icons[kind] || WalletCards

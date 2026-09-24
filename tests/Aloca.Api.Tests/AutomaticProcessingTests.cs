@@ -128,5 +128,70 @@ public sealed class AutomaticProcessingTests
         Assert.Equal(1, await db.CommitmentPayments.CountAsync());
     }
 
+    [Fact]
+    public async Task ReversingPaymentRestoresBalanceReservationAndPendingState()
+    {
+        await using var db = CreateDb();
+        var today = BusinessClock.Today();
+        db.FinancialSettings.Add(new FinancialSettings(1000m));
+        var item = new FinancialCommitment("Parcela", 300m, 1, 0, 300m, null, true, today);
+        db.FinancialCommitments.Add(item);
+        await db.SaveChangesAsync();
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+
+        await service.RegisterPaymentAsync(item.Id, default);
+        Assert.Equal(700m, (await new FinancialBalanceService(db).GetAsync(default)).SaldoReal);
+        Assert.Equal(0m, (await new FinancialBalanceService(db).GetAsync(default)).TotalReservado);
+
+        await service.ReverseLatestPaymentAsync(item.Id, default);
+        var balance = await new FinancialBalanceService(db).GetAsync(default);
+        var saved = await db.FinancialCommitments.SingleAsync();
+        Assert.Equal(1000m, balance.SaldoReal);
+        Assert.Equal(300m, balance.TotalReservado);
+        Assert.Equal(0, saved.PaidInstallments);
+        Assert.Equal(300m, saved.AllocatedAmount);
+        Assert.Empty(await db.CommitmentPayments.ToListAsync());
+        Assert.Empty(await db.Transactions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task PaymentTransactionCannotBeDeletedOrEditedDirectly()
+    {
+        await using var db = CreateDb();
+        var today = BusinessClock.Today();
+        var item = new FinancialCommitment("Parcela", 100m, 1, 0, 100m, null, true, today);
+        db.FinancialCommitments.Add(item);
+        await db.SaveChangesAsync();
+        var commitments = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+        await commitments.RegisterPaymentAsync(item.Id, default);
+        var payment = await db.CommitmentPayments.SingleAsync();
+        var movement = await db.Transactions.SingleAsync();
+        var transactions = new TransactionService(db);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => transactions.DeleteAsync(movement.Id, default));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => transactions.UpdateAsync(movement.Id, new TransactionRequest
+        {
+            Description = "Alteração indevida", Amount = 100m, Type = TransactionType.Expense, Date = today
+        }, default));
+        Assert.NotNull(await db.CommitmentPayments.FindAsync(payment.Id));
+        Assert.Equal(1, (await db.FinancialCommitments.SingleAsync()).PaidInstallments);
+    }
+
+    [Fact]
+    public async Task CommitmentWithPaymentCannotBeDeletedWithoutReversingHistory()
+    {
+        await using var db = CreateDb();
+        var today = BusinessClock.Today();
+        var item = new FinancialCommitment("Histórico", 100m, 1, 0, 100m, null, true, today);
+        db.FinancialCommitments.Add(item);
+        await db.SaveChangesAsync();
+        var commitments = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+        await commitments.RegisterPaymentAsync(item.Id, default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => commitments.DeleteAsync(item.Id, default));
+        Assert.NotNull(await db.FinancialCommitments.FindAsync(item.Id));
+        Assert.Single(await db.Transactions.ToListAsync());
+    }
+
     private static AlocaDbContext CreateDb() => new(new DbContextOptionsBuilder<AlocaDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
 }

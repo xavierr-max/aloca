@@ -8,7 +8,8 @@ public sealed record FinancialSummaryResponse(
     decimal AllocatedBalance,
     decimal UnallocatedBalance,
     decimal FreeBalance,
-    decimal CoverageDeficit)
+    decimal CoverageDeficit,
+    DateOnly? BusinessDate = null)
 {
     public decimal Balance => CurrentBalance;
     public decimal AllocatedAmount => AllocatedBalance;
@@ -30,7 +31,15 @@ public sealed record MonthlyFinancialSummaryResponse(
     decimal CoveragePercentage,
     decimal EstimatedFinalBalance,
     IReadOnlyCollection<MonthlyCommitmentResponse> Commitments,
-    IReadOnlyCollection<MonthlyUrgentCommitmentResponse> UrgentCommitments);
+    IReadOnlyCollection<MonthlyUrgentCommitmentResponse> UrgentCommitments,
+    decimal EntradasRealizadas = 0m,
+    decimal EntradasPrevistas = 0m,
+    decimal EntradasTotais = 0m,
+    decimal SaidasRealizadas = 0m,
+    decimal SaidasPrevistas = 0m,
+    decimal SaidasTotais = 0m,
+    decimal ResultadoReal = 0m,
+    decimal ResultadoPrevisto = 0m);
 
 public sealed record MonthlyUrgentCommitmentResponse(
     Guid CommitmentId,

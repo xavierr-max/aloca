@@ -57,15 +57,22 @@ public sealed class TransactionsController(TransactionService transactionService
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken) =>
-        await transactionService.DeleteAsync(id, cancellationToken) ? NoContent() : NotFound();
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        try { return await transactionService.DeleteAsync(id, cancellationToken) ? NoContent() : NotFound(); }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
+    }
 
     [HttpPut("{id:guid}")]
     public async Task<ActionResult<TransactionResponse>> Update(Guid id, TransactionRequest request, CancellationToken cancellationToken)
     {
-        var result = await transactionService.UpdateAsync(id, request, cancellationToken);
-        if (result.Status == TransactionWriteStatus.NotFound) return NotFound();
-        if (result.Status == TransactionWriteStatus.CategoryNotFound) return BadRequest(new { message = "Grupo inválido para esta movimentação." });
-        return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
+        try
+        {
+            var result = await transactionService.UpdateAsync(id, request, cancellationToken);
+            if (result.Status == TransactionWriteStatus.NotFound) return NotFound();
+            if (result.Status == TransactionWriteStatus.CategoryNotFound) return BadRequest(new { message = "Grupo inválido para esta movimentação." });
+            return Ok(await transactionService.GetByIdAsync(id, cancellationToken));
+        }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 }

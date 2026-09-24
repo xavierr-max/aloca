@@ -267,7 +267,8 @@
   .mobile-dashboard-context-chips a:focus-visible,
   .mobile-dashboard-section-heading a:focus-visible { outline: 3px solid var(--color-info); outline-offset: 2px; }
   .mobile-dashboard-hero { display: grid; gap: 12px; padding: 20px; border-radius: 22px; background: var(--dashboard-solid-accent); color: var(--dashboard-solid-accent-ink); }
-  .mobile-dashboard-hero-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 650; letter-spacing: .07em; }
+.mobile-dashboard-hero-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 650; letter-spacing: .07em; }
+.mobile-dashboard-hero-actions { display: inline-flex; align-items: center; gap: 8px; }
   .mobile-dashboard-hero > strong { overflow-wrap: anywhere; font-size: clamp(28px, 8vw, 32px); font-weight: 700; letter-spacing: -.05em; line-height: 1.05; font-variant-numeric: tabular-nums; }
   .mobile-dashboard-hero > span { font-size: 13px; opacity: .82; }
   .mobile-dashboard-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }

@@ -22,7 +22,7 @@ public sealed class FinancialSummaryService
     public async Task<FinancialSummaryResponse> GetAsync(CancellationToken cancellationToken)
     {
         var x = await balanceService.GetAsync(cancellationToken);
-        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.SaldoReal, x.TotalReservado, x.SaldoNaoAlocado, x.SaldoLivre, x.DeficitCobertura);
+        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.SaldoReal, x.TotalReservado, x.SaldoNaoAlocado, x.SaldoLivre, x.DeficitCobertura, clock.Today);
     }
 
     public async Task<MonthlyFinancialSummaryResponse> GetMonthlyAsync(DateOnly period, CancellationToken ct)
@@ -40,11 +40,15 @@ public sealed class FinancialSummaryService
                         x.Status != RecurringIncomeOccurrenceStatus.Paused)
             .ToListAsync(ct);
         var commitments = await db.FinancialCommitments.AsNoTracking()
+            .Include(x => x.CommitmentPayments)
             .Where(x => x.DueDate < nextPeriod &&
                         ((x.EndDate == null && x.Frequency != RecurringIncomeFrequency.Once) ||
                          (x.EndDate != null && x.EndDate >= period)))
             .ToListAsync(ct);
         var commitmentIds = commitments.Select(x => x.Id).ToArray();
+        var transactions = await db.Transactions.AsNoTracking()
+            .Where(x => x.Date >= period && x.Date < nextPeriod && !x.IsBalanceAdjustment && x.Description != "Ajuste manual de saldo")
+            .ToListAsync(ct);
         var payments = await db.CommitmentPayments.AsNoTracking()
             .Where(x => commitmentIds.Contains(x.FinancialCommitmentId))
             .Select(x => new { x.FinancialCommitmentId, x.InstallmentNumber })
@@ -90,18 +94,38 @@ public sealed class FinancialSummaryService
         var committed = details.Sum(x => x.DueAmount);
         var allocated = details.Sum(x => x.AllocatedAmount);
         var missing = Math.Max(0m, committed - allocated);
-        var expectedIncome = incomes.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && x.ScheduledDate >= today).Sum(x => x.Amount);
-        var expectedCommitments = details.Where(x => !x.IsPaid && x.DueDate >= today).Sum(x => x.DueAmount);
+        var realizedIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date <= today).Sum(x => x.Amount);
+        var realizedExpense = transactions.Where(x => x.Type == TransactionType.Expense && x.Date <= today).Sum(x => x.Amount);
+        var futureTransactionIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date > today).Sum(x => x.Amount);
+        var futureTransactionExpense = transactions.Where(x => x.Type == TransactionType.Expense && x.Date > today).Sum(x => x.Amount);
+        var plannedIncome = incomes.Where(x => x.Status == RecurringIncomeOccurrenceStatus.Planned && !x.TransactionId.HasValue).Sum(x => x.Amount);
+        var plannedExpense = details.Where(x => !x.IsPaid).Sum(x => x.DueAmount);
         var currentBalance = (await balanceService.GetAsync(ct)).SaldoReal;
+        var projectionStart = new DateOnly(today.Year, today.Month, 1);
+        var projectionEvents = await new ForecastEventNormalizer(db, clock)
+            .NormalizeAsync(projectionStart, nextPeriod.AddDays(-1), ct);
+        var projection = new ForecastCalculator().Calculate(
+            projectionStart,
+            nextPeriod.AddDays(-1),
+            ForecastProjectionRules.FutureEvents(projectionEvents, today),
+            currentBalance);
+        var projectedClosingBalance = projection.Months.LastOrDefault()?.ClosingBalance ?? currentBalance;
         var urgentCommitments = (await db.FinancialCommitments.AsNoTracking()
+                .Include(x => x.CommitmentPayments)
                 .Where(x => x.Urgent)
                 .ToListAsync(ct))
             .Where(x => x.RequiresAttention)
             .Select(x => new MonthlyUrgentCommitmentResponse(x.Id, x.Name, x.OverallRemainingAmount))
             .ToList();
+        plannedIncome += futureTransactionIncome;
+        plannedExpense += futureTransactionExpense;
+        var metrics = FinancialDomainCalculator.CalculatePeriodMetrics(realizedIncome, plannedIncome, realizedExpense, plannedExpense);
         return new(period, incomes.Sum(x => x.Amount), committed, incomes.Sum(x => x.Amount) - committed,
             allocated, missing, committed > 0 ? Math.Min(100m, allocated / committed * 100m) : 100m,
-            currentBalance + expectedIncome - expectedCommitments, details, urgentCommitments);
+            projectedClosingBalance, details, urgentCommitments,
+            metrics.RealizedIncome, metrics.PlannedIncome, metrics.TotalIncome,
+            metrics.RealizedExpense, metrics.PlannedExpense, metrics.TotalExpense,
+            metrics.RealResult, metrics.ForecastResult);
     }
 
 }

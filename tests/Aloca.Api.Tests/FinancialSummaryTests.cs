@@ -127,12 +127,13 @@ public sealed class FinancialSummaryTests
     public async Task MultipleMonthlyOccurrencesOfOneUrgentCommitmentAreReturnedOnceGlobally()
     {
         await using var db = CreateDb();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = new DateOnly(2026, 9, 1);
+        var clock = new FixedClock(today);
         var commitment = new FinancialCommitment("Urgente semanal", 100m, RecurringIncomeFrequency.Weekly, today, today.AddDays(20), 1, true, urgent: true);
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
-        var result = await new FinancialSummaryService(db).GetMonthlyAsync(new DateOnly(today.Year, today.Month, 1), default);
+        var result = await new FinancialSummaryService(db, new FinancialBalanceService(db, clock), clock).GetMonthlyAsync(new DateOnly(today.Year, today.Month, 1), default);
 
         Assert.True(result.Commitments.Count >= 2);
         var urgent = Assert.Single(result.UrgentCommitments);
@@ -288,6 +289,38 @@ public sealed class FinancialSummaryTests
         Assert.Equal(new DateOnly(today.Year, today.Month, 1), result.Period);
     }
 
+    [Fact]
+    public async Task MonthlyMetricsSeparateRealizedFutureAndPendingEvents()
+    {
+        await using var db = CreateDb();
+        var today = new DateOnly(2026, 9, 15);
+        var clock = new FixedClock(today);
+        db.Transactions.Add(new Transaction("Entrada realizada", 500m, TransactionType.Income, today, null));
+        db.Transactions.Add(new Transaction("Entrada futura", 1000m, TransactionType.Income, today.AddDays(2), null));
+        db.Transactions.Add(new Transaction("Saída realizada", 200m, TransactionType.Expense, today, null));
+        db.FinancialCommitments.Add(new FinancialCommitment("Compromisso futuro", 600m, 1, 0, 0m, null, true, today.AddDays(2)));
+        await db.SaveChangesAsync();
+
+        var result = await new FinancialSummaryService(db, new FinancialBalanceService(db, clock), clock)
+            .GetMonthlyAsync(new DateOnly(2026, 9, 1), default);
+
+        Assert.Equal(500m, result.EntradasRealizadas);
+        Assert.Equal(1000m, result.EntradasPrevistas);
+        Assert.Equal(1500m, result.EntradasTotais);
+        Assert.Equal(200m, result.SaidasRealizadas);
+        Assert.Equal(600m, result.SaidasPrevistas);
+        Assert.Equal(800m, result.SaidasTotais);
+        Assert.Equal(300m, result.ResultadoReal);
+        Assert.Equal(700m, result.ResultadoPrevisto);
+    }
+
     private static AlocaDbContext CreateDb() => new(new DbContextOptionsBuilder<AlocaDbContext>()
         .UseInMemoryDatabase($"summary-{Guid.NewGuid()}").Options);
+
+    private sealed class FixedClock(DateOnly today) : IBusinessClock
+    {
+        public DateTime UtcNow => today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        public DateTime LocalNow => UtcNow;
+        public DateOnly Today => today;
+    }
 }

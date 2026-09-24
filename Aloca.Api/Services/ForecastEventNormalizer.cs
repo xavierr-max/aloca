@@ -16,8 +16,9 @@ public interface IForecastEventNormalizer
 /// Converts transactions, recurring occurrences and commitment installments
 /// into the common event contract used by the forecast pipeline.
 /// </summary>
-public sealed class ForecastEventNormalizer(AlocaDbContext db) : IForecastEventNormalizer
+public sealed class ForecastEventNormalizer(AlocaDbContext db, IBusinessClock? clock = null) : IForecastEventNormalizer
 {
+    private IBusinessClock Clock => clock ?? new SystemBusinessClock(new ConfigurationBuilder().Build());
     public async Task<IReadOnlyCollection<ForecastEvent>> NormalizeAsync(
         DateOnly from,
         DateOnly to,
@@ -29,7 +30,7 @@ public sealed class ForecastEventNormalizer(AlocaDbContext db) : IForecastEventN
         var transactions = await db.Transactions
             .AsNoTracking()
             .Include(x => x.Category)
-            .Where(x => x.Date >= from && x.Date <= to)
+            .Where(x => x.Date >= from && x.Date <= to && !x.IsBalanceAdjustment && x.Description != "Ajuste manual de saldo")
             .OrderBy(x => x.Date)
             .ThenBy(x => x.Id)
             .ToListAsync(cancellationToken);
@@ -87,7 +88,7 @@ public sealed class ForecastEventNormalizer(AlocaDbContext db) : IForecastEventN
             events.Add(new(
                 transaction.Id.ToString("N"),
                 transaction.Type == TransactionType.Income ? ForecastEventType.Income : ForecastEventType.Expense,
-                ForecastEventStatus.Realized,
+                transaction.Date <= Clock.Today ? ForecastEventStatus.Realized : ForecastEventStatus.Planned,
                 transaction.Amount,
                 transaction.Date,
                 null,

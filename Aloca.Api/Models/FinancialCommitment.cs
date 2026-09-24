@@ -115,10 +115,16 @@ public sealed class FinancialCommitment
     public bool IsOpenEnded => IsRecurring && !EndDate.HasValue;
     public decimal TotalAmount => IsOpenEnded ? 0m : InstallmentAmount * TotalInstallments;
 
+    public ICollection<CommitmentPayment> CommitmentPayments { get; private set; } = new List<CommitmentPayment>();
+
+    public decimal TotalPaidAmount => CommitmentPayments.Sum(payment => payment.Amount);
+
     // AllocatedAmount tracks the reserve still attached to unpaid installments.
     // Include paid installments here so overall coverage remains meaningful
     // throughout the full commitment lifecycle.
-    public decimal TotalAllocatedAmount => PaidInstallments * InstallmentAmount + AllocatedAmount;
+    // Compatibility value: combines historical payments with the current reserve.
+    // New consumers should use TotalPaidAmount and AllocatedAmount separately.
+    public decimal TotalAllocatedAmount => TotalPaidAmount + AllocatedAmount;
 
     public decimal OverallRemainingAmount => IsOpenEnded ? AmountNeededForNextInstallment : decimal.Max(TotalAmount - TotalAllocatedAmount, 0m);
 

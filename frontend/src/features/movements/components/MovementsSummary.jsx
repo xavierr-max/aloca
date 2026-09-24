@@ -7,9 +7,9 @@ const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', curre
 export default function MovementsSummary({ values, periodLabel }) {
   const result = values.income - values.expense
   const cards = [
-    { key: 'income', label: 'Entradas', value: values.income, tone: 'positive', icon: ArrowDownLeft, description: 'Total recebido no período selecionado.' },
-    { key: 'expense', label: 'Saídas', value: values.expense, tone: 'negative', icon: ArrowUpRight, description: 'Total gasto no período selecionado.' },
-    { key: 'result', label: 'Resultado', value: result, tone: result > 0 ? 'positive' : result < 0 ? 'negative' : 'neutral', icon: ArrowLeftRight, description: 'Diferença entre as entradas e as saídas do período.' },
+    { key: 'income', label: 'Entradas realizadas', value: values.income, tone: 'positive', icon: ArrowDownLeft, description: 'Entradas efetivamente recebidas no período selecionado. Valores futuros não entram.' },
+    { key: 'expense', label: 'Saídas realizadas', value: values.expense, tone: 'negative', icon: ArrowUpRight, description: 'Saídas efetivamente realizadas no período selecionado. Compromissos pendentes não entram.' },
+    { key: 'result', label: 'Resultado realizado', value: result, tone: result > 0 ? 'positive' : result < 0 ? 'negative' : 'neutral', icon: ArrowLeftRight, description: 'Entradas realizadas menos saídas realizadas no período selecionado.' },
     { key: 'balance', label: 'Saldo atual', value: values.currentBalance, tone: 'balance', icon: Wallet, description: 'Saldo real disponível, considerando as movimentações confirmadas.' },
   ]
   return <section className="movements-summary" aria-label="Resumo financeiro das movimentações">

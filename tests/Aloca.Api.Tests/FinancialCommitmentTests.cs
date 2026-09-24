@@ -5,6 +5,36 @@ namespace Aloca.Api.Tests;
 public sealed class FinancialCommitmentTests
 {
     [Fact]
+    public void TotalPaidAmountUsesPersistedPaymentAmountsAfterFutureInstallmentEdit()
+    {
+        var commitment = CreateCommitment(totalInstallments: 3, installmentAmount: 300m);
+        commitment.Allocate(300m);
+        var paid = commitment.RegisterPayment();
+        commitment.UpdateDetails("Teste", 400m, 3, null, true, null);
+        commitment.CommitmentPayments.Add(new CommitmentPayment(commitment.Id, paid, 1, DateTime.UtcNow));
+
+        Assert.Equal(1, commitment.PaidInstallments);
+        Assert.Equal(300m, commitment.TotalPaidAmount);
+        Assert.NotEqual(400m, commitment.TotalPaidAmount);
+    }
+
+    [Fact]
+    public void TotalPaidAmountTracksPaymentAndReversalAmountsIndependentlyFromReserve()
+    {
+        var commitment = CreateCommitment(totalInstallments: 3, installmentAmount: 300m);
+        commitment.CommitmentPayments.Add(new CommitmentPayment(commitment.Id, 300m, 1, DateTime.UtcNow));
+        commitment.CommitmentPayments.Add(new CommitmentPayment(commitment.Id, 400m, 2, DateTime.UtcNow));
+        commitment.Allocate(100m);
+
+        Assert.Equal(700m, commitment.TotalPaidAmount);
+        Assert.Equal(100m, commitment.AllocatedAmount);
+
+        commitment.CommitmentPayments.Remove(commitment.CommitmentPayments.Single(payment => payment.InstallmentNumber == 2));
+        Assert.Equal(300m, commitment.TotalPaidAmount);
+        Assert.Equal(100m, commitment.AllocatedAmount);
+    }
+
+    [Fact]
     public void CalculatesCoverage_WhenThereIsNoAllocatedAmount()
     {
         var commitment = CreateCommitment(allocatedAmount: 0m);
@@ -209,7 +239,8 @@ public sealed class FinancialCommitmentTests
     public void ReleasingAllAllocationLeavesPaidInstallmentsAndCommitmentIntact()
     {
         var commitment = CreateCommitment(allocatedAmount: 400m);
-        commitment.RegisterPayment();
+        var paid = commitment.RegisterPayment();
+        commitment.CommitmentPayments.Add(new CommitmentPayment(commitment.Id, paid, 1, DateTime.UtcNow));
 
         var released = commitment.ReleaseAllAllocation();
 

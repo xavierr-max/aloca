@@ -30,7 +30,9 @@ public sealed record TransactionResponse(
     DateTime CreatedAt,
     bool IsRecurring = false,
     Guid? FinancialCommitmentId = null,
-    bool WasAutomatic = false);
+    bool WasAutomatic = false,
+    bool IsRealized = true,
+    bool IsBalanceAdjustment = false);
 
 public sealed class TransactionQueryParameters
 {
