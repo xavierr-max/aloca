@@ -9,6 +9,31 @@ namespace Aloca.Api.Controllers;
 [ApiController, Route("api/account"), AllowAnonymous]
 public sealed class AccountController(AccountService service) : ControllerBase
 {
+    [HttpPost("password-recovery/request"), EnableRateLimiting("password-recovery")]
+    public async Task<IActionResult> RequestPasswordRecovery(
+        PasswordRecoveryRequest request,
+        PasswordRecoveryService recovery,
+        CancellationToken ct)
+    {
+        await recovery.RequestAsync(request.Email, ct);
+        return Accepted(new { message = PasswordRecoveryService.GenericRequestMessage });
+    }
+
+    [HttpPost("password-recovery/reset"), EnableRateLimiting("password-recovery")]
+    public async Task<IActionResult> ResetPassword(
+        PasswordResetRequest request,
+        PasswordRecoveryService recovery,
+        CancellationToken ct)
+    {
+        try
+        {
+            await recovery.ResetAsync(request, ct);
+            return NoContent();
+        }
+        catch (PasswordRecoveryException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
     [HttpGet("current")]
     public async Task<ActionResult<AccountListDto>> Current(CancellationToken ct) => Ok(await service.GetAccountsAsync(HttpContext, ct));
 

@@ -485,7 +485,7 @@ public sealed class AccountService(
             throw new AccountConflictException("Este e-mail já está em uso.");
     }
 
-    private static void ValidatePassword(string password)
+    public static void ValidatePassword(string password)
     {
         if (password.Length < 8 || !password.Any(char.IsUpper) || !password.Any(char.IsLower) || !password.Any(char.IsDigit))
             throw new AccountConflictException("A senha deve ter pelo menos 8 caracteres, com letra maiúscula, minúscula e número.");
@@ -522,7 +522,8 @@ public sealed class AccountSessionMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context, AccountService accounts)
     {
-        if (context.Request.Path.StartsWithSegments("/api"))
+        var isPasswordRecoveryRequest = context.Request.Path.StartsWithSegments("/api/account/password-recovery");
+        if (context.Request.Path.StartsWithSegments("/api") && !isPasswordRecoveryRequest)
             await accounts.EnsureSessionAsync(context, context.RequestAborted);
 
         await next(context);

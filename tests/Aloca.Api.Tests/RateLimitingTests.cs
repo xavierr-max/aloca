@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Aloca.Api.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -39,6 +40,18 @@ public sealed class RateLimitingTests : IClassFixture<RateLimitingApplicationFac
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordRecoveryUsesThePublicRateLimit()
+    {
+        using var client = factory.CreateClient();
+
+        var first = await client.PostAsJsonAsync("/api/account/password-recovery/request", new { email = "pessoa@example.com" });
+        var second = await client.PostAsJsonAsync("/api/account/password-recovery/request", new { email = "pessoa@example.com" });
+
+        Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
     }
 }
 

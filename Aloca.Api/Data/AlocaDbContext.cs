@@ -10,6 +10,7 @@ public sealed class AlocaDbContext(DbContextOptions<AlocaDbContext> options)
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<DeviceAccount> DeviceAccounts => Set<DeviceAccount>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     private readonly ICurrentUserAccessor? currentUserAccessor = null;
 

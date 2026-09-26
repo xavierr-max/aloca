@@ -35,6 +35,11 @@ services:
       DataProtection__ApplicationName: ${DATA_PROTECTION_APPLICATION_NAME:-Aloca}
       DataProtection__KeysPath: ${DATA_PROTECTION_KEYS_PATH:-/app/data-protection-keys}
       Account__AvatarStoragePath: ${ACCOUNT_AVATAR_STORAGE_PATH:-/app/account-avatars}
+      Email__Environment: ${EMAIL_ENVIRONMENT:-Production}
+      Email__PublicFrontendUrl: ${EMAIL_PUBLIC_FRONTEND_URL}
+      Email__Resend__FromAddress: ${EMAIL_RESEND_FROM_ADDRESS}
+      Email__Resend__FromName: ${EMAIL_RESEND_FROM_NAME:-Aloca}
+      Email__Resend__ApiKey: ${EMAIL_RESEND_API_KEY}
       ForwardedHeaders__TrustedProxyNetwork: 172.30.0.0/24
     secrets:
       - postgres_password

@@ -68,6 +68,8 @@ function request(path, options = {}) {
 
 export const apiAvailabilityEvents = { unavailable: API_UNAVAILABLE_EVENT, recovered: API_RECOVERED_EVENT }
 export const api = {
+  requestPasswordRecovery: email => request('/api/account/password-recovery/request', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (token, password, confirmPassword) => request('/api/account/password-recovery/reset', { method: 'POST', body: JSON.stringify({ token, password, confirmPassword }) }),
   updateCurrentBalance: newBalance => request('/api/financial-settings/current-balance-adjustment', { method: 'POST', body: JSON.stringify({ newBalance: amountValue(newBalance) }) }),
   // Health is the only global availability signal. Resource failures stay local.
   health: async () => { try { const result = await request('/health', { timeout: 8000, suppressAvailabilityEvent: true }); notify(API_RECOVERED_EVENT); return result } catch (error) { throw error } },

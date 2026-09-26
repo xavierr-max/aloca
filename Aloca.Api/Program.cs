@@ -45,6 +45,11 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<ResendPasswordRecoveryEmailSender>(client =>
+{
+    client.BaseAddress = new Uri("https://api.resend.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddSingleton<IBusinessClock, SystemBusinessClock>();
 builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 var dataProtection = builder.Services.AddDataProtection()
@@ -84,6 +89,7 @@ builder.Services.AddRateLimiter(options =>
     var globalLimit = builder.Configuration.GetValue("RateLimiting:GlobalPermitLimit", 120);
     var accountLimit = builder.Configuration.GetValue("RateLimiting:AccountPermitLimit", 12);
     var heavyLimit = builder.Configuration.GetValue("RateLimiting:HeavyPermitLimit", 40);
+    var recoveryLimit = builder.Configuration.GetValue("RateLimiting:PasswordRecoveryPermitLimit", 5);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
     var window = TimeSpan.FromSeconds(windowSeconds);
 
@@ -109,6 +115,8 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter($"account:{ClientKey(context)}", _ => Options(accountLimit, window)));
     options.AddPolicy("heavy", context =>
         RateLimitPartition.GetFixedWindowLimiter($"heavy:{ClientKey(context)}", _ => Options(heavyLimit, window)));
+    options.AddPolicy("password-recovery", context =>
+        RateLimitPartition.GetFixedWindowLimiter($"password-recovery:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}", _ => Options(recoveryLimit, window)));
     options.OnRejected = async (context, cancellationToken) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -146,6 +154,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.Services.AddDbContext<AlocaDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<PasswordRecoveryService>();
+builder.Services.AddTransient<IPasswordRecoveryEmailSender>(serviceProvider =>
+    serviceProvider.GetRequiredService<ResendPasswordRecoveryEmailSender>());
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<RecurringIncomeService>();

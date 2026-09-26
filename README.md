@@ -159,6 +159,24 @@ Para remover deliberadamente os dados persistidos, use `docker compose down -v` 
 
 ## Produção com Docker
 
+### Recuperação de senha por e-mail
+
+O envio de recuperação usa a API do Resend. A API não inicia o envio real enquanto as variáveis abaixo não estiverem configuradas; nesse caso, a solicitação permanece uniforme para o usuário e a falha operacional é registrada sem token, link ou credencial.
+
+No serviço `aloca-api` do Coolify, configure:
+
+```text
+EMAIL_ENVIRONMENT=Production
+EMAIL_PUBLIC_FRONTEND_URL=https://SEU_DOMINIO
+EMAIL_RESEND_API_KEY=<secret do Resend>
+EMAIL_RESEND_FROM_ADDRESS=no-reply@SEU_DOMINIO
+EMAIL_RESEND_FROM_NAME=Aloca
+```
+
+O domínio remetente precisa ser verificado no Resend. Configure no DNS os registros SPF e DKIM fornecidos pelo Resend. Publique também um registro DMARC alinhado à política da organização, começando preferencialmente com uma política de monitoramento (`p=none`) antes de elevar a exigência. Não coloque a API key em arquivos versionados, imagens Docker ou logs.
+
+Antes de habilitar o fluxo em produção, valide o domínio, o endereço remetente, a URL HTTPS do frontend e a entrega para uma caixa de teste. A integração não faz retry automático: isso evita duplicidade quando o provedor aceita a mensagem, mas a resposta se perde.
+
 O arquivo `compose.production.yml` publica somente o frontend na porta HTTP configurada por `HTTP_PORT`. A API e o PostgreSQL ficam na rede interna `backend`; o PostgreSQL não possui porta publicada. O Nginx serve os assets gerados pelo Vite e encaminha `/api` e `/health` para a API.
 
 Crie o secret fora do Git e inicie a composição:

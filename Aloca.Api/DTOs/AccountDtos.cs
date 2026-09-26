@@ -27,6 +27,14 @@ public sealed record ChangePasswordRequest(
     [param: Required, StringLength(128, MinimumLength = 8)] string Password,
     [param: Required] string ConfirmPassword);
 
+public sealed record PasswordRecoveryRequest(
+    [param: Required, EmailAddress, StringLength(254)] string Email);
+
+public sealed record PasswordResetRequest(
+    [param: Required, StringLength(128, MinimumLength = 32)] string Token,
+    [param: Required, StringLength(128, MinimumLength = 8)] string Password,
+    [param: Required, StringLength(128, MinimumLength = 8)] string ConfirmPassword);
+
 public sealed record CreateLocalAccountRequest(
     [param: StringLength(80, MinimumLength = 1)] string? DisplayName = null);
 

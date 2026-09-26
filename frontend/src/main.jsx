@@ -32,6 +32,7 @@ import './commitments-base.css'
 import './responsive-overrides.css'
 import './account-contrast.css'
 import './mobile-foundation.css'
+import './recovery.css'
 import { businessMonth, businessToday } from './utils/businessDate.js'
 
 const navigationItems = [
@@ -183,7 +184,7 @@ function ModalLayer({ children, onClose, className = '', backdropClassName = '' 
   )
 }
 
-function AccountDialog({ mode, initialDisplayName = '', initialEmail = '', onClose, onSubmit }) {
+function AccountDialog({ mode, initialDisplayName = '', initialEmail = '', onClose, onSubmit, onForgotPassword }) {
   const [displayName, setDisplayName] = useState(initialDisplayName)
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
@@ -194,7 +195,56 @@ function AccountDialog({ mode, initialDisplayName = '', initialEmail = '', onClo
   const title = mode === 'protect' ? 'Proteger conta' : mode === 'login' ? 'Entrar em conta protegida' : mode === 'password' ? 'Alterar senha' : 'Renomear conta'
   const submit = async event => { event.preventDefault(); setError(''); if ((mode === 'protect' || mode === 'login' || mode === 'password') && !password.trim()) return setError('Informe a senha.'); if ((mode === 'protect' || mode === 'password') && password !== confirmPassword) return setError('As senhas não conferem.'); if ((mode === 'protect' || mode === 'rename') && !displayName.trim()) return setError('Informe o nome da conta.'); if ((mode === 'login' || mode === 'protect') && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setError('Informe um e-mail válido.'); setBusy(true); try { await onSubmit(mode, { displayName, email, password, confirmPassword, currentPassword }); } catch (e) { setError(errorText(e)) } finally { setBusy(false) } }
   if (mode === 'add') return <ModalLayer onClose={onClose}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>Adicionar conta</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div><p className="modal-copy">Continue localmente sem cadastro ou entre em uma conta protegida existente.</p><div className="account-add-options"><button type="button" className="secondary" onClick={() => onSubmit('create-local', {})} disabled={busy}>Continuar localmente</button><button type="button" className="primary" onClick={() => onSubmit('login-form', {})} disabled={busy}>Entrar em conta protegida</button></div>{error && <div className="alert error">{error}</div>}</ModalLayer>
-  return <ModalLayer onClose={onClose}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>{title}</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div>{mode === 'login' && <p className="modal-copy">Use o e-mail e a senha da conta protegida para acessar os dados financeiros existentes.</p>}{mode === 'protect' && <p className="modal-copy">A conta atual será protegida sem criar uma nova conta nem alterar seus dados financeiros.</p>}{error && <div className="alert error">{error}</div>}{(mode === 'protect' || mode === 'rename') && <label>Nome da conta<input autoFocus value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>}{(mode === 'protect' || mode === 'login') && <label>E-mail<input type="email" autoFocus={mode === 'login'} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /></label>}{mode === 'password' && <label>Senha atual<input autoFocus type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'login' || mode === 'password') && <label>{mode === 'password' ? 'Nova senha' : 'Senha'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'password') && <label>Confirmar senha<input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label>}{mode === 'protect' && <small className="field-hint">Use este e-mail e senha para entrar novamente em sua conta protegida.</small>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="primary" disabled={busy}>{busy ? 'Processando…' : mode === 'login' ? 'Entrar' : mode === 'protect' ? 'Proteger conta' : mode === 'password' ? 'Alterar senha' : 'Renomear'}</button></div></form></ModalLayer>
+  return <ModalLayer onClose={onClose}><form onSubmit={submit}><div className="modal-head"><div><span className="eyebrow">CONTAS</span><h2>{title}</h2></div><button type="button" className="icon-button" onClick={onClose}>×</button></div>{mode === 'login' && <p className="modal-copy">Use o e-mail e a senha da conta protegida para acessar os dados financeiros existentes.</p>}{mode === 'protect' && <p className="modal-copy">A conta atual será protegida sem criar uma nova conta nem alterar seus dados financeiros.</p>}{error && <div className="alert error">{error}</div>}{(mode === 'protect' || mode === 'rename') && <label>Nome da conta<input autoFocus value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength="80" /></label>}{(mode === 'protect' || mode === 'login') && <label>E-mail<input type="email" autoFocus={mode === 'login'} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" /></label>}{mode === 'password' && <label>Senha atual<input autoFocus type="password" autoComplete="current-password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} /></label>}{(mode === 'protect' || mode === 'login' || mode === 'password') && <label>{mode === 'password' ? 'Nova senha' : 'Senha'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} /></label>}{mode === 'login' && <button type="button" className="recovery-link" onClick={onForgotPassword} disabled={busy}>Esqueci minha senha</button>}{(mode === 'protect' || mode === 'password') && <label>Confirmar senha<input type="password" autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label>}{mode === 'protect' && <small className="field-hint">Use este e-mail e senha para entrar novamente em sua conta protegida.</small>}<div className="modal-actions"><button type="button" className="secondary" onClick={onClose} disabled={busy}>Cancelar</button><button type="submit" className="primary" disabled={busy}>{busy ? 'Processando…' : mode === 'login' ? 'Entrar' : mode === 'protect' ? 'Proteger conta' : mode === 'password' ? 'Alterar senha' : 'Renomear'}</button></div></form></ModalLayer>
+}
+
+function PasswordRecoveryPage({ initialToken = '', onBack = null }) {
+  const [email, setEmail] = useState('')
+  const [token, setToken] = useState(initialToken)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState(initialToken ? 'reset' : 'request')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (initialToken && window.location.pathname === '/reset-password')
+      window.history.replaceState({}, '', '/reset-password')
+  }, [initialToken])
+
+  const returnToLogin = () => {
+    if (onBack) { onBack(); return }
+    window.history.pushState({}, '', '/?openLogin=1')
+    window.location.reload()
+  }
+  const submitRequest = async event => {
+    event.preventDefault()
+    if (busy) return
+    const normalized = email.trim()
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) { setError('Informe um e-mail válido.'); return }
+    setBusy(true); setError(''); setMessage('')
+    try {
+      await api.requestPasswordRecovery(normalized)
+      setStatus('requested')
+      setMessage('Se existir uma conta protegida para este e-mail, a solicitação de recuperação será processada.')
+    } catch (e) { setError(e?.status === 429 ? 'Aguarde alguns instantes antes de tentar novamente.' : errorText(e)) } finally { setBusy(false) }
+  }
+  const submitReset = async event => {
+    event.preventDefault()
+    if (busy) return
+    if (!token) { setError('O link de recuperação é inválido ou expirou.'); return }
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) { setError('A senha deve ter pelo menos 8 caracteres, com letra maiúscula, minúscula e número.'); return }
+    if (password !== confirmPassword) { setError('As senhas não conferem.'); return }
+    setBusy(true); setError('')
+    try {
+      await api.resetPassword(token, password, confirmPassword)
+      setToken(''); setPassword(''); setConfirmPassword(''); setStatus('reset-success')
+      window.history.replaceState({}, '', '/reset-password')
+    } catch (e) { setError(e?.status === 429 ? 'Aguarde alguns instantes antes de tentar novamente.' : e?.status === 400 ? 'O link de recuperação é inválido ou expirou.' : errorText(e)) } finally { setBusy(false) }
+  }
+  return <main className="recovery-page"><section className="recovery-card" aria-labelledby="recovery-title"><div className="recovery-brand">Aloca <span>beta</span></div>{status === 'request' && <><h1 id="recovery-title">Recuperar acesso</h1><p className="recovery-copy">Informe o e-mail da sua conta protegida. Se houver uma conta, enviaremos as instruções para recuperar o acesso.</p><form onSubmit={submitRequest} className="recovery-form"><label htmlFor="recovery-email">E-mail<input id="recovery-email" type="email" autoComplete="email" inputMode="email" value={email} onChange={e => setEmail(e.target.value)} maxLength="254" autoFocus /></label>{error && <div className="alert error" role="alert">{error}</div>}<button type="submit" className="primary" disabled={busy}>{busy ? 'Processando…' : 'Solicitar recuperação'}</button></form><button type="button" className="recovery-back" onClick={returnToLogin}>Voltar ao login</button></>}{status === 'requested' && <><div className="recovery-success-icon" aria-hidden="true">✓</div><h1 id="recovery-title">Verifique seu e-mail</h1><p className="recovery-copy" role="status">{message}</p><p className="recovery-muted">Se a mensagem não chegar, confira o endereço informado e a pasta de spam.</p><button type="button" className="primary recovery-full-button" onClick={returnToLogin}>Voltar ao login</button></>}{status === 'reset' && <><h1 id="recovery-title">Criar nova senha</h1><p className="recovery-copy">Escolha uma nova senha para voltar a acessar sua conta protegida.</p><form onSubmit={submitReset} className="recovery-form"><label htmlFor="recovery-password">Nova senha<div className="password-field"><input id="recovery-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} autoFocus /><button type="button" className="password-toggle" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? 'Ocultar' : 'Mostrar'}</button></div></label><label htmlFor="recovery-confirm-password">Confirmar nova senha<input id="recovery-confirm-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></label><small className="recovery-password-hint">Use pelo menos 8 caracteres, com letra maiúscula, minúscula e número.</small>{error && <div className="alert error" role="alert">{error}</div>}<button type="submit" className="primary" disabled={busy}>{busy ? 'Salvando…' : 'Confirmar redefinição'}</button></form><button type="button" className="recovery-back" onClick={returnToLogin}>Solicitar outro link</button></>}{status === 'reset-success' && <><div className="recovery-success-icon" aria-hidden="true">✓</div><h1 id="recovery-title">Senha redefinida</h1><p className="recovery-copy" role="status">Sua senha foi alterada com sucesso. Entre novamente para acessar sua conta.</p><button type="button" className="primary recovery-full-button" onClick={returnToLogin}>Voltar ao login</button></>}</section></main>
 }
 
 function AccountDeleteModal({ displayName, isLocal, onClose, onConfirm }) {
@@ -724,7 +774,8 @@ function MonthlySummaryCard({ summary, commitments = [], loading, error, selecte
 function App() {
   const [accountState, setAccountState] = useState(null)
   const [accountReady, setAccountReady] = useState(false)
-  const [accountDialog, setAccountDialog] = useState(null)
+  const [accountDialog, setAccountDialog] = useState(() => new URLSearchParams(window.location.search).get('openLogin') === '1' ? { mode: 'login' } : null)
+  const [passwordRecoveryOpen, setPasswordRecoveryOpen] = useState(false)
   const [accountDeleteOpen, setAccountDeleteOpen] = useState(false)
   const [accountMutationBusy, setAccountMutationBusy] = useState(false)
   const [accountPopoverOpen, setAccountPopoverOpen] = useState(false)
@@ -778,6 +829,9 @@ function App() {
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('openLogin') === '1') window.history.replaceState({}, '', '/')
+  }, [])
   useEffect(() => {
     if (!mobileNavigationOpen) return undefined
     const previousOverflow = document.body.style.overflow
@@ -944,7 +998,8 @@ function App() {
     {categoryDialog && <CategoryModal category={categoryDialog} onClose={() => setCategoryDialog(null)} onSaved={() => { setCategoryDialog(null); run(async () => {}) }} />}
     {deleteDialog && <ConfirmModal title={deleteDialog.transaction ? 'Excluir saída?' : `Excluir o grupo “${deleteDialog.name}”?`} message={deleteDialog.transaction ? `A saída “${deleteDialog.description}” de ${money(deleteDialog.amount)} será removida do saldo real.` : `Os registros associados não serão excluídos e passarão para “Sem grupo”.`} confirmLabel={deleteDialog.transaction ? 'Excluir' : 'Excluir grupo'} onClose={() => setDeleteDialog(null)} onConfirm={() => run(async () => { if (deleteDialog.transaction) await api.deleteExpense(deleteDialog.id); else { await api.deleteCategory(deleteDialog.id); if (filters.category === deleteDialog.id) setFilters(current => ({ ...current, category: '' })) } setDeleteDialog(null) })} />}
     {accountDialog?.mode === 'switch' && <ModalLayer onClose={() => setAccountDialog(null)}><div className="modal-head"><div><span className="eyebrow">CONTAS NESTE DISPOSITIVO</span><h2>Trocar conta</h2></div><button type="button" className="icon-button" onClick={() => setAccountDialog(null)}>×</button></div><div className="account-switch-list">{(accountState.accounts || []).map(item => <button type="button" key={item.id} className={item.id === accountState.current.id ? 'account-switch-item is-current' : 'account-switch-item'} onClick={() => performAccountSwitch(item.id)} disabled={accountMutationBusy}><AccountAvatar account={item} size="small" /><span><strong>{item.displayName}</strong><small>{item.isLocal ? 'Conta local' : 'Conta protegida'}</small></span>{item.id === accountState.current.id && <b>✓</b>}</button>)}</div></ModalLayer>}
-    {accountDialog && accountDialog.mode !== 'remove' && accountDialog.mode !== 'switch' && <AccountDialog mode={accountDialog.mode} initialDisplayName={accountState?.current?.displayName || ''} initialEmail={accountState?.current?.email || ''} onClose={() => setAccountDialog(null)} onSubmit={handleAccountSubmit} />}
+    {accountDialog && accountDialog.mode !== 'remove' && accountDialog.mode !== 'switch' && <AccountDialog mode={accountDialog.mode} initialDisplayName={accountState?.current?.displayName || ''} initialEmail={accountState?.current?.email || ''} onClose={() => setAccountDialog(null)} onSubmit={handleAccountSubmit} onForgotPassword={() => { setAccountDialog(null); setPasswordRecoveryOpen(true) }} />}
+    {passwordRecoveryOpen && <ModalLayer className="recovery-modal" onClose={() => { setPasswordRecoveryOpen(false); setAccountDialog({ mode: 'login' }) }}><PasswordRecoveryPage onBack={() => { setPasswordRecoveryOpen(false); setAccountDialog({ mode: 'login' }) }} /></ModalLayer>}
     {accountDialog?.mode === 'remove' && <ConfirmModal title="Remover conta deste dispositivo?" message="A conta será desvinculada deste dispositivo e liberará um espaço na lista de contas. Os dados da conta não serão excluídos." confirmLabel="Remover" busy={accountMutationBusy} onClose={() => { if (!accountMutationBusy) setAccountDialog(null) }} onConfirm={removeAccount} />}
     {accountDeleteOpen && <AccountDeleteModal displayName={accountState?.current?.displayName || ''} isLocal={accountState?.current?.isLocal} onClose={() => setAccountDeleteOpen(false)} onConfirm={deleteAccount} />}
     {notice && <div className="app-toast success" role="status" aria-live="polite">✓ {notice.replace(' com sucesso', '')}</div>}
@@ -1529,4 +1584,13 @@ function CommitmentModal({ item, categories, businessDate: referenceDate, onClos
 }
 
 
-createRoot(document.getElementById('root')).render(<ThemeProvider><ErrorBoundary><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></ErrorBoundary></ThemeProvider>)
+function RootApp() {
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/'
+  if (path === '/reset-password') {
+    const token = new URLSearchParams(window.location.search).get('token') || ''
+    return <PasswordRecoveryPage initialToken={token} />
+  }
+  return <ThemeProvider><ErrorBoundary><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></ErrorBoundary></ThemeProvider>
+}
+
+createRoot(document.getElementById('root')).render(<RootApp />)
