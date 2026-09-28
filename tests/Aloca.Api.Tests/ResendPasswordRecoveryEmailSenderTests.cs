@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Aloca.Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,10 +21,19 @@ public sealed class ResendPasswordRecoveryEmailSenderTests
         Assert.Equal("Bearer test-api-key", handler.Authorization);
         using var body = JsonDocument.Parse(handler.Body!);
         Assert.Equal("Redefinição de senha — Aloca", body.RootElement.GetProperty("subject").GetString());
-        Assert.Contains("ABC123", body.RootElement.GetProperty("html").GetString());
-        Assert.Contains("ABC123", body.RootElement.GetProperty("text").GetString());
-        Assert.Contains("30 minutos", body.RootElement.GetProperty("html").GetString());
-        Assert.Contains("reset-password?token=ABC123", body.RootElement.GetProperty("html").GetString());
+        var html = body.RootElement.GetProperty("html").GetString()!;
+        var text = body.RootElement.GetProperty("text").GetString()!;
+        var expectedUrl = "https://usealoca.tech/reset-password?token=ABC123";
+        var hrefs = Regex.Matches(html, "<a\\s+href=\\\"([^\\\"]+)\\\"", RegexOptions.IgnoreCase)
+            .Select(match => WebUtility.HtmlDecode(match.Groups[1].Value))
+            .ToArray();
+        Assert.Equal(2, hrefs.Length);
+        Assert.All(hrefs, href => Assert.Equal(expectedUrl, href));
+        Assert.Contains("O botão não funcionou?", html);
+        Assert.Contains(expectedUrl, html);
+        Assert.Contains(expectedUrl, text);
+        Assert.Contains("30 minutos", html);
+        Assert.DoesNotContain("javascript:", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -79,17 +89,29 @@ public sealed class ResendPasswordRecoveryEmailSenderTests
     [Fact]
     public void TemplateDoesNotContainExternalDependencies()
     {
-        var html = PasswordRecoveryEmailTemplate.Html("https://app.example.com/reset-password?token=ABC123", DateTime.UtcNow.AddMinutes(30));
+        var html = PasswordRecoveryEmailTemplate.Html("https://usealoca.tech/reset-password?token=ABC123", DateTime.UtcNow.AddMinutes(30));
 
         Assert.DoesNotContain("http://", html);
         Assert.DoesNotContain("fonts.googleapis", html);
         Assert.Contains("Redefinir minha senha", html);
     }
 
+    [Fact]
+    public void TemplateEscapesSpecialCharactersAndUsesTheSameUrlInBothLinks()
+    {
+        const string url = "https://usealoca.tech/reset-password?token=a%26b%3Cc%3E\"";
+        var html = PasswordRecoveryEmailTemplate.Html(url, DateTime.UtcNow.AddMinutes(30));
+
+        Assert.Contains("a%26b%3Cc%3E&quot;", html);
+        Assert.Equal(2, Regex.Matches(html, $"href=\\\"{Regex.Escape(WebUtility.HtmlEncode(url))}\\\"", RegexOptions.IgnoreCase).Count);
+        Assert.DoesNotContain("<script", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("onClick", html, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static ResendPasswordRecoveryEmailSender CreateSender(
         RecordingHandler handler,
         string environment = "Production",
-        string frontendUrl = "https://app.example.com")
+        string frontendUrl = "https://usealoca.tech")
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {

@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net;
 using System.Text.Json.Serialization;
 
 namespace Aloca.Api.Services;
@@ -21,6 +22,7 @@ public sealed class ResendPasswordRecoveryEmailSender(
     ILogger<ResendPasswordRecoveryEmailSender> logger)
     : IPasswordRecoveryEmailSender
 {
+    private const string CanonicalFrontendHost = "usealoca.tech";
     private const string ResendEndpoint = "emails";
     private readonly ResendEmailOptions options = new()
     {
@@ -81,7 +83,9 @@ public sealed class ResendPasswordRecoveryEmailSender(
         }
 
         if (!Uri.TryCreate(options.PublicFrontendUrl, UriKind.Absolute, out var uri)
-            || uri.Scheme != Uri.UriSchemeHttps && !string.Equals(options.Environment, "Development", StringComparison.OrdinalIgnoreCase))
+            || uri.Scheme != Uri.UriSchemeHttps
+            || (!string.Equals(options.Environment, "Development", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(uri.Host, CanonicalFrontendHost, StringComparison.OrdinalIgnoreCase)))
         {
             logger.LogError("Password recovery email sender has an invalid public frontend URL for environment={Environment}.", options.Environment);
             throw new EmailDeliveryException("A URL pública do frontend não é válida para o ambiente.");
@@ -115,7 +119,10 @@ public static class PasswordRecoveryEmailTemplate
       <h1 style="font-size:24px;margin:28px 0 16px">Redefinição de senha</h1>
       <p>Olá!</p><p>Recebemos uma solicitação para redefinir a senha da sua conta Aloca.</p>
       <p>Clique no botão abaixo para criar uma nova senha.</p>
-      <p style="margin:28px 0"><a href="{resetUrl}" style="display:inline-block;background:#39a96b;color:#10251c;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:8px">Redefinir minha senha</a></p>
+      <p style="margin:28px 0"><a href="{WebUtility.HtmlEncode(resetUrl)}" style="display:inline-block;background:#39a96b;color:#10251c;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:8px">Redefinir minha senha</a></p>
+      <p style="font-size:14px;color:#63726e">O botão não funcionou?</p>
+      <p style="font-size:14px;color:#63726e">Copie e cole o endereço abaixo no seu navegador:</p>
+      <p style="font-size:14px;overflow-wrap:anywhere;word-break:break-word"><a href="{WebUtility.HtmlEncode(resetUrl)}" style="color:#238653;overflow-wrap:anywhere;word-break:break-word">{WebUtility.HtmlEncode(resetUrl)}</a></p>
       <p style="font-size:14px;color:#63726e">Este link expira em 30 minutos e só pode ser utilizado uma vez.</p>
       <p style="font-size:14px;color:#63726e">Se você não solicitou essa alteração, ignore esta mensagem.</p>
       <p>Equipe Aloca.</p></td></tr>
