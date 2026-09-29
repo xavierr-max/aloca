@@ -11,13 +11,15 @@ const errorText = error => error?.message || 'Não foi possível concluir a oper
 
 function PortalModal({ title, children, onClose, labelledBy }) {
   const opener = useRef(typeof document !== 'undefined' ? document.activeElement : null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
-    const close = event => { if (event.key === 'Escape') onClose() }
+    const close = event => { if (event.key === 'Escape') onCloseRef.current() }
     document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', close)
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', close); if (opener.current instanceof HTMLElement && document.contains(opener.current)) opener.current.focus() }
-  }, [onClose])
+  }, [])
   return createPortal(<div className="movement-modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className="movement-modal" role="dialog" aria-modal="true" aria-labelledby={labelledBy}><header className="movement-modal-header"><div><span className="eyebrow">MOVIMENTAÇÃO</span><h2 id={labelledBy}>{title}</h2></div><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X size={18} /></button></header>{children}</div></div>, document.body)
 }
 
