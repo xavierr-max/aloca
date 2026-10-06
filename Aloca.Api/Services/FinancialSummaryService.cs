@@ -102,14 +102,19 @@ public sealed class FinancialSummaryService
         var plannedExpense = details.Where(x => !x.IsPaid).Sum(x => x.DueAmount);
         var currentBalance = (await balanceService.GetAsync(ct)).SaldoReal;
         var projectionStart = new DateOnly(today.Year, today.Month, 1);
-        var projectionEvents = await new ForecastEventNormalizer(db, clock)
-            .NormalizeAsync(projectionStart, nextPeriod.AddDays(-1), ct);
-        var projection = new ForecastCalculator().Calculate(
-            projectionStart,
-            nextPeriod.AddDays(-1),
-            ForecastProjectionRules.FutureEvents(projectionEvents, today),
-            currentBalance);
-        var projectedClosingBalance = projection.Months.LastOrDefault()?.ClosingBalance ?? currentBalance;
+        var projectionEnd = nextPeriod.AddDays(-1);
+        var projectedClosingBalance = currentBalance;
+        if (projectionStart <= projectionEnd)
+        {
+            var projectionEvents = await new ForecastEventNormalizer(db, clock)
+                .NormalizeAsync(projectionStart, projectionEnd, ct);
+            var projection = new ForecastCalculator().Calculate(
+                projectionStart,
+                projectionEnd,
+                ForecastProjectionRules.FutureEvents(projectionEvents, today),
+                currentBalance);
+            projectedClosingBalance = projection.Months.LastOrDefault()?.ClosingBalance ?? currentBalance;
+        }
         var urgentCommitments = (await db.FinancialCommitments.AsNoTracking()
                 .Include(x => x.CommitmentPayments)
                 .Where(x => x.Urgent)
