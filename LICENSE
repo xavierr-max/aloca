@@ -1,0 +1,50 @@
+Aloca Attribution License
+Version 1.0
+
+Copyright (c) 2026 Maxwell Xavier
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included
+   in all copies or substantial portions of the Software.
+
+2. Any website, web application, graphical application, or other user-facing
+   software derived substantially from this Software must retain a visible
+   attribution to the original project and developer.
+
+3. Such attribution must include, at minimum:
+
+   "© 2026 Aloca — Desenvolvido originalmente por Maxwell Xavier"
+
+   together with a visible hyperlink to:
+
+   https://github.com/xavierr-max
+
+4. If the Software already contains this attribution in a footer, About page,
+   credits section, login screen, dashboard, or other user-facing interface,
+   the attribution may be repositioned or restyled, provided that it remains
+   reasonably visible and accessible to end users.
+
+5. The attribution may not be removed, hidden, obscured, made effectively
+   unreadable, or replaced in a manner that falsely represents another person
+   or organization as the original developer of Aloca.
+
+6. Version information, such as "v0.1.0-beta", may be updated or omitted to
+   accurately represent the version of the derived software. This does not
+   permit removal of the Aloca and Maxwell Xavier attribution required above.
+
+7. This license does not grant permission to use the name "Aloca", the name
+   "Maxwell Xavier", logos, trademarks, or other branding to imply endorsement,
+   sponsorship, or official affiliation with the original project beyond the
+   attribution required by this license.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
