@@ -45,8 +45,8 @@ const dateValue = value => {
   return new Date(year, month - 1, day)
 }
 
-export default function MovementsPage({ incomes = [], expenses = [], recurringIncomes = [], summary = null, categories = [], onEdit, onDelete, onManage }) {
-  const [activeTab, setActiveTab] = useState('all')
+export default function MovementsPage({ incomes = [], expenses = [], recurringIncomes = [], summary = null, categories = [], onEdit, onDelete, onManage, initialTab = 'all' }) {
+  const [activeTab, setActiveTab] = useState(initialTab)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [period, setPeriod] = useState('current')
@@ -89,6 +89,7 @@ export default function MovementsPage({ incomes = [], expenses = [], recurringIn
   }, [retryToken])
 
   useEffect(() => { setLoadedIncomes(incomes); setLoadedExpenses(expenses) }, [incomes, expenses])
+  useEffect(() => { setActiveTab(initialTab) }, [initialTab])
 
   const periodLabel = periodOptions.find(option => option.value === period)?.label || 'Este mês'
   const referenceDate = dateValue(businessDate(summary?.businessDate)) || new Date()

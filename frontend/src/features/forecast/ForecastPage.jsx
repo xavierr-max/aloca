@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { api } from '../services/api'
-import PageHeader from '../components/PageHeader.jsx'
-import { ForecastBalanceCard as BalanceCard } from '../components/forecast/ForecastBalanceCard.jsx'
-import ForecastCoverage from '../components/forecast/ForecastCoverage.jsx'
-import ForecastKpiCard from '../components/forecast/ForecastKpiCard.jsx'
-import ForecastMainChart from '../components/forecast/ForecastMainChart.jsx'
-import ForecastMiniCard from '../components/forecast/ForecastMiniCard.jsx'
-import ForecastRecommendations from '../components/forecast/ForecastRecommendations.jsx'
-import ForecastMonthDrawer from '../components/forecast/ForecastMonthDrawer.jsx'
-import { businessMonth } from '../utils/businessDate.js'
+import { api } from '../../services/api'
+import PageHeader from '../../components/PageHeader.jsx'
+import { ForecastBalanceCard as BalanceCard } from '../../components/forecast/ForecastBalanceCard.jsx'
+import ForecastCoverage from '../../components/forecast/ForecastCoverage.jsx'
+import ForecastKpiCard from '../../components/forecast/ForecastKpiCard.jsx'
+import ForecastMainChart from '../../components/forecast/ForecastMainChart.jsx'
+import ForecastMiniCard from '../../components/forecast/ForecastMiniCard.jsx'
+import ForecastRecommendations from '../../components/forecast/ForecastRecommendations.jsx'
+import ForecastMonthDrawer from '../../components/forecast/ForecastMonthDrawer.jsx'
+import { businessMonth } from '../../utils/businessDate.js'
 
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const monthKey = month => month ? `${month.year}-${String(month.month).padStart(2, '0')}` : ''
@@ -51,3 +51,4 @@ export default function FinancialForecastPage({ businessDate: referenceDate }) {
     </div>{drawerOpen && <ForecastMonthDrawer month={month} onClose={() => setDrawerOpen(false)} openerRef={drawerOpenerRef} />}
   </div>
 }
+
