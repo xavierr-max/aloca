@@ -5,8 +5,6 @@ import MovementsSummary from './components/MovementsSummary.jsx'
 import MovementsTabs from './components/MovementsTabs.jsx'
 import MovementsFilters from './components/MovementsFilters.jsx'
 import MovementsContent from './components/MovementsContent.jsx'
-import './movements.css'
-import './movement-crud.css'
 import { businessDate } from '../../utils/businessDate.js'
 
 const periodOptions = [

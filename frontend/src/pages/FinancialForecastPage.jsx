@@ -8,7 +8,6 @@ import ForecastMainChart from '../components/forecast/ForecastMainChart.jsx'
 import ForecastMiniCard from '../components/forecast/ForecastMiniCard.jsx'
 import ForecastRecommendations from '../components/forecast/ForecastRecommendations.jsx'
 import ForecastMonthDrawer from '../components/forecast/ForecastMonthDrawer.jsx'
-import './financial-forecast.css'
 import { businessMonth } from '../utils/businessDate.js'
 
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

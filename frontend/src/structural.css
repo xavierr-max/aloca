@@ -1,0 +1,86 @@
+/* Provisional structural styles only. No brand palette, theme, effects or decorative system. */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+html { background: #fff; }
+body { margin: 0; background: #fff; color: #222; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.45; }
+button, input, select, textarea { font: inherit; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid #555; outline-offset: 2px; }
+a { color: inherit; }
+img, svg { max-width: 100%; }
+h1, h2, h3, h4, p { margin-top: 0; }
+hr { border: 0; border-top: 1px solid #ddd; }
+
+.app-shell { min-height: 100vh; display: grid; grid-template-columns: 56px minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+.app-topbar { grid-column: 1 / -1; min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #ddd; background: #fff; }
+.app-topbar-actions, .app-create-wrap, .app-account-wrap { display: flex; align-items: center; gap: 8px; }
+.app-mobile-brand { display: none; }
+.app-sidebar { grid-row: 2; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 8px; border-right: 1px solid #ddd; }
+.app-sidebar nav, .mobile-navigation nav { display: grid; gap: 4px; }
+.app-nav-item, .mobile-navigation a, .mobile-bottom-navigation a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px; text-decoration: none; }
+.app-nav-item.is-active, .mobile-navigation a.is-active, .mobile-bottom-navigation a.is-active { background: #eee; }
+.app-main { grid-column: 2; min-width: 0; }
+.page-content { width: min(1200px, 100%); margin: 0 auto; padding: 24px; }
+.app-footer { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 24px; border-top: 1px solid #ddd; font-size: 12px; }
+
+.page-heading, .dashboard-header, .section-heading, .account-card-heading, .modal-head, .drawer-head, .forecast-card-title, .commitment-static-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dashboard-balance-grid, .summary-grid, .account-page-grid, .forecast-grid, .form-grid, .commitment-form-grid, .commitment-form-options, .checkbox-options-grid { display: grid; gap: 12px; }
+.dashboard-balance-grid, .summary-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.account-page-grid, .forecast-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.metric, .card, .account-card, .forecast-surface, .forecast-card, .group-manager, .commitment-card, .commitment-static-card, .recurring-panel, .financial-guidance { min-width: 0; padding: 16px; border: 1px solid #ddd; background: #fff; }
+.card, .account-card, .forecast-surface, .forecast-card, .group-manager, .commitment-card, .commitment-static-card, .recurring-panel { overflow: visible; }
+.loading, .empty, .alert { padding: 16px; border: 1px solid #ddd; }
+.alert { margin-bottom: 16px; }
+.alert.error, .inline-error { border-color: #999; }
+.primary, .secondary, .danger-button, .tertiary, .icon-button { min-height: 36px; padding: 7px 12px; border: 1px solid #999; background: #f5f5f5; color: #222; }
+.primary { background: #e8e8e8; }
+.danger-button { border-color: #777; }
+.icon-button { min-width: 36px; padding: 6px 10px; }
+.form-grid, .commitment-form-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.form-grid > label, .commitment-form-grid > label, form > label { display: block; }
+input, select, textarea { width: 100%; min-height: 36px; margin-top: 4px; padding: 7px 8px; border: 1px solid #aaa; border-radius: 0; background: #fff; color: #222; }
+textarea { resize: vertical; }
+label { display: block; }
+.modal-backdrop, .drawer-backdrop, .detail-drawer-backdrop, .forecast-drawer-backdrop, .mobile-navigation-backdrop { position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, .35); }
+.modal-backdrop { display: grid; place-items: center; padding: 16px; overflow: auto; }
+.modal { width: min(620px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px; border: 1px solid #777; background: #fff; }
+.modal-actions, .drawer-actions, .account-form-actions, .profile-image-dialog-actions, .calculator-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.drawer-backdrop, .detail-drawer-backdrop, .forecast-drawer-backdrop { overflow: auto; }
+.filter-drawer, .detail-drawer, .forecast-month-drawer { position: absolute; top: 0; right: 0; display: flex; flex-direction: column; width: min(480px, 100%); height: 100%; overflow: auto; padding: 20px; border-left: 1px solid #777; background: #fff; }
+.drawer-content, .detail-drawer-content { overflow: auto; flex: 1; }
+.mobile-navigation-backdrop { display: flex; justify-content: flex-end; }
+.mobile-navigation { width: min(320px, 100%); height: 100%; padding: 16px; overflow: auto; background: #fff; }
+.mobile-bottom-navigation { display: none; }
+.app-create-wrap, .app-account-wrap, .card-menu, .recurring-menu, .movement-create-menu { position: relative; }
+.app-create-menu, #account-popover, .card-menu-popover, .recurring-menu-popover, .movement-create-popover, .commitment-static-menu { position: absolute; z-index: 20; top: calc(100% + 4px); right: 0; display: grid; min-width: 180px; padding: 4px; border: 1px solid #888; background: #fff; }
+.app-create-menu button, .card-menu-popover button, .recurring-menu-popover button, .movement-create-popover button, .commitment-static-menu button { padding: 8px; border: 0; background: #fff; text-align: left; }
+.app-create-menu button:hover, .card-menu-popover button:hover, .recurring-menu-popover button:hover, .movement-create-popover button:hover, .commitment-static-menu button:hover { background: #eee; }
+.calculator-popover { position: fixed; top: 64px; right: 16px; z-index: 30; width: min(320px, calc(100vw - 32px)); padding: 16px; border: 1px solid #777; background: #fff; }
+.calculator-keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.calculator-keypad button { min-height: 36px; }
+.calculator-display { margin: 12px 0; padding: 8px; border: 1px solid #aaa; text-align: right; }
+.progress-track, [role="progressbar"] { min-height: 8px; background: #eee; }
+.progress-track > div, [role="progressbar"] > span, [role="progressbar"] > i { display: block; min-height: inherit; background: #777; }
+.forecast-chart-frame, .forecast-line-chart { width: 100%; overflow: visible; }
+.forecast-chart-accessible-summary { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.api-unavailable-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.api-unavailable-card { width: min(440px, 100%); padding: 24px; border: 1px solid #777; background: #fff; }
+.app-logo-slot { display: none; }
+
+@media (max-width: 760px) {
+  .app-shell { display: block; }
+  .app-sidebar { display: none; }
+  .app-topbar { position: sticky; top: 0; z-index: 5; }
+  .app-mobile-brand { display: inline; }
+  .page-content { padding: 16px; }
+  .app-footer { padding: 16px; }
+  .mobile-bottom-navigation { position: fixed; right: 0; bottom: 0; left: 0; z-index: 5; display: block; overflow-x: auto; border-top: 1px solid #ddd; background: #fff; }
+  .mobile-bottom-navigation-scroll { display: flex; min-width: max-content; }
+  .mobile-bottom-navigation a { flex-direction: column; min-width: 76px; font-size: 11px; }
+  .app-topbar-actions { gap: 4px; }
+  .app-account-button span { display: none; }
+  .app-footer { margin-bottom: 68px; }
+}

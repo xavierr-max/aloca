@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import ErrorBoundary from './ErrorBoundary.jsx'
@@ -6,7 +6,7 @@ import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, BadgeCheck, Bell, Calculator,
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleAlert, CircleCheck, Eye,
   Folder, Info, LayoutDashboard, List, Pencil, Plus, RotateCw, Settings, ShieldCheck, Target,
-  Menu, Moon, Sun, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy, Camera,
+  Menu, Trash2, TriangleAlert, Undo2, UserCircle, Users, Wallet, LockKeyhole, Mail, LifeBuoy, Camera,
 } from 'lucide-react'
 import { api, apiAvailabilityEvents, markAccountContextChanged } from './services/api'
 import { APP_VERSION } from './appVersion'
@@ -15,24 +15,7 @@ import PageHeader from './components/PageHeader.jsx'
 import FinancialForecastPage from './pages/FinancialForecastPage.jsx'
 import MovementsPage from './features/movements/MovementsPage.jsx'
 import MovementFormModal from './features/movements/components/MovementFormModal.jsx'
-import './styles.css'
-import './balance.css'
-import './payment.css'
-import './transactions.css'
-import './semantic.css'
-import './theme.css'
-import './calculator.css'
-import './responsive-system.css'
-import './account.css'
-import './profile-page.css'
-import './navigation.css'
-import './ux-overhaul.css'
-import './dashboard-overview.css'
-import './commitments-base.css'
-import './responsive-overrides.css'
-import './account-contrast.css'
-import './mobile-foundation.css'
-import './recovery.css'
+import './structural.css'
 import { businessMonth, businessToday } from './utils/businessDate.js'
 
 const navigationItems = [
@@ -116,9 +99,6 @@ const generateCommitmentOccurrences = (firstDueDate, frequency, endDate) => { co
 const getCommitmentRecurrencePreview = ({ dueDate, frequency, endDate }) => { if (frequency === 'Once') return { kind: 'once' }; if (!dueDate) return { kind: 'missing-start', message: 'Informe o primeiro vencimento para visualizar a previsão.' }; if (!parseDateInput(dueDate)) return { kind: 'invalid', message: 'Informe um primeiro vencimento válido.' }; if (endDate && !parseDateInput(endDate)) return { kind: 'invalid', message: 'Informe uma data de término válida.' }; if (endDate && endDate < dueDate) return { kind: 'invalid', message: 'A data de término deve ser igual ou posterior ao primeiro vencimento.' }; if (!endDate) return { kind: 'open' }; const occurrences = generateCommitmentOccurrences(dueDate, frequency, endDate); return occurrences.length ? { kind: 'scheduled', occurrences } : { kind: 'invalid', message: 'Não foi possível calcular as cobranças para esse período.' } }
 const monthDistance = (from, to) => { const [fromYear, fromMonth] = String(from).slice(0, 7).split('-').map(Number); const [toYear, toMonth] = String(to).slice(0, 7).split('-').map(Number); return (toYear - fromYear) * 12 + toMonth - fromMonth + 1 }
 const formatDate = date => date ? new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data informada'
-const THEME_STORAGE_KEY = 'theme'
-const ThemeContext = createContext(null)
-
 // Keep every global layer in one place so local stacking contexts cannot change the order.
 const LAYER_TOKENS = Object.freeze({
   page: 0,
@@ -423,40 +403,8 @@ function CalculatorPopover({ open, onClose }) {
   return createPortal(<div ref={popoverRef} className="calculator-popover" role="dialog" aria-label="Calculadora" style={{ zIndex: LAYER_TOKENS.popover }}><div className="calculator-header"><div><span className="eyebrow">UTILITÁRIO</span><strong>Calculadora</strong></div><button className="icon-button" type="button" onClick={onClose} aria-label="Fechar calculadora">×</button></div><div className="calculator-display"><div className="calculator-expression" aria-label="Expressão atual">{expression || '0'}</div><div className="calculator-result" aria-live="polite">{result === null ? '—' : formatCalculatorNumber(result)}</div>{error && <small className="calculator-error" role="alert">{error}</small>}</div><div ref={keypadRef} className="calculator-keypad" tabIndex="0" aria-label="Teclado da calculadora">{buttons.map(([label, value]) => <button key={label} type="button" className={value === 'clear' ? 'calculator-clear' : ['+', '-', '×', '÷', '%'].includes(value) ? 'calculator-operator' : ''} onClick={() => value === 'clear' ? clear() : value === 'erase' ? erase() : append(value)}>{label}</button>)}<button type="button" className="calculator-equals" onClick={calculate}>=</button></div><div className="calculator-actions"><button type="button" className="tertiary" onClick={copyResult} disabled={result === null}>{copied ? 'Copiado' : 'Copiar resultado'}</button><span>Enter calcula · Esc fecha</span></div></div>, document.body)
 }
 
-const getInitialTheme = () => {
-  const saved = localStorage.getItem(THEME_STORAGE_KEY)
-  if (saved === 'light' || saved === 'dark') return saved
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
-
-function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(getInitialTheme)
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.style.colorScheme = theme
-  }, [theme])
-
-  const setTheme = nextTheme => {
-    setThemeState(currentTheme => {
-      const resolvedTheme = typeof nextTheme === 'function' ? nextTheme(currentTheme) : nextTheme
-      if (resolvedTheme !== 'light' && resolvedTheme !== 'dark') return currentTheme
-      document.documentElement.dataset.theme = resolvedTheme
-      document.documentElement.style.colorScheme = resolvedTheme
-      localStorage.setItem(THEME_STORAGE_KEY, resolvedTheme)
-      return resolvedTheme
-    })
-  }
-
-  const value = useMemo(() => ({ theme, setTheme, toggleTheme: () => setTheme(currentTheme => currentTheme === 'light' ? 'dark' : 'light') }), [theme])
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-}
-
-const useTheme = () => useContext(ThemeContext)
-
 function ApiUnavailableScreen({ checking, retrying, onRetry, status }) {
   return <div className="api-unavailable-screen" role="alertdialog" aria-labelledby="api-unavailable-title" aria-describedby="api-unavailable-description">
-    <div className="api-orb api-orb-left" aria-hidden="true" /><div className="api-orb api-orb-right" aria-hidden="true" /><div className="api-orb api-orb-center" aria-hidden="true" />
     <section className="api-unavailable-card">
       <div className="api-unavailable-logo" aria-hidden="true"><CircleAlert size={23} strokeWidth={1.7} /></div>
       <span className="api-unavailable-eyebrow">ALOCA</span>
@@ -503,7 +451,7 @@ function ApiAvailabilityBoundary({ children }) {
     return () => clearTimeout(timerRef.current)
   }, [availability, checking])
 
-  if (availability === 'checking') return <div className="api-unavailable-screen api-checking-screen" aria-busy="true" aria-label="Verificando disponibilidade do serviço"><div className="api-orb api-orb-left" aria-hidden="true" /><div className="api-orb api-orb-right" aria-hidden="true" /></div>
+  if (availability === 'checking') return <div className="api-unavailable-screen api-checking-screen" aria-busy="true" aria-label="Verificando disponibilidade do serviço" />
   return <>{availability === 'online' && children}{availability === 'offline' && <ApiUnavailableScreen checking={checking} retrying={retrying} onRetry={() => check(true)} status={status} />}</>
 }
 
@@ -526,9 +474,9 @@ function AppSidebar({ view }) {
   </aside>
 }
 
-function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverOpen, onToggleAccount, onCloseAccount, onAccountAction, createMenuOpen, onToggleCreate, onNewIncome, onNewExpense, onNewRecurring, onNewCommitment, theme, onToggleTheme, onOpenNavigation, calculatorOpen, onToggleCalculator }) {
+function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverOpen, onToggleAccount, onCloseAccount, onAccountAction, createMenuOpen, onToggleCreate, onNewIncome, onNewExpense, onNewRecurring, onNewCommitment, onOpenNavigation, calculatorOpen, onToggleCalculator }) {
   return <header className="app-topbar">
-    <img className="app-mobile-brand" src="/aloca-mark-mobile.png" alt="Aloca" />
+    <span className="app-mobile-brand">Aloca</span>
     <button type="button" className="app-mobile-menu-button" onClick={onOpenNavigation} aria-label="Abrir navegação" aria-controls="mobile-navigation"><Menu size={20} /></button>
     <div className="app-topbar-actions">
       <div className="app-create-wrap">
@@ -536,7 +484,6 @@ function AppTopbar({ account, accountState, accountMutationBusy, accountPopoverO
         {createMenuOpen && <div className="app-create-menu" role="menu"><button type="button" role="menuitem" onClick={onNewIncome}>Nova entrada</button><button type="button" role="menuitem" onClick={onNewExpense}>Nova saída</button><button type="button" role="menuitem" onClick={onNewRecurring}>Nova entrada recorrente</button><button type="button" role="menuitem" onClick={onNewCommitment}>Novo compromisso</button></div>}
       </div>
       <button type="button" className={`calculator-trigger${calculatorOpen ? ' active' : ''}`} onClick={onToggleCalculator} aria-label="Calculadora" aria-expanded={calculatorOpen} title="Calculadora"><Calculator size={20} /></button>
-      <button type="button" className="app-theme-toggle" onClick={onToggleTheme} aria-label="Alternar tema" title="Alternar tema"><Sun size={16} /><span><i /></span><Moon size={16} /></button>
       <div className="app-account-wrap"><button type="button" className="app-account-button" onClick={onToggleAccount} aria-haspopup="dialog" aria-expanded={accountPopoverOpen} aria-controls={accountPopoverOpen ? 'account-popover' : undefined} aria-label="Abrir gerenciamento da conta"><AccountAvatar account={account} className="app-account-avatar" /><span><strong>{account?.displayName || 'Minha conta'}</strong><small>{account?.isLocal ? 'Conta local' : 'Conta protegida'}</small></span><ChevronDown size={17} /></button>{accountPopoverOpen && <div id="account-popover"><AccountPopover accountState={accountState} busy={accountMutationBusy} onClose={onCloseAccount} onProfile={onAccountAction.profile} onProtect={onAccountAction.protect} onSwitch={onAccountAction.switch} onAdd={onAccountAction.add} onRemove={onAccountAction.remove} /></div>}</div>
     </div>
   </header>
@@ -840,7 +787,6 @@ function App() {
     document.addEventListener('keydown', closeOnEscape)
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', closeOnEscape) }
   }, [mobileNavigationOpen])
-  const { theme, toggleTheme } = useTheme()
   const refreshVersionRef = useRef(0)
   const accountTransitionRef = useRef(0)
   useEffect(() => { if (!notice) return undefined; const timer = window.setTimeout(() => setNotice(''), 3500); return () => window.clearTimeout(timer) }, [notice])
@@ -970,8 +916,7 @@ function App() {
   if (!accountReady) return <div className="app-shell"><div className="loading">Preparando sua conta local…</div></div>
   if (!accountState?.current) return <div className="app-shell"><div className="loading account-recovery"><strong>Não foi possível abrir uma conta local</strong><span>Gerencie as contas deste dispositivo para liberar espaço e entrar no Aloca.</span></div></div>
   return <div className="app-shell">
-    <div className="app-logo-slot" aria-hidden="true"><img src={theme === 'dark' ? '/aloca-logo-dark.png' : '/aloca-logo.png'} alt="" /><span className="app-logo-beta">beta</span></div>
-    <AppTopbar account={accountState.current} accountState={accountState} accountMutationBusy={accountMutationBusy} accountPopoverOpen={accountPopoverOpen} onToggleAccount={() => setAccountPopoverOpen(value => !value)} onCloseAccount={() => setAccountPopoverOpen(false)} onAccountAction={{ profile: () => { setAccountPopoverOpen(false); window.location.hash = 'perfil' }, protect: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'protect' }) }, switch: switchAccount, add: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'add' }) }, remove: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'remove' }) }}} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-income' }) }} onNewExpense={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-expense' }) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} theme={theme} onToggleTheme={toggleTheme} onOpenNavigation={() => setMobileNavigationOpen(true)} calculatorOpen={calculatorOpen} onToggleCalculator={() => setCalculatorOpen(value => !value)} />
+    <AppTopbar account={accountState.current} accountState={accountState} accountMutationBusy={accountMutationBusy} accountPopoverOpen={accountPopoverOpen} onToggleAccount={() => setAccountPopoverOpen(value => !value)} onCloseAccount={() => setAccountPopoverOpen(false)} onAccountAction={{ profile: () => { setAccountPopoverOpen(false); window.location.hash = 'perfil' }, protect: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'protect' }) }, switch: switchAccount, add: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'add' }) }, remove: () => { setAccountPopoverOpen(false); setAccountDialog({ mode: 'remove' }) }}} createMenuOpen={createMenuOpen} onToggleCreate={() => setCreateMenuOpen(value => !value)} onNewIncome={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-income' }) }} onNewExpense={() => { setCreateMenuOpen(false); setMovementForm({ mode: 'create-expense' }) }} onNewRecurring={() => { setCreateMenuOpen(false); setRecurringDialog(true) }} onNewCommitment={() => { setCreateMenuOpen(false); setEditing({}) }} onOpenNavigation={() => setMobileNavigationOpen(true)} calculatorOpen={calculatorOpen} onToggleCalculator={() => setCalculatorOpen(value => !value)} />
     <AppSidebar view={view} />
     {mobileNavigationOpen && <MobileNavigation view={view} onClose={() => setMobileNavigationOpen(false)} />}
     <MobileBottomNavigation view={view} />
@@ -1590,7 +1535,7 @@ function RootApp() {
     const token = new URLSearchParams(window.location.search).get('token') || ''
     return <PasswordRecoveryPage initialToken={token} />
   }
-  return <ThemeProvider><ErrorBoundary><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></ErrorBoundary></ThemeProvider>
+  return <ErrorBoundary><ApiAvailabilityBoundary><App /></ApiAvailabilityBoundary></ErrorBoundary>
 }
 
 createRoot(document.getElementById('root')).render(<RootApp />)
