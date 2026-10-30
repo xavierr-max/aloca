@@ -119,6 +119,16 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: validar no navegador criação de grupo, entrada, saída e reflexo no saldo.
 - Próximo passo: implementar recorrências e recebimento de ocorrências.
 
+## 2026-10-30 — recorrências no frontend descartável
+
+- Implementada criação de entrada recorrente mensal.
+- Adicionadas seleção de grupo, data inicial e opção de processamento automático.
+- Adicionada visualização resumida da agenda e ação de recebimento manual de ocorrência planejada.
+- Após recebimento, o frontend recarrega resumo, histórico e recorrências para validar a transição previsto → realizado.
+- Build Vite validado com sucesso.
+- Ação do usuário necessária: validar no navegador criação, agenda e recebimento de uma recorrência.
+- Próximo passo: implementar compromissos, pagamento, confirmação de saldo insuficiente e reversão.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

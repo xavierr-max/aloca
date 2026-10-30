@@ -23,6 +23,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Frontend: ainda é uma base Vite, preparada para desenvolvimento das telas.
 - Fase 1 do frontend descartável iniciada: `App.jsx` agora valida sessão, conta local/login e resumo; a interface é deliberadamente simples e substituível.
 - Fase 2 iniciada: a mesma base agora valida grupos, criação de entradas/saídas e histórico das movimentações.
+- Fase 3 iniciada: a base agora valida criação de entradas mensais recorrentes, agenda de ocorrências e recebimento manual.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -69,7 +70,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
 5. Configurar CI para testes, build e verificação de vulnerabilidades.
 6. Validar a aplicação em staging com HTTPS real.
-7. Validar no navegador sessão, conta local/login, dashboard, grupos e transações; depois avançar para recorrências.
+7. Validar no navegador sessão, conta local/login, dashboard, grupos, transações e recorrências; depois avançar para compromissos/pagamentos.
 
 ## Pendências conhecidas
 
