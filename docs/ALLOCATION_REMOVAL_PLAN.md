@@ -1,4 +1,6 @@
-# Auditoria arquitetural — remoção do sistema de alocações financeiras
+# Documento histórico — remoção do sistema de alocações financeiras
+
+> Status: migração concluída. Este arquivo preserva a auditoria e as decisões da remoção do modelo de alocações; não descreve o contrato atual. Para regras vigentes, consulte `FINANCIAL-DOMAIN-RULES.md` e `API_ENDPOINTS.md`.
 
 ## Escopo e método
 

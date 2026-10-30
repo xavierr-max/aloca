@@ -139,9 +139,9 @@ Depois, execute `npm run screenshots` em `frontend/`. O comando captura Dashboar
 
 - `Category`: categoria de uma movimentação.
 - `Transaction`: entrada ou saída, sempre vinculada a uma categoria.
-- `FinancialCommitment`: compromisso parcelado, recorrente ou futuro provisionado. `AllocatedAmount` é uma reserva virtual: continua compondo o saldo real, mas deixa de ser saldo livre.
+- `FinancialCommitment`: compromisso parcelado, recorrente ou futuro provisionado. Compromissos não reservam saldo; o pagamento materializa uma única despesa vinculada.
 
-As APIs atuais são `GET/POST/PUT/DELETE /api/categories`, `GET/POST/PUT/DELETE /api/transactions` (com filtros `type`, `categoryId`, `startDate`, `endDate`, `page` e `pageSize`) e `GET /api/financial-summary`. O resumo calcula apenas `totalIncome - totalExpense`; alocações ainda não são descontadas.
+As APIs atuais usam o recurso público `/api/groups` para categorias, além de `GET/POST/PUT/DELETE /api/transactions` (com filtros `type`, `categoryId`, `startDate`, `endDate`, `page` e `pageSize`) e `GET /api/financial-summary`. O resumo expõe saldo inicial, entradas, despesas e saldo atual; compromissos futuros aparecem apenas no planejamento/previsão.
 
 ## Contas e isolamento
 
@@ -236,7 +236,7 @@ O script `scripts/migrate-production.sh` usa `flock` para impedir duas migration
 
 ## Smoke test após cada release
 
-`scripts/smoke-test.sh` valida o deploy pelo endpoint público HTTPS. A suíte verifica health/readiness do PostgreSQL, HTTPS e headers de segurança, criação/login/logout, cookies e sessão, isolamento entre duas contas, grupos, entrada, saída, compromisso, alocação, pagamento e reversão, recorrência, recebimento idempotente, pausa/reativação e a configuração usada pelo processamento automático.
+`scripts/smoke-test.sh` valida o deploy pelo endpoint público HTTPS. A suíte verifica health/readiness do PostgreSQL, HTTPS e headers de segurança, criação/login/logout, cookies e sessão, isolamento entre duas contas, grupos, entrada, saída, compromisso, pagamento e reversão, recorrência, recebimento idempotente, pausa/reativação e a configuração usada pelo processamento automático.
 
 Como a suíte cria dados, ela exige confirmação explícita do ambiente. Use uma conta/dispositivo de smoke dedicado em staging, canary ou em um ambiente de teste da produção; nunca aponte para uma base de produção real sem essa autorização operacional:
 

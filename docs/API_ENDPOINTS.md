@@ -45,7 +45,7 @@ A resposta do compromisso é `FinancialCommitmentResponse`, que contém métrica
 
 ### Resumo/configuração
 
-`FinancialSummaryResponse`: `initialBalance`, `totalIncome`, `totalExpense`, `currentBalance`, `allocatedBalance`, `unallocatedBalance`, `freeBalance`, `coverageDeficit`, `businessDate`.
+`FinancialSummaryResponse`: `initialBalance`, `totalIncome`, `totalExpense`, `currentBalance`, `businessDate`.
 
 `FinancialSettingsRequest` e `CurrentBalanceAdjustmentRequest`: `{ initialBalance }` ou `{ newBalance }`, respectivamente, com faixa de 0 a 9.999.999.999.999.999,99.
 
@@ -92,7 +92,7 @@ Implementações: `FinancialSummaryController.cs`, `FinancialSettingsController.
 - `GET /api/financial-settings`: `200 {initialBalance}`; cria configuração 0 quando ainda não existe.
 - `PUT /api/financial-settings`: `{ "initialBalance": 1000.00 }`; `200`; `400` se fora da faixa. Atualiza o saldo inicial.
 - `POST /api/financial-settings/current-balance-adjustment`: `{ "newBalance": 2500.00 }`; `200 FinancialSummaryResponse`; `400` se negativo. Se necessário cria uma transação de ajuste manual na data de negócio.
-- `GET /api/financial-forecast?from=2026-10-01&months=6`: `200 FinancialForecastResponse`; `400` se `months` não estiver entre 1 e 36 ou `from` não for o primeiro dia do mês. `from` padrão é o primeiro dia do mês atual; o horizonte inclui meses, eventos realizados e planejados, compromissos, cobertura e saldo projetado.
+- `GET /api/financial-forecast?from=2026-10-01&months=6`: `200 FinancialForecastResponse`; `400` se `months` não estiver entre 1 e 36 ou `from` não for o primeiro dia do mês. `from` padrão é o primeiro dia do mês atual; o horizonte inclui meses, eventos realizados e planejados, compromissos e saldo projetado.
 
 ## Movimentações
 

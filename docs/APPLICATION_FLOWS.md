@@ -31,7 +31,7 @@ Recuperação: formulário → `POST /api/account/password-recovery/request` →
 
 1. Carregar `GET /api/groups` para o select.
 2. Usuário confirma → `POST /api/transactions` com `type` e `categoryId`.
-3. Backend valida DTO, existência do grupo, cria transação e executa reconciliação de alocações.
+3. Backend valida DTO, existência do grupo e cria a transação.
 4. Resposta `201` contém a transação completa.
 5. Frontend atualiza lista paginada e refaz resumo/forecast/compromissos.
 
@@ -56,14 +56,14 @@ Pausar usa `POST .../pause`; ativar usa `POST .../activate`. A projeção agrega
 5. Backend cria uma única transação de despesa vinculada ao pagamento e marca a ocorrência como paga.
 6. Para reverter, usa `DELETE .../payments/latest` ou a rota de ocorrência; o backend cria um estorno auditável.
 
-Erros: `404` id/ocorrência; `409` operação incompatível; `422` em certos erros de alocação; `400` quando o controller mapeia o domínio como entrada inválida. O frontend deve usar a resposta completa, não assumir que apenas o campo clicado mudou.
+Erros: `404` id/ocorrência; `409` operação incompatível; `422` quando o pagamento exige confirmação explícita de saldo insuficiente; `400` quando o controller mapeia o domínio como entrada inválida. O frontend deve usar a resposta completa, não assumir que apenas o campo clicado mudou.
 
 ## 7. Dashboard e fechamento mensal
 
 1. Chamar `GET /api/financial-summary` para saldo atual.
 2. Chamar `GET /api/financial-summary/monthly?period=YYYY-MM-01` para o mês exibido.
 3. Backend combina transações, ocorrências recorrentes, compromissos, pagamentos e saldo atual; também calcula saldo final estimado.
-4. Frontend exibe realizado, previsto, cobertura, urgentes e compromissos.
+4. Frontend exibe valores realizados, previstos, urgentes e compromissos.
 
 Não há chamada de “fechar mês”; o período é apenas query string e o processamento automático pode materializar entradas vencidas durante a consulta.
 
@@ -78,7 +78,7 @@ Não há chamada de “fechar mês”; o período é apenas query string e o pro
 
 1. Frontend chama `GET /api/financial-forecast?from=YYYY-MM-01&months=N`.
 2. Backend normaliza eventos de transações, ocorrências recorrentes e parcelas de compromissos.
-3. Calcula cada mês com saldo de abertura/fechamento, entradas/saídas realizadas e planejadas, compromisso, alocação, cobertura e itens.
+3. Calcula cada mês com saldo de abertura/fechamento, entradas/saídas realizadas e planejadas, compromissos e itens.
 4. Frontend renderiza meses e detalhe de eventos.
 
 `months` permitido: 1–36. `from` deve ser primeiro dia do mês.

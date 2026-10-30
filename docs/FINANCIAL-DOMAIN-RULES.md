@@ -4,7 +4,7 @@ Este documento é a fonte documental única das regras financeiras da aplicaçã
 
 ## Conceitos
 
-- **Saldo atual**: dinheiro que o usuário possui efetivamente agora. Só muda por ajuste manual explícito, entrada concretizada, saída concretizada ou pagamento concretizado de compromisso. Compromissos futuros, reservas, alocações e previsões não o alteram.
+- **Saldo atual**: dinheiro que o usuário possui efetivamente agora. Só muda por ajuste manual explícito, entrada concretizada, saída concretizada ou pagamento concretizado de compromisso. Compromissos futuros e previsões não o alteram.
 - **Obrigação pendente**: parcela futura ou vencida ainda não paga. É planejamento e não altera o saldo atual.
 - **Entrada realizada**: dinheiro que efetivamente entrou.
 - **Entrada prevista**: dinheiro esperado que ainda não entrou.
@@ -55,7 +55,7 @@ Eventos realizados não são recontados na projeção
 1. Consolidar as fórmulas de saldo e projeção em um serviço de domínio puro e DTOs com nomes oficiais.
 2. Separar entradas/saídas realizadas e previstas nos contratos mensais.
 3. Garantir que pagamentos e recebimentos façam a transição de previsto para realizado sem duplicação.
-4. Fortalecer o ajuste de saldo como evento auditável e testar histórico, reservas e pagamentos.
+4. Fortalecer o ajuste de saldo como evento auditável e testar histórico, pagamentos e projeções.
 5. Só remover aliases e cálculos antigos após auditoria transversal e referências confirmarem que não são mais usados.
 
 Este contrato foi introduzido sem alterar o comportamento financeiro existente.
@@ -68,7 +68,7 @@ O ajuste atual é feito por `POST /api/financial-settings/current-balance-adjust
 
 Ajustes participam do saldo atual e do ponto de partida do forecast, mas não são receita ou despesa normal: são excluídos dos campos mensais de entradas, saídas e resultados e não são enviados como eventos do forecast. Ajustes antigos identificados apenas pela descrição também são excluídos para compatibilidade.
 
-Após um ajuste negativo, nenhuma reserva é alterada: o saldo passa a refletir o ajuste e as transações existentes.
+Após um ajuste negativo, nenhuma obrigação pendente é alterada: o saldo passa a refletir o ajuste e as transações existentes.
 
 ## Obrigações e saldo
 
