@@ -18,7 +18,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 
 - Repositório: `/home/maxwell/Projetos/aloca`.
 - Branch de trabalho: `chore/frontend-reset`.
-- Último commit registrado nesta memória: `a96b4a9 docs: align documentation with current domain`.
+- Último commit registrado nesta memória: `4353bd5 docs: add project continuity memory`.
 - Branch sincronizada com `origin/chore/frontend-reset` no último encerramento.
 - Frontend: ainda é uma base Vite, preparada para desenvolvimento das telas.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
@@ -33,11 +33,12 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Atualização dos contratos da API, regras financeiras e integração do frontend.
 - Smoke test local HTTP/HTTPS configurado; HTTPS local usa o certificado de desenvolvimento e proxy Vite com `secure: false`.
 - Documentação ativa revisada; plano de remoção de alocações marcado como histórico.
+- Memória de continuidade criada em `PROJECT_MEMORY.md` e `PROJECT_WORKLOG.md`.
 
 ## Validações conhecidas
 
 - `dotnet test aloca.slnx --filter 'FullyQualifiedName!~Postgres'`: 135 testes aprovados.
-- Testes de integração PostgreSQL local já foram executados anteriormente: 8 aprovados, total conhecido de 143.
+- Testes de integração PostgreSQL local já foram executados anteriormente: 8 aprovados, mas ainda precisam ser repetidos após a consolidação documental/código final.
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
@@ -55,14 +56,19 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Fazer uma revisão final de contratos e comportamento da API, comparando DTOs, controllers, serviços e documentação.
-2. Criar ou ampliar testes de contrato para os fluxos que o frontend usará primeiro: sessão, resumo, grupos, transações, compromissos/pagamentos e recorrências.
-3. Implementar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
+1. Reexecutar os 8 testes PostgreSQL contra o banco local autorizado e registrar o resultado.
+2. Melhorar processamento automático e avaliar paginação/performance antes de aumentar o volume de dados.
+3. Configurar CI para testes, build e verificação de vulnerabilidades.
+4. Validar a aplicação em staging com HTTPS real.
+5. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
 
 ## Pendências conhecidas
 
 - Padronizar gradualmente mensagens e respostas de erro.
 - Avaliar paginação/filtros para coleções financeiras quando o volume justificar.
+- Melhorar processamento automático para grandes volumes.
+- Configurar CI com testes, build e verificação de vulnerabilidades.
+- Validar staging HTTPS real.
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.
 - Decidir, com evidência de produto, se serão necessárias operações adicionais para pagamento ou cancelamento individual de ocorrências.
 

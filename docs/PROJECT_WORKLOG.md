@@ -12,6 +12,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Commit: `a96b4a9 docs: align documentation with current domain`.
 - Push: concluído em `origin/chore/frontend-reset`.
 
+## 2026-10-30 — atualização do plano de continuidade
+
+- Revisado o plano informado para as fases 1 e 2.
+- Confirmado como concluído: revisão dos endpoints, remoção de duplicidades documentais, remoção de referências ativas a alocação/cobertura e atualização do contrato financeiro/frontend.
+- Confirmado como concluído: `docs/ALLOCATION_REMOVAL_PLAN.md` marcado como documento histórico.
+- Registrado como pendente: repetir os 8 testes PostgreSQL após a consolidação; melhorar processamento automático para grandes volumes; avaliar paginação/performance; configurar CI; validar staging HTTPS real; iniciar frontend somente após essas estabilizações.
+- Nenhum teste PostgreSQL foi executado nesta atualização documental.
+- Próxima ação: executar os 8 testes PostgreSQL com o banco local autorizado e registrar evidência antes de avançar para performance/CI.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
