@@ -62,6 +62,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Resultado final: 137 testes não-PostgreSQL aprovados, sem novos avisos.
 - Próximo passo: medir o forecast com carga representativa; depois decidir a otimização de sincronização e paginação.
 
+## 2026-10-30 — medição funcional de forecast
+
+- Adicionado teste com 100 compromissos distribuídos em seis meses.
+- O forecast retornou seis meses e 100 detalhes de compromisso, totalizando `2.500,00` em compromissos planejados.
+- Resultado específico: 4 testes aprovados em 3,76 s e aproximadamente 189 MB de memória no ambiente atual; valores apenas referenciais.
+- Resultado da suíte completa não-PostgreSQL: 138 testes aprovados, 0 falhas, 0 ignorados.
+- As falhas intermediárias foram somente ajustes de compilação do teste novo; não houve alteração de produção nem falha funcional.
+- Próximo passo: medir as consultas e o SQL no PostgreSQL real, especialmente listagens e forecast, antes de decidir paginação ou processamento em lotes.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

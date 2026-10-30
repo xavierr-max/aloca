@@ -39,7 +39,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 
 - `dotnet test aloca.slnx --filter 'FullyQualifiedName!~Postgres'`: 135 testes aprovados.
 - Testes de integração PostgreSQL local: 8 aprovados após a consolidação atual (`dotnet test ... --filter 'FullyQualifiedName~Postgres'`).
-- Suíte não-PostgreSQL: 137 testes aprovados após adicionar regressões de processamento de 100 recorrências vencidas e listagem de 100 compromissos. Execução observada: cerca de 1 s no ambiente atual; não é um limite de CI.
+- Suíte não-PostgreSQL: 138 testes aprovados após adicionar regressões de processamento de 100 recorrências vencidas, listagem de 100 compromissos e forecast de 100 compromissos em seis meses. Execução observada: cerca de 1 s no ambiente atual; não é um limite de CI.
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
@@ -57,7 +57,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Medir consultas de forecast com dados representativos.
+1. Medir consultas de listagem e SQL gerado em PostgreSQL com dados representativos.
 2. Refatorar a sincronização de ocorrências para trabalhar em lotes e consultar somente o intervalo necessário.
 3. Avaliar paginação/performance antes de aumentar o volume de dados.
 2. Configurar CI para testes, build e verificação de vulnerabilidades.

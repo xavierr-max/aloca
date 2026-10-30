@@ -2,6 +2,7 @@ using Aloca.Api.Data;
 using Aloca.Api.Models;
 using Aloca.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Aloca.Api.Tests;
 
@@ -40,6 +41,34 @@ public sealed class FinancialForecastCoverageTests
             Assert.NotNull(item.Occurrences);
             Assert.Single(item.Occurrences!);
         });
+    }
+
+    [Fact]
+    public async Task ForecastHandlesOneHundredCommitmentsAcrossSixMonths()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var firstMonth = new DateOnly(today.Year, today.Month, 1);
+        db.FinancialSettings.Add(new FinancialSettings(10_000m));
+        for (var index = 0; index < 100; index++)
+        {
+            var dueDate = firstMonth.AddMonths(index % 6).AddDays(Math.Min(10, DateTime.DaysInMonth(firstMonth.AddMonths(index % 6).Year, firstMonth.AddMonths(index % 6).Month) - 1));
+            db.FinancialCommitments.Add(new FinancialCommitment($"Forecast {index}", 25m, 1, 0, null, dueDate));
+        }
+
+        await db.SaveChangesAsync();
+        var balance = new FinancialBalanceService(db);
+        var service = new FinancialForecastService(
+            new ForecastEventNormalizer(db),
+            new ForecastCalculator(),
+            balance,
+            new SystemBusinessClock(new ConfigurationBuilder().Build()));
+
+        var result = await service.GetAsync(firstMonth, 6, default);
+
+        Assert.Equal(6, result.Months.Count);
+        Assert.Equal(100, result.Summary.Commitments.Count);
+        Assert.Equal(2_500m, result.Summary.PlannedCommitmentAmount);
     }
 
     private static AlocaDbContext CreateDb()
