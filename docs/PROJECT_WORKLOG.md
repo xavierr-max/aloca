@@ -38,6 +38,14 @@ Registro compacto para permitir retomada segura entre sessões.
 - Próxima ação: criar testes de volume/performance e medir tempo, memória, quantidade de linhas carregadas e duração do ciclo automático; depois implementar processamento em lotes com regressão funcional.
 - Ação do usuário necessária: nenhuma nesta etapa.
 
+## 2026-10-30 — regressão de processamento de recorrências
+
+- Adicionado teste em `AutomaticProcessingTests` com 20 entradas recorrentes vencidas.
+- O teste valida processamento em lote funcional, uma transação por ocorrência e segunda execução idempotente sem duplicação.
+- Durante a criação do teste, foi confirmado que uma recorrência iniciada no mês anterior possui duas ocorrências vencidas legítimas; o cenário foi ajustado para uma ocorrência por item, sem alteração do código de produção.
+- Resultado: 136 testes não-PostgreSQL aprovados, 0 falhas.
+- Próximo passo: benchmark/teste de volume maior e medição antes da refatoração de consultas.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

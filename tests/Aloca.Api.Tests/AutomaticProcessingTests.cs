@@ -65,4 +65,30 @@ public sealed class AutomaticProcessingTests
         Assert.Equal(2, await db.Transactions.CountAsync(x => x.ReversesTransactionId.HasValue));
         Assert.Equal(0, await db.FinancialCommitments.Where(x => x.Id == commitment.Id).Select(x => x.PaidInstallments).SingleAsync());
     }
+
+    [Fact]
+    public async Task ProcessesSeveralDueRecurringIncomesWithoutDuplicatingTransactions()
+    {
+        await using var db = Db();
+        var category = new Category("Receitas");
+        db.Categories.Add(category);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        for (var index = 0; index < 20; index++)
+        {
+            db.RecurringIncomes.Add(new RecurringIncome(
+                $"Receita {index}", 100m + index, category.Id,
+                RecurringIncomeFrequency.Monthly, today, today,
+                today.Day, automaticProcessing: true));
+        }
+
+        await db.SaveChangesAsync();
+        var service = new RecurringIncomeService(db);
+
+        Assert.Equal(20, await service.ProcessDueAsync(today, default));
+        Assert.Equal(20, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
+        Assert.Equal(20, await db.RecurringIncomeOccurrences.CountAsync(x => x.Status == RecurringIncomeOccurrenceStatus.Received));
+
+        Assert.Equal(0, await service.ProcessDueAsync(today, default));
+        Assert.Equal(20, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
+    }
 }
