@@ -1,0 +1,34 @@
+# Histórico de trabalho do projeto Aloca
+
+Registro compacto para permitir retomada segura entre sessões.
+
+## 2026-10-30 — documentação alinhada ao domínio atual
+
+- Revisados `README.md`, `docs/API_ENDPOINTS.md`, `docs/APPLICATION_FLOWS.md` e `docs/FINANCIAL-DOMAIN-RULES.md`.
+- Removidas referências ativas a alocações, cobertura e saldo livre.
+- Corrigido o README para usar `/api/groups` e descrever pagamentos como despesas vinculadas.
+- `docs/ALLOCATION_REMOVAL_PLAN.md` foi mantido e classificado como histórico.
+- Validação: `git diff --check` aprovado; 135 testes não-PostgreSQL aprovados.
+- Commit: `a96b4a9 docs: align documentation with current domain`.
+- Push: concluído em `origin/chore/frontend-reset`.
+
+## Estado anterior consolidado
+
+- A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
+- O pacote `System.Security.Cryptography.Pkcs` foi atualizado e a verificação NuGet deixou de reportar vulnerabilidades.
+- Foram executados testes unitários/funcionais, integração PostgreSQL local e smoke test HTTPS local.
+- O frontend ainda não foi desenvolvido além da base Vite; o próximo ciclo deve priorizar contratos de sessão e dashboard.
+
+## Modelo de entrada para novas sessões
+
+Ao concluir uma tarefa, acrescente uma entrada com:
+
+- data;
+- objetivo;
+- arquivos alterados;
+- validações executadas e resultado;
+- commit/push, se houver;
+- bloqueios ou ação necessária do usuário;
+- próximo passo recomendado.
+
+Não marque uma etapa como concluída sem registrar a evidência correspondente.
