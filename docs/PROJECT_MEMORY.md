@@ -26,6 +26,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Fase 3 iniciada: a base agora valida criação de entradas mensais recorrentes, agenda de ocorrências e recebimento manual.
 - Fase 4 iniciada: a base agora valida criação de compromissos, pagamento, confirmação de saldo insuficiente e reversão.
 - Fase 5 iniciada: a base agora exibe forecast de seis meses com entradas, saídas e saldo de fechamento.
+- Primeiro ciclo funcional do frontend descartável concluído em código; a validação manual no navegador ainda está pendente.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -50,7 +51,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
-- Build do frontend descartável aprovado com Vite (`/tmp/aloca-frontend-validation`).
+- Build do frontend descartável aprovado novamente com Vite (`/tmp/aloca-frontend-validation`); branch limpa e sincronizada.
 - Build atualizado após grupos/movimentações aprovado com Vite.
 
 Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo: os testes de integração recriam o banco/schema de teste.
@@ -86,6 +87,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.
 - Decidir, com evidência de produto, se serão necessárias operações adicionais para pagamento ou cancelamento individual de ocorrências.
 - A base visual atual é temporária; não criar design system definitivo nesta etapa.
+- Nenhuma decisão de UX/UI definitivo deve ser tomada antes da validação manual dos fluxos.
 
 ## Regra de atualização
 

@@ -150,6 +150,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: validar o fluxo completo no navegador e registrar qualquer divergência de contrato ou regra de negócio.
 - Próximo passo: corrigir divergências encontradas e preparar a transição para o frontend definitivo/UX/UI.
 
+## 2026-10-30 — revisão de prontidão do frontend descartável
+
+- Build Vite executado novamente com sucesso.
+- `git diff --check` aprovado.
+- Branch `chore/frontend-reset` confirmada limpa e sincronizada com a origem.
+- O primeiro ciclo funcional está concluído em código; ainda não foi declarado validado no navegador.
+- Ação do usuário necessária: iniciar API e frontend localmente e executar o roteiro manual de sessão, grupos, movimentações, recorrências, compromissos, pagamentos, reversão e forecast.
+- Decisão: não iniciar UX/UI definitivo antes de registrar as divergências encontradas nesse roteiro.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
