@@ -99,6 +99,17 @@ Registro compacto para permitir retomada segura entre sessões.
 - O banco de desenvolvimento `aloca` não foi alterado.
 - Próximo passo: repetir com múltiplas contas/volume maior e coletar `EXPLAIN ANALYZE` sobre a mesma carga.
 
+## 2026-10-30 — início do frontend descartável
+
+- Substituída a página padrão do Vite por uma base simples de validação em `frontend/src/App.jsx`.
+- Implementados os primeiros fluxos: carregamento da sessão, conta local, login e leitura do resumo financeiro.
+- Mantido o cliente HTTP existente, com cookies, contexto de conta e tratamento básico de indisponibilidade.
+- Criada uma interface provisória, sem compromisso com o UX/UI definitivo.
+- Build validado: `npm run build -- --configLoader runner --outDir /tmp/aloca-frontend-validation`.
+- Resultado: build Vite aprovado.
+- Ação do usuário necessária: abrir o frontend com a API local em execução e validar conta local/login/dashboard no navegador.
+- Próximo passo: corrigir eventuais divergências observadas no navegador e implementar grupos/transações.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

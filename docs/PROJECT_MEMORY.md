@@ -21,6 +21,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Último commit registrado nesta memória: `4353bd5 docs: add project continuity memory`.
 - Branch sincronizada com `origin/chore/frontend-reset` no último encerramento.
 - Frontend: ainda é uma base Vite, preparada para desenvolvimento das telas.
+- Fase 1 do frontend descartável iniciada: `App.jsx` agora valida sessão, conta local/login e resumo; a interface é deliberadamente simples e substituível.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -45,6 +46,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
+- Build do frontend descartável aprovado com Vite (`/tmp/aloca-frontend-validation`).
 
 Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo: os testes de integração recriam o banco/schema de teste.
 
@@ -65,7 +67,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
 5. Configurar CI para testes, build e verificação de vulnerabilidades.
 6. Validar a aplicação em staging com HTTPS real.
-7. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
+7. Validar no navegador sessão, conta local/login e dashboard; depois avançar para grupos e transações.
 
 ## Pendências conhecidas
 
@@ -78,6 +80,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 - O container `aloca-postgres` disponível é o banco de desenvolvimento `aloca`; nenhuma carga artificial deve ser inserida nele.
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.
 - Decidir, com evidência de produto, se serão necessárias operações adicionais para pagamento ou cancelamento individual de ocorrências.
+- A base visual atual é temporária; não criar design system definitivo nesta etapa.
 
 ## Regra de atualização
 
