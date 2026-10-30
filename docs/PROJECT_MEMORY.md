@@ -22,6 +22,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Branch sincronizada com `origin/chore/frontend-reset` no último encerramento.
 - Frontend: ainda é uma base Vite, preparada para desenvolvimento das telas.
 - Fase 1 do frontend descartável iniciada: `App.jsx` agora valida sessão, conta local/login e resumo; a interface é deliberadamente simples e substituível.
+- Fase 2 iniciada: a mesma base agora valida grupos, criação de entradas/saídas e histórico das movimentações.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -47,6 +48,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
 - Build do frontend descartável aprovado com Vite (`/tmp/aloca-frontend-validation`).
+- Build atualizado após grupos/movimentações aprovado com Vite.
 
 Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo: os testes de integração recriam o banco/schema de teste.
 
@@ -67,7 +69,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
 5. Configurar CI para testes, build e verificação de vulnerabilidades.
 6. Validar a aplicação em staging com HTTPS real.
-7. Validar no navegador sessão, conta local/login e dashboard; depois avançar para grupos e transações.
+7. Validar no navegador sessão, conta local/login, dashboard, grupos e transações; depois avançar para recorrências.
 
 ## Pendências conhecidas
 

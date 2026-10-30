@@ -110,6 +110,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: abrir o frontend com a API local em execução e validar conta local/login/dashboard no navegador.
 - Próximo passo: corrigir eventuais divergências observadas no navegador e implementar grupos/transações.
 
+## 2026-10-30 — grupos e movimentações no frontend descartável
+
+- Implementados grupos: carregar lista, criar grupo e selecionar grupo na movimentação.
+- Implementadas movimentações: criar entrada/saída, escolher data/tipo/grupo e atualizar resumo/histórico.
+- A tela lista as últimas movimentações usando os contratos paginados existentes.
+- Build Vite validado novamente com sucesso.
+- Ação do usuário necessária: validar no navegador criação de grupo, entrada, saída e reflexo no saldo.
+- Próximo passo: implementar recorrências e recebimento de ocorrências.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
