@@ -27,6 +27,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Fase 4 iniciada: a base agora valida criação de compromissos, pagamento, confirmação de saldo insuficiente e reversão.
 - Fase 5 iniciada: a base agora exibe forecast de seis meses com entradas, saídas e saldo de fechamento.
 - Primeiro ciclo funcional do frontend descartável concluído em código; a validação manual no navegador ainda está pendente.
+- Validação manual inicial concluída no navegador local: sessão existente, dashboard, grupos, movimentações, compromissos, pagamentos e forecast foram renderizados; console sem erros/warnings.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -73,7 +74,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
 5. Configurar CI para testes, build e verificação de vulnerabilidades.
 6. Validar a aplicação em staging com HTTPS real.
-7. Validar no navegador o fluxo financeiro completo, incluindo forecast; depois registrar divergências e decidir o que será reaproveitado no frontend definitivo.
+7. Executar mutações controladas no navegador — criar grupo, movimentação, recorrência e compromisso, pagar/reverter — e registrar divergências; depois decidir o que será reaproveitado no frontend definitivo.
 
 ## Pendências conhecidas
 

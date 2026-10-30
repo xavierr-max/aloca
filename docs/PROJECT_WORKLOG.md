@@ -159,6 +159,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: iniciar API e frontend localmente e executar o roteiro manual de sessão, grupos, movimentações, recorrências, compromissos, pagamentos, reversão e forecast.
 - Decisão: não iniciar UX/UI definitivo antes de registrar as divergências encontradas nesse roteiro.
 
+## 2026-10-30 — validação manual inicial no navegador
+
+- Frontend local aberto em `http://localhost:5173/` com API local disponível.
+- Confirmado visualmente: sessão de conta existente, dashboard com saldo/entradas/despesas, grupo, histórico, compromissos, ações de pagamento/reversão e forecast de seis meses.
+- Console do navegador consultado: nenhum erro ou warning.
+- Não foram criados novos registros durante esta etapa para evitar poluir o banco local.
+- Ação do usuário necessária: executar mutações controladas no navegador e confirmar regras de negócio com dados de teste.
+- Próximo passo: corrigir divergências encontradas ou iniciar o planejamento do frontend definitivo/UX/UI.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
