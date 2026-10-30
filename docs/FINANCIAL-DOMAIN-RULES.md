@@ -1,13 +1,11 @@
 # Contrato oficial do domínio financeiro
 
-Este documento é a fonte documental única das regras financeiras da aplicação. Os serviços e DTOs devem usar os mesmos nomes e fórmulas; aliases antigos existem apenas por compatibilidade temporária.
+Este documento é a fonte documental única das regras financeiras da aplicação. Os serviços e DTOs devem usar os mesmos nomes e fórmulas. O modelo de alocações não faz parte do contrato atual.
 
 ## Conceitos
 
 - **Saldo atual**: dinheiro que o usuário possui efetivamente agora. Só muda por ajuste manual explícito, entrada concretizada, saída concretizada ou pagamento concretizado de compromisso. Compromissos futuros, reservas, alocações e previsões não o alteram.
-- **Saldo reservado**: parte do saldo atual explicitamente separada para compromissos futuros. Continua pertencendo ao saldo atual, não é transação e não é saída.
-- **Saldo não alocado**: `max(0, saldo atual - saldo reservado)`. Não é sinônimo de saldo livre.
-- **Saldo livre**: `max(0, saldo não alocado - compromissos descobertos)`. É uma métrica de segurança financeira; não é dinheiro bloqueado, não cria reserva e não altera o saldo atual.
+- **Obrigação pendente**: parcela futura ou vencida ainda não paga. É planejamento e não altera o saldo atual.
 - **Entrada realizada**: dinheiro que efetivamente entrou.
 - **Entrada prevista**: dinheiro esperado que ainda não entrou.
 - **Saída realizada**: dinheiro que efetivamente saiu, incluindo pagamento concretizado de compromisso.
@@ -16,7 +14,6 @@ Este documento é a fonte documental única das regras financeiras da aplicaçã
 ## Fórmulas oficiais
 
 ```text
-Saldo não alocado = max(0, Saldo atual - Saldo reservado)
 Resultado real = Entradas realizadas - Saídas realizadas
 Entradas totais = Entradas realizadas + Entradas previstas pendentes
 Saídas totais = Saídas realizadas + Saídas previstas pendentes
@@ -29,10 +26,6 @@ Um evento só pode ser `REALIZADO` ou `PREVISTO`. Ao ser recebido/pago, ele muda
 ## Invariantes
 
 ```text
-0 <= Saldo reservado <= max(0, Saldo atual)
-Saldo não alocado = max(0, Saldo atual - Saldo reservado)
-0 <= Saldo livre <= Saldo não alocado
-Reserva não altera Saldo atual
 Compromisso não pago não altera Saldo atual
 Pagamento altera Saldo atual
 Eventos realizados não são recontados na projeção
@@ -75,7 +68,7 @@ O ajuste atual é feito por `POST /api/financial-settings/current-balance-adjust
 
 Ajustes participam do saldo atual e do ponto de partida do forecast, mas não são receita ou despesa normal: são excluídos dos campos mensais de entradas, saídas e resultados e não são enviados como eventos do forecast. Ajustes antigos identificados apenas pela descrição também são excluídos para compatibilidade.
 
-Após um ajuste negativo, `FinancialAllocationReconciliationService` pode reduzir reservas excedentes para manter `Saldo reservado <= max(0, Saldo atual)`. A ordem é determinística: preserva compromissos urgentes e remove primeiro de compromissos não urgentes, de menor prioridade e mais distantes. A reconciliação não cria transações; ela altera somente a reserva persistida.
+Após um ajuste negativo, nenhuma reserva é alterada: o saldo passa a refletir o ajuste e as transações existentes.
 
 ## Obrigações e saldo
 

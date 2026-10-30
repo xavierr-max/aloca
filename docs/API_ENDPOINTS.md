@@ -41,7 +41,7 @@ Documentação produzida a partir do código em `Aloca.Api` (controllers, DTOs, 
 
 `FinancialCommitmentCreateRequest` e `FinancialCommitmentUpdateRequest` têm: `name` obrigatório (1–150), `installmentAmount` >= 0,01, `totalInstallments` opcional >= 1, `priority` opcional >= 1, `categoryId`, `dueDate`, `objective` até 500, `urgent`, `automaticProcessing`, `frequency` opcional e `endDate` opcional. Deve ser informado `totalInstallments` **ou** `frequency`.
 
-`AmountRequest`: `amount` >= 0,01. A resposta do compromisso é `FinancialCommitmentResponse`, que contém métricas de parcelas, pagamentos, alocação, cobertura, flags de ação (`canPay`, `canAllocate`), agenda e `occurrences[]` (`Planned`, `Pending`, `Paid`, `Cancelled`).
+A resposta do compromisso é `FinancialCommitmentResponse`, que contém métricas de parcelas e pagamentos, a flag `canPay`, agenda e `occurrences[]` (`Planned`, `Pending`, `Paid`, `Cancelled`).
 
 ### Resumo/configuração
 
@@ -87,11 +87,11 @@ Implementação: `Aloca.Api/Controllers/CategoriesController.cs` (linhas 9–70)
 
 Implementações: `FinancialSummaryController.cs`, `FinancialSettingsController.cs`, `FinancialForecastController.cs` e services correspondentes.
 
-- `GET /api/financial-summary`: `200 FinancialSummaryResponse`. Calcula saldo inicial, realizado, reservado, não alocado, livre e déficit; inclui a data de negócio configurada (`Business:TimeZone`, padrão de código em configuração: `America/Sao_Paulo`).
+- `GET /api/financial-summary`: `200 FinancialSummaryResponse`. Calcula saldo inicial, receitas, despesas, saldo atual e data de negócio.
 - `GET /api/financial-summary/monthly?period=2026-10-01`: `200 MonthlyFinancialSummaryResponse`. O dia é descartado e o mês é normalizado para o primeiro dia. Sem `period`, usa o mês atual. Inclui entradas, compromissos, métricas realizadas/previstas, compromissos urgentes e saldo final estimado.
 - `GET /api/financial-settings`: `200 {initialBalance}`; cria configuração 0 quando ainda não existe.
-- `PUT /api/financial-settings`: `{ "initialBalance": 1000.00 }`; `200`; `400` se fora da faixa. Atualiza saldo inicial e reconcilia alocações.
-- `POST /api/financial-settings/current-balance-adjustment`: `{ "newBalance": 2500.00 }`; `200 FinancialSummaryResponse`; `400` se negativo. Se necessário cria uma transação de ajuste manual na data de negócio e reconcilia.
+- `PUT /api/financial-settings`: `{ "initialBalance": 1000.00 }`; `200`; `400` se fora da faixa. Atualiza o saldo inicial.
+- `POST /api/financial-settings/current-balance-adjustment`: `{ "newBalance": 2500.00 }`; `200 FinancialSummaryResponse`; `400` se negativo. Se necessário cria uma transação de ajuste manual na data de negócio.
 - `GET /api/financial-forecast?from=2026-10-01&months=6`: `200 FinancialForecastResponse`; `400` se `months` não estiver entre 1 e 36 ou `from` não for o primeiro dia do mês. `from` padrão é o primeiro dia do mês atual; o horizonte inclui meses, eventos realizados e planejados, compromissos, cobertura e saldo projetado.
 
 ## Movimentações
@@ -107,7 +107,7 @@ Exemplo: `GET /api/transactions?Type=Expense&StartDate=2026-10-01&EndDate=2026-1
 ### Operações
 
 - `GET /api/transactions/{id}`: `200 TransactionResponse` ou `404`.
-- `POST /api/transactions`: `{ "description": "Aluguel", "amount": 1200, "type": "Expense", "date": "2026-10-05", "categoryId": "UUID" }`; `201` com recurso; `400` por validação ou grupo inexistente. Cria e reconcilia alocações.
+- `POST /api/transactions`: `{ "description": "Aluguel", "amount": 1200, "type": "Expense", "date": "2026-10-05", "categoryId": "UUID" }`; `201` com recurso; `400` por validação ou grupo inexistente.
 - `PUT /api/transactions/{id}`: mesmo corpo; `200`, `400` se grupo inexistente ou tipo diferente do original, `404`, `409` se tentativa de editar pagamento de compromisso.
 - `DELETE /api/transactions/{id}`: `204`, `404`, `409`. Pagamentos vinculados não podem ser apagados diretamente; recebimentos recorrentes são marcados como excluídos/cancelados de forma coerente.
 
@@ -125,7 +125,7 @@ Implementação: `RecurringIncomesController.cs` e `RecurringIncomeService.cs`.
 - `DELETE /api/recurring-incomes/{id}`: `204`, `404` ou `409` se houver dados relacionados; arquiva o item e remove ocorrências não recebidas.
 - `POST /api/recurring-incomes/occurrences/{occurrenceId}/receive`: `200 RecurringIncomeOccurrenceResponse` ou `404`. Cria transação de entrada na data de confirmação (ou na data agendada se ela já passou), marca a ocorrência como recebida e reconcilia.
 
-## Compromissos financeiros e alocações
+## Compromissos financeiros e pagamentos
 
 Implementação: `FinancialCommitmentsController.cs` e `FinancialCommitmentService.cs`. O service gera/reconcilia ocorrências em horizonte de 24 meses.
 
@@ -138,10 +138,6 @@ Implementação: `FinancialCommitmentsController.cs` e `FinancialCommitmentServi
 - `POST /api/financial-commitments/{id}/occurrences/{occurrenceId}/payment`: mesmo contrato, para uma ocorrência específica.
 - `DELETE /api/financial-commitments/{id}/payments/latest`: cria estorno auditável para o último pagamento ativo.
 - `DELETE /api/financial-commitments/{id}/occurrences/{occurrenceId}/payment`: estorna o pagamento da ocorrência indicada.
-- `POST /api/financial-commitments/{id}/payments`: registra pagamento da próxima parcela; `200`, `404`, `409`.
-- `POST /api/financial-commitments/{id}/occurrences/{occurrenceId}/payment`: paga ocorrência específica; `200`, `404`, `409`.
-- `DELETE /api/financial-commitments/{id}/payments/latest`: desfaz último pagamento; `200`, `404`, `400`.
-- `DELETE /api/financial-commitments/{id}/occurrences/{occurrenceId}/payment`: desfaz pagamento da ocorrência; `200`, `404`, `400`.
 
 Todas as mutações retornam o compromisso completo atualizado, exceto as operações de exclusão/limpeza que ainda retornam `200` com o recurso. Pagamento cria uma transação vinculada; a transação não pode ser editada/excluída pela API genérica.
 

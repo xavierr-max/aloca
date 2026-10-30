@@ -17,20 +17,20 @@ Este documento mapeia capacidades confirmadas no backend para telas e estados de
 | Conta | Avatar | `POST/GET/DELETE /api/account/avatar` | multipart ou nenhum | Atualizar imagem/cache |
 | Conta | Trocar conta | `POST /api/account/switch/{id}` | id | Invalidar dados carregados e recarregar tudo |
 | Conta | Sair/remover/excluir | `POST /logout`, `DELETE /device`, `DELETE /current` | confirmação quando aplicável | Encerrar/remontar sessão |
-| Dashboard | Abrir | `GET /api/financial-summary` | nenhum | KPIs de saldo e cobertura |
+| Dashboard | Abrir | `GET /api/financial-summary` | nenhum | KPIs de saldo |
 | Dashboard | Ver mês | `GET /api/financial-summary/monthly?period=...` | mês | Cards, compromissos e projeção mensal |
 | Configurações | Ler/alterar saldo inicial | `GET/PUT /api/financial-settings` | `initialBalance` | Persistir configuração |
 | Configurações | Corrigir saldo atual | `POST /api/financial-settings/current-balance-adjustment` | `newBalance` | Atualizar resumo; backend cria ajuste |
 | Grupos | Listar/cadastrar/editar/excluir | `GET/POST/PUT/DELETE /api/groups` | nome/id | Atualizar selects e registros dependentes |
 | Histórico | Listar | `GET /api/transactions` | filtros, página, ordenação | Tabela paginada |
-| Histórico | Criar/editar/excluir | `POST/PUT/DELETE /api/transactions` | contrato de transação | Atualizar lista, resumo e cobertura |
+| Histórico | Criar/editar/excluir | `POST/PUT/DELETE /api/transactions` | contrato de transação | Atualizar lista e resumo |
 | Recorrentes | Listar | `GET /api/recurring-incomes` | nenhum | Lista + histórico de ocorrências |
 | Recorrentes | Projeção | `GET /api/recurring-incomes/projection` | nenhum | Gráfico/lista de 12 meses |
 | Recorrentes | Criar/editar | `POST/PUT /api/recurring-incomes` | agenda/valor/grupo | Atualizar recorrente e previsões |
 | Recorrentes | Pausar/ativar | `POST .../pause` ou `.../activate` | nenhum | Alterar estado local |
 | Recorrentes | Receber ocorrência | `POST .../occurrences/{id}/receive` | nenhum | Criar entrada real e atualizar resumo |
-| Planejamento | Listar | `GET /api/financial-commitments` | filtros de conclusão/cobertura | Cards/tabela de compromissos |
-| Planejamento | Criar/editar/excluir | `POST/PUT/DELETE /api/financial-commitments` | contrato do compromisso | Atualizar agenda e alocações |
+| Planejamento | Listar | `GET /api/financial-commitments` | filtro de conclusão | Cards/tabela de compromissos |
+| Planejamento | Criar/editar/excluir | `POST/PUT/DELETE /api/financial-commitments` | contrato do compromisso | Atualizar agenda e pagamentos |
 | Planejamento | Consultar obrigações | `GET /api/financial-commitments` e forecast | filtros e período | Atualizar valores previstos e ocorrências |
 | Planejamento | Pagar/desfazer | endpoints de payments | nenhum | Mover ocorrência para paga e criar/remover transação vinculada |
 | Previsões | Abrir | `GET /api/financial-forecast` | `from`, `months` | Série mensal com eventos e saldo projetado |
@@ -50,7 +50,7 @@ Paginação só existe em transações. Compromissos, grupos e recorrentes são 
 - Grupo: nome.
 - Transação: descrição, valor, tipo, data e grupo opcional.
 - Entrada recorrente: descrição, valor, grupo, frequência, início/fim, dia do mês e processamento automático.
-- Compromisso: nome, valor da parcela, parcelas **ou** frequência, vencimento, prioridade, cobertura total, grupo, objetivo, urgente e processamento automático.
+- Compromisso: nome, valor da parcela, parcelas **ou** frequência, vencimento, prioridade, grupo, objetivo, urgente e processamento automático.
 - Configuração: saldo inicial ou novo saldo atual.
 
 Valores monetários devem ser normalizados para número antes do JSON. Datas devem ser strings `YYYY-MM-DD`; não converter para `Date` local/UTC de forma que altere o dia.
@@ -63,7 +63,7 @@ O backend usa quatro formatos principais: `204` sem corpo; resposta JSON de suce
 - `401`: sessão ausente/inválida ou senha incorreta.
 - `404`: recurso/conta/grupo/ocorrência inexistente.
 - `409`: conflito de unicidade, limite de contas, exclusão bloqueada, operação incompatível.
-- `422`: alguns erros de alocação classificados explicitamente pelo service.
+- `422`: confirmação necessária para pagamento com saldo insuficiente.
 - `429`: limite de requisições; respeitar `Retry-After`.
 - `5xx`: indisponibilidade/erro inesperado; usar `/health` para distinguir indisponibilidade global de falha de recurso.
 
@@ -77,4 +77,4 @@ O fluxo inicial confirmado é: `GET /api/account/current` → se `current` exist
 
 Confirmado: endpoints, campos, códigos descritos em `API_ENDPOINTS.md`, filtros de transações, horizonte de forecast e regras de sessão.
 
-Sugestão de UI: usar optimistic update somente para estados simples de pausa/ativação; para valores financeiros, refazer as consultas relacionadas após `200`, porque alocação, reconciliação e processamento automático podem alterar múltiplos recursos. Também é recomendável centralizar mapeamento de `401/409/422/429` e exibir mensagens vindas da API.
+Sugestão de UI: usar optimistic update somente para estados simples de pausa/ativação; para valores financeiros, refazer as consultas relacionadas após `200`, porque pagamentos, estornos e processamento automático podem alterar múltiplos recursos. Também é recomendável centralizar mapeamento de `401/409/422/429` e exibir mensagens vindas da API.
