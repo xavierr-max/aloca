@@ -71,6 +71,17 @@ Registro compacto para permitir retomada segura entre sessões.
 - As falhas intermediárias foram somente ajustes de compilação do teste novo; não houve alteração de produção nem falha funcional.
 - Próximo passo: medir as consultas e o SQL no PostgreSQL real, especialmente listagens e forecast, antes de decidir paginação ou processamento em lotes.
 
+## 2026-10-30 — inspeção de índices e planos PostgreSQL
+
+- Cliente `psql` local não estava instalado; a consulta foi executada somente leitura dentro do container `postgres-local` ativo.
+- Inspecionados 44 índices do banco `aloca`.
+- `transactions` utilizou `IX_transactions_Date` para filtro por período.
+- `recurring_income_occurrences` utilizou o índice composto existente, mas ainda ordenou o resultado em memória.
+- `financial_commitments` realizou seq scan; com o banco atual vazio isso não comprova problema nem justifica migration de índice.
+- Não houve alteração de dados, schema ou migrations.
+- Limitação: o banco não contém carga representativa; os tempos não são métricas de produção.
+- Próximo passo: gerar carga controlada no PostgreSQL de teste e repetir EXPLAIN incluindo filtros de conta/período.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
