@@ -121,7 +121,7 @@ dotnet tool run dotnet-ef database update --project .\Aloca.Api --startup-projec
 dotnet run --project .\Aloca.Api
 ```
 
-Teste `http://localhost:5243/health` (ou a porta exibida pelo `dotnet run`).
+Teste `https://localhost:7243/health` (ou a porta exibida pelo `dotnet run`). O perfil HTTPS local usa o certificado de desenvolvimento do .NET; o frontend Vite encaminha as chamadas locais para essa API.
 
 ## Screenshots do frontend
 

@@ -7,6 +7,9 @@ set -Eeuo pipefail
 [[ "$SMOKE_ENV" != production || "${SMOKE_ALLOW_PRODUCTION:-}" == 1 ]] || { echo 'Refusing to run against production without SMOKE_ALLOW_PRODUCTION=1.' >&2; exit 2; }
 command -v curl >/dev/null || { echo 'curl is required' >&2; exit 2; }
 command -v jq >/dev/null || { echo 'jq is required' >&2; exit 2; }
+if [[ "${SMOKE_INSECURE_TLS:-}" == 1 ]]; then
+  curl() { command curl --insecure "$@"; }
+fi
 
 base="${SMOKE_BASE_URL%/}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/aloca-smoke.XXXXXX")"
@@ -29,12 +32,14 @@ expect_json() { check "$RESPONSE_CODE" "$1" "$2"; jq -e . >/dev/null <<<"$RESPON
 echo "Smoke test: $base ($SMOKE_ENV)"
 code="$(curl --silent --show-error --output "$work/health" --write-out '%{http_code}' "$base/health")" || fail 'curl failed for /health'
 check "$code" 200 '/health'; grep -qi 'healthy\|"status"[[:space:]]*:[[:space:]]*"Healthy"' "$work/health" || fail '/health is not healthy'
-if [[ "${base%%:*}" == https ]]; then
+if [[ "${base%%:*}" == https && "${SMOKE_LOCAL_HTTPS:-}" != 1 ]]; then
   http_base="${SMOKE_HTTP_BASE_URL:-http://${base#https://}}"; http_base="${http_base%/}"
   redirect_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --head "$http_base/health")" || fail 'curl failed for HTTP redirect'
   [[ "$redirect_code" == 301 || "$redirect_code" == 308 ]] || fail "HTTP to HTTPS redirect expected (got $redirect_code)"
   curl --silent --show-error --head "$base/health" >"$work/head" || fail 'curl failed for HTTPS headers'
   for h in strict-transport-security x-content-type-options referrer-policy permissions-policy content-security-policy x-frame-options; do grep -qi "^$h:" "$work/head" || fail "missing security header: $h"; done
+elif [[ "${base%%:*}" == https ]]; then
+  echo 'WARNING: local HTTPS mode enabled; HTTP redirect and production security headers are skipped.'
 else
   [[ "${SMOKE_ALLOW_HTTP:-}" == 1 ]] || fail 'HTTP smoke tests require SMOKE_ALLOW_HTTP=1'
   host="${base#http://}"; host="${host%%/*}"; host="${host%%:*}"

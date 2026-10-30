@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': { target: 'http://localhost:5243', changeOrigin: true },
-      '/health': { target: 'http://localhost:5243', changeOrigin: true }
+      '/api': { target: 'https://localhost:7243', changeOrigin: true, secure: false },
+      '/health': { target: 'https://localhost:7243', changeOrigin: true, secure: false }
     }
   }
 })
