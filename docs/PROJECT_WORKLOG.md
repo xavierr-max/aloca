@@ -29,6 +29,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: nenhuma nesta etapa.
 - Próximo passo: analisar processamento automático e performance de consultas/coleções antes de iniciar o frontend.
 
+## 2026-10-30 — auditoria inicial de processamento e performance
+
+- Inspecionados `AutomaticProcessingHostedService`, `RecurringIncomeService`, `FinancialCommitmentService`, `FinancialForecastService` e `ForecastEventNormalizer`.
+- Risco confirmado: o ciclo automático percorre todas as contas a cada minuto e executa sincronização de ocorrências para horizonte de 24 meses por conta.
+- Risco confirmado: a sincronização carrega entidades e ocorrências completas para reconciliar agendas; forecast e algumas listagens também materializam coleções inteiras.
+- Decisão: não aplicar uma refatoração de performance sem teste de volume, pois a sincronização atual também corrige dados históricos e reconcilia estados.
+- Próxima ação: criar testes de volume/performance e medir tempo, memória, quantidade de linhas carregadas e duração do ciclo automático; depois implementar processamento em lotes com regressão funcional.
+- Ação do usuário necessária: nenhuma nesta etapa.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

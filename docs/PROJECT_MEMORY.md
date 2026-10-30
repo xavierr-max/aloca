@@ -56,7 +56,9 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Melhorar processamento automático e avaliar paginação/performance antes de aumentar o volume de dados.
+1. Criar testes de volume para processamento automático e consultas de forecast/coleções.
+2. Refatorar a sincronização de ocorrências para trabalhar em lotes e consultar somente o intervalo necessário.
+3. Avaliar paginação/performance antes de aumentar o volume de dados.
 2. Configurar CI para testes, build e verificação de vulnerabilidades.
 3. Validar a aplicação em staging com HTTPS real.
 4. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
@@ -66,6 +68,8 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 - Padronizar gradualmente mensagens e respostas de erro.
 - Avaliar paginação/filtros para coleções financeiras quando o volume justificar.
 - Melhorar processamento automático para grandes volumes.
+- A sincronização de recorrências e compromissos ainda carrega agendas completas de até 24 meses em algumas operações; falta medir e definir uma estratégia de lotes.
+- O serviço hospedado percorre todas as contas a cada minuto; falta validar o custo com volume representativo e limitar o trabalho por ciclo se necessário.
 - Configurar CI com testes, build e verificação de vulnerabilidades.
 - Validar staging HTTPS real.
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.
