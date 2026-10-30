@@ -129,6 +129,17 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: validar no navegador criação, agenda e recebimento de uma recorrência.
 - Próximo passo: implementar compromissos, pagamento, confirmação de saldo insuficiente e reversão.
 
+## 2026-10-30 — compromissos e pagamentos no frontend descartável
+
+- Implementada criação de compromisso parcelado com valor, quantidade de parcelas, vencimento, grupo e processamento automático.
+- Implementado pagamento da próxima parcela.
+- Tratado `422` de saldo insuficiente com confirmação explícita antes de permitir saldo negativo.
+- Implementada reversão do último pagamento.
+- Após cada operação, resumo, histórico e compromissos são recarregados.
+- Build Vite validado com sucesso.
+- Ação do usuário necessária: validar pagamento normal, pagamento com saldo insuficiente e reversão no navegador.
+- Próximo passo: adicionar a visualização de forecast e validar o fluxo financeiro completo.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
