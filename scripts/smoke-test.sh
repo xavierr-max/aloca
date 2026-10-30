@@ -29,21 +29,27 @@ expect_json() { check "$RESPONSE_CODE" "$1" "$2"; jq -e . >/dev/null <<<"$RESPON
 echo "Smoke test: $base ($SMOKE_ENV)"
 code="$(curl --silent --show-error --output "$work/health" --write-out '%{http_code}' "$base/health")" || fail 'curl failed for /health'
 check "$code" 200 '/health'; grep -qi 'healthy\|"status"[[:space:]]*:[[:space:]]*"Healthy"' "$work/health" || fail '/health is not healthy'
-[[ "${base%%:*}" == https ]] || fail 'SMOKE_BASE_URL must use HTTPS'
-http_base="${SMOKE_HTTP_BASE_URL:-http://${base#https://}}"; http_base="${http_base%/}"
-redirect_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --head "$http_base/health")" || fail 'curl failed for HTTP redirect'
-[[ "$redirect_code" == 301 || "$redirect_code" == 308 ]] || fail "HTTP to HTTPS redirect expected (got $redirect_code)"
-curl --silent --show-error --head "$base/health" >"$work/head" || fail 'curl failed for HTTPS headers'
-for h in strict-transport-security x-content-type-options referrer-policy permissions-policy content-security-policy x-frame-options; do grep -qi "^$h:" "$work/head" || fail "missing security header: $h"; done
+if [[ "${base%%:*}" == https ]]; then
+  http_base="${SMOKE_HTTP_BASE_URL:-http://${base#https://}}"; http_base="${http_base%/}"
+  redirect_code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --head "$http_base/health")" || fail 'curl failed for HTTP redirect'
+  [[ "$redirect_code" == 301 || "$redirect_code" == 308 ]] || fail "HTTP to HTTPS redirect expected (got $redirect_code)"
+  curl --silent --show-error --head "$base/health" >"$work/head" || fail 'curl failed for HTTPS headers'
+  for h in strict-transport-security x-content-type-options referrer-policy permissions-policy content-security-policy x-frame-options; do grep -qi "^$h:" "$work/head" || fail "missing security header: $h"; done
+else
+  [[ "${SMOKE_ALLOW_HTTP:-}" == 1 ]] || fail 'HTTP smoke tests require SMOKE_ALLOW_HTTP=1'
+  host="${base#http://}"; host="${host%%/*}"; host="${host%%:*}"
+  [[ "$host" == localhost || "$host" == 127.0.0.1 ]] || fail 'HTTP is allowed only for localhost or 127.0.0.1'
+  echo 'WARNING: local HTTP mode enabled; HTTPS redirect and production security headers are skipped.'
+fi
 
 mutate "$jar1" POST /api/account/local "$(jq -nc --arg n "Smoke A $stamp" '{displayName:$n}')"; expect_json 200 'create account A'
 mutate "$jar1" POST /api/account/protect "$(jq -nc --arg e "$email1" --arg p "$pass" '{displayName:"Smoke A",email:$e,password:$p,confirmPassword:$p}')"; expect_json 200 'protect account A'
 grep -q 'aloca.auth' "$jar1" || fail 'auth cookie missing'; grep -q 'aloca.device' "$jar1" || fail 'device cookie missing'
 mutate "$jar1" POST /api/account/logout '{}'; check "$RESPONSE_CODE" 204 'logout'
-request "$jar1" GET /api/categories; check "$RESPONSE_CODE" 401 'logout invalidates session'
+request "$jar1" GET /api/groups; check "$RESPONSE_CODE" 401 'logout invalidates session'
 mutate "$jar1" POST /api/account/login "$(jq -nc --arg e "$email1" --arg p "$pass" '{email:$e,password:$p}')"; expect_json 200 'login'
-mutate "$jar1" POST /api/categories '{"name":"Smoke group"}'; expect_json 201 'create group'; category="$(jq -r .id <<<"$RESPONSE")"
-mutate "$jar1" PUT "/api/categories/$category" '{"name":"Smoke group updated"}'; expect_json 200 'update group'
+mutate "$jar1" POST /api/groups '{"name":"Smoke group"}'; expect_json 201 'create group'; category="$(jq -r .id <<<"$RESPONSE")"
+mutate "$jar1" PUT "/api/groups/$category" '{"name":"Smoke group updated"}'; expect_json 200 'update group'
 mutate "$jar1" POST /api/transactions "$(jq -nc --arg c "$category" --arg d "$today" '{description:"Smoke income",amount:100,type:"Income",date:$d,categoryId:$c}')"; expect_json 201 'income'
 mutate "$jar1" POST /api/transactions "$(jq -nc --arg c "$category" --arg d "$today" '{description:"Smoke expense",amount:10,type:"Expense",date:$d,categoryId:$c}')"; expect_json 201 'expense'
 commitment_body="$(jq -nc --arg d "$today" '{name:"Smoke commitment",installmentAmount:20,totalInstallments:1,priority:1,dueDate:$d,objective:"smoke",automaticProcessing:false}')"
@@ -56,7 +62,7 @@ mutate "$jar1" POST "/api/recurring-incomes/occurrences/$occurrence/receive"; ex
 mutate "$jar1" POST "/api/recurring-incomes/occurrences/$occurrence/receive"; expect_json 200 'idempotent receive'; check "$(jq -r .transactionId <<<"$RESPONSE")" "$transaction1" 'duplicate receipt'
 mutate "$jar1" POST "/api/recurring-incomes/$recurring/pause"; check "$RESPONSE_CODE" 204 'pause'; mutate "$jar1" POST "/api/recurring-incomes/$recurring/activate"; check "$RESPONSE_CODE" 204 'reactivation'
 mutate "$jar2" POST /api/account/local "$(jq -nc '{displayName:"Smoke B"}')"; expect_json 200 'create account B'
-request "$jar2" GET /api/categories; check "$RESPONSE_CODE" 200 'account B groups'; [[ "$(jq 'length' <<<"$RESPONSE")" == 0 ]] || fail 'group isolation'
+request "$jar2" GET /api/groups; check "$RESPONSE_CODE" 200 'account B groups'; [[ "$(jq 'length' <<<"$RESPONSE")" == 0 ]] || fail 'group isolation'
 request "$jar2" GET '/api/transactions?search=Smoke'; check "$RESPONSE_CODE" 200 'account B transactions'; [[ "$(jq '.items|length' <<<"$RESPONSE")" == 0 ]] || fail 'transaction isolation'
 mutate "$jar2" POST /api/account/logout '{}'; check "$RESPONSE_CODE" 204 'logout B'; request "$jar1" GET /api/financial-commitments; check "$RESPONSE_CODE" 200 'automatic processing readback'
 echo 'PASS: health/PostgreSQL, HTTP redirect/HTTPS headers, account/login/logout/session, cookies, isolation, groups, income/expense, commitment/payment/reversal, recurrence/idempotent receipt, pause/reactivation and automatic-processing configuration'
