@@ -58,7 +58,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Criar carga controlada no PostgreSQL de teste e repetir EXPLAIN com volume representativo.
+1. Criar um banco/container PostgreSQL temporário isolado, aplicar migrations e carga controlada; então repetir EXPLAIN com volume representativo.
 2. Medir consultas de listagem e forecast, incluindo filtros de conta e período.
 3. Refatorar a sincronização de ocorrências para trabalhar em lotes e consultar somente o intervalo necessário.
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
@@ -74,6 +74,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 - A sincronização de recorrências e compromissos ainda carrega agendas completas de até 24 meses em algumas operações; falta medir e definir uma estratégia de lotes.
 - O serviço hospedado percorre todas as contas a cada minuto; falta validar o custo com volume representativo e limitar o trabalho por ciclo se necessário.
 - Os planos PostgreSQL atuais foram coletados com banco vazio; não devem ser usados como métrica de produção.
+- O container `aloca-postgres` disponível é o banco de desenvolvimento `aloca`; nenhuma carga artificial deve ser inserida nele.
 - Configurar CI com testes, build e verificação de vulnerabilidades.
 - Validar staging HTTPS real.
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.

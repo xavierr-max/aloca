@@ -82,6 +82,14 @@ Registro compacto para permitir retomada segura entre sessões.
 - Limitação: o banco não contém carga representativa; os tempos não são métricas de produção.
 - Próximo passo: gerar carga controlada no PostgreSQL de teste e repetir EXPLAIN incluindo filtros de conta/período.
 
+## 2026-10-30 — tentativa de carga PostgreSQL isolada
+
+- Verificado o ambiente Docker: há um container `aloca-postgres` com o banco de desenvolvimento `aloca`, mas não há container de carga separado ativo.
+- A tentativa de acessar um banco de testes existente não foi executada porque o container não possui o usuário esperado; nenhum dado foi alterado.
+- Decisão de segurança: não inserir dados artificiais no banco de desenvolvimento.
+- Bloqueio técnico atual: para benchmark real, é necessário subir um PostgreSQL temporário, aplicar migrations e carregar dados representativos; o script atual de integração remove o container ao final e ainda não oferece uma etapa de carga/EXPLAIN.
+- Ação do usuário necessária: nenhuma imediata; o próximo passo pode criar um fluxo temporário de benchmark isolado.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
