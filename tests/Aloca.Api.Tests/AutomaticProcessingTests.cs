@@ -73,7 +73,7 @@ public sealed class AutomaticProcessingTests
         var category = new Category("Receitas");
         db.Categories.Add(category);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        for (var index = 0; index < 20; index++)
+        for (var index = 0; index < 100; index++)
         {
             db.RecurringIncomes.Add(new RecurringIncome(
                 $"Receita {index}", 100m + index, category.Id,
@@ -84,11 +84,11 @@ public sealed class AutomaticProcessingTests
         await db.SaveChangesAsync();
         var service = new RecurringIncomeService(db);
 
-        Assert.Equal(20, await service.ProcessDueAsync(today, default));
-        Assert.Equal(20, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
-        Assert.Equal(20, await db.RecurringIncomeOccurrences.CountAsync(x => x.Status == RecurringIncomeOccurrenceStatus.Received));
+        Assert.Equal(100, await service.ProcessDueAsync(today, default));
+        Assert.Equal(100, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
+        Assert.Equal(100, await db.RecurringIncomeOccurrences.CountAsync(x => x.Status == RecurringIncomeOccurrenceStatus.Received));
 
         Assert.Equal(0, await service.ProcessDueAsync(today, default));
-        Assert.Equal(20, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
+        Assert.Equal(100, await db.Transactions.CountAsync(x => x.Type == TransactionType.Income));
     }
 }

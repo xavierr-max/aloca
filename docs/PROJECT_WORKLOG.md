@@ -40,11 +40,19 @@ Registro compacto para permitir retomada segura entre sessões.
 
 ## 2026-10-30 — regressão de processamento de recorrências
 
-- Adicionado teste em `AutomaticProcessingTests` com 20 entradas recorrentes vencidas.
+- Adicionado teste em `AutomaticProcessingTests` com 100 entradas recorrentes vencidas.
 - O teste valida processamento em lote funcional, uma transação por ocorrência e segunda execução idempotente sem duplicação.
 - Durante a criação do teste, foi confirmado que uma recorrência iniciada no mês anterior possui duas ocorrências vencidas legítimas; o cenário foi ajustado para uma ocorrência por item, sem alteração do código de produção.
 - Resultado: 136 testes não-PostgreSQL aprovados, 0 falhas.
 - Próximo passo: benchmark/teste de volume maior e medição antes da refatoração de consultas.
+
+## 2026-10-30 — execução do volume maior
+
+- A primeira tentativa foi bloqueada pelo ambiente ao criar canais internos do MSBuild; nenhum teste chegou a iniciar.
+- Reexecução autorizada concluída com sucesso: 136 testes aprovados, 0 falhas, 0 ignorados.
+- Tempo observado da suíte: 6,32 s; memória máxima observada: aproximadamente 208 MB. Esses valores são referência local, não critérios de CI.
+- O cenário de 100 recorrências confirmou processamento e idempotência sem alteração de produção.
+- Próximo passo: medir forecast e listagens com dados representativos e decidir a refatoração em lotes/paginação com base nesses dados.
 
 ## Estado anterior consolidado
 
