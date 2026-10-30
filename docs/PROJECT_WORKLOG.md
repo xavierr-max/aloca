@@ -54,6 +54,14 @@ Registro compacto para permitir retomada segura entre sessões.
 - O cenário de 100 recorrências confirmou processamento e idempotência sem alteração de produção.
 - Próximo passo: medir forecast e listagens com dados representativos e decidir a refatoração em lotes/paginação com base nesses dados.
 
+## 2026-10-30 — regressão de listagem de compromissos
+
+- Adicionado teste com 100 compromissos e geração das ocorrências correspondentes através da listagem oficial.
+- O teste confirma 100 itens retornados e uma ocorrência por compromisso, sem alterar o comportamento de produção.
+- A primeira execução passou, mas gerou aviso de nulabilidade no teste; o aviso foi corrigido e a suíte foi repetida.
+- Resultado final: 137 testes não-PostgreSQL aprovados, sem novos avisos.
+- Próximo passo: medir o forecast com carga representativa; depois decidir a otimização de sincronização e paginação.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

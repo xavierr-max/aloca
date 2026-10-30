@@ -22,6 +22,26 @@ public sealed class FinancialForecastCoverageTests
         Assert.Equal(1000m, balance.CurrentBalance);
     }
 
+    [Fact]
+    public async Task CommitmentListingHandlesOneHundredItemsWithGeneratedOccurrences()
+    {
+        await using var db = CreateDb();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        for (var index = 0; index < 100; index++)
+            db.FinancialCommitments.Add(new FinancialCommitment($"Compromisso {index}", 25m, 1, 0, null, today));
+        await db.SaveChangesAsync();
+
+        var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
+        var result = await service.GetAllAsync(false, default);
+
+        Assert.Equal(100, result.Count);
+        Assert.All(result, item =>
+        {
+            Assert.NotNull(item.Occurrences);
+            Assert.Single(item.Occurrences!);
+        });
+    }
+
     private static AlocaDbContext CreateDb()
     {
         var options = new DbContextOptionsBuilder<AlocaDbContext>()
