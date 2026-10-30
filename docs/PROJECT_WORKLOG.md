@@ -21,6 +21,14 @@ Registro compacto para permitir retomada segura entre sessões.
 - Nenhum teste PostgreSQL foi executado nesta atualização documental.
 - Próxima ação: executar os 8 testes PostgreSQL com o banco local autorizado e registrar evidência antes de avançar para performance/CI.
 
+## 2026-10-30 — validação PostgreSQL pós-consolidação
+
+- Executado: `ALOCA_TEST_POSTGRES_CONNECTION=... dotnet test tests/Aloca.Api.Tests/Aloca.Api.Tests.csproj --filter 'FullyQualifiedName~Postgres'`.
+- Resultado: 8 testes aprovados, 0 falhas, 0 ignorados.
+- Escopo validado: migrations, tipos/constraints, foreign keys, transações, health check, compatibilidade legada e concorrência de pagamentos.
+- Ação do usuário necessária: nenhuma nesta etapa.
+- Próximo passo: analisar processamento automático e performance de consultas/coleções antes de iniciar o frontend.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.

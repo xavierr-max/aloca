@@ -38,7 +38,7 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 ## Validações conhecidas
 
 - `dotnet test aloca.slnx --filter 'FullyQualifiedName!~Postgres'`: 135 testes aprovados.
-- Testes de integração PostgreSQL local já foram executados anteriormente: 8 aprovados, mas ainda precisam ser repetidos após a consolidação documental/código final.
+- Testes de integração PostgreSQL local: 8 aprovados após a consolidação atual (`dotnet test ... --filter 'FullyQualifiedName~Postgres'`).
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
@@ -56,11 +56,10 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Reexecutar os 8 testes PostgreSQL contra o banco local autorizado e registrar o resultado.
-2. Melhorar processamento automático e avaliar paginação/performance antes de aumentar o volume de dados.
-3. Configurar CI para testes, build e verificação de vulnerabilidades.
-4. Validar a aplicação em staging com HTTPS real.
-5. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
+1. Melhorar processamento automático e avaliar paginação/performance antes de aumentar o volume de dados.
+2. Configurar CI para testes, build e verificação de vulnerabilidades.
+3. Validar a aplicação em staging com HTTPS real.
+4. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
 
 ## Pendências conhecidas
 
