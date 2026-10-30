@@ -140,6 +140,16 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: validar pagamento normal, pagamento com saldo insuficiente e reversão no navegador.
 - Próximo passo: adicionar a visualização de forecast e validar o fluxo financeiro completo.
 
+## 2026-10-30 — forecast no frontend descartável
+
+- Implementada visualização dos próximos seis meses.
+- Exibidos totais de entradas, saídas e saldo de fechamento por mês.
+- A previsão é carregada pelo endpoint oficial `GET /api/financial-forecast` e recarregada após mutações financeiras.
+- Build Vite validado com sucesso.
+- Fase funcional descartável concluída em código: sessão, grupos, movimentações, recorrências, compromissos, pagamentos e forecast.
+- Ação do usuário necessária: validar o fluxo completo no navegador e registrar qualquer divergência de contrato ou regra de negócio.
+- Próximo passo: corrigir divergências encontradas e preparar a transição para o frontend definitivo/UX/UI.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
