@@ -29,6 +29,8 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 - Primeiro ciclo funcional do frontend descartável concluído em código; a validação manual no navegador ainda está pendente.
 - Validação manual inicial concluída no navegador local: sessão existente, dashboard, grupos, movimentações, compromissos, pagamentos e forecast foram renderizados; console sem erros/warnings.
 - Validação de mutações financeiras ainda pendente de autorização explícita para criar registros e executar pagamento/reversão no banco local.
+- Teste ponta a ponta autorizado executado: grupo, entrada de `123,45`, saída de `45,00`, recorrência de `50,00`, recebimento, compromisso de `10.000,00`, confirmação de saldo insuficiente, pagamento e reversão.
+- Correção aplicada: compromissos concluídos agora continuam carregados no frontend para permitir reversão; o pagamento revertido voltou a `0/1` e gerou estorno auditável.
 - Backend: ASP.NET Core em .NET 10, PostgreSQL com Entity Framework Core e migrations.
 - Modelo financeiro vigente: não existem alocações ativas. Compromissos são planejamento; pagamento cria uma única despesa vinculada.
 
@@ -75,7 +77,7 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
 5. Configurar CI para testes, build e verificação de vulnerabilidades.
 6. Validar a aplicação em staging com HTTPS real.
-7. Após autorização explícita, executar mutações controladas no navegador — criar grupo, movimentação, recorrência e compromisso, pagar/reverter — e registrar divergências; depois decidir o que será reaproveitado no frontend definitivo.
+7. Avaliar os registros de teste criados no banco local, corrigir eventuais divergências remanescentes e decidir o que será reaproveitado no frontend definitivo.
 
 ## Pendências conhecidas
 

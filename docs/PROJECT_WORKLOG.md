@@ -175,6 +175,19 @@ Registro compacto para permitir retomada segura entre sessões.
 - Nenhum dado adicional foi criado e nenhum pagamento foi realizado nesta etapa.
 - Próximo passo condicionado: receber autorização para executar o roteiro de mutações controladas e validar as regras ponta a ponta.
 
+## 2026-10-30 — validação ponta a ponta autorizada
+
+- Criado grupo `Teste Frontend 2026`.
+- Criadas entrada `123,45` e saída `45,00`, ambas refletidas no histórico e no saldo.
+- Criada recorrência mensal `Teste recorrente frontend` de `50,00`; primeira ocorrência recebida e refletida como entrada realizada.
+- Criado compromisso `Teste compromisso frontend` de `10.000,00`.
+- Pagamento sem confirmação retornou `422`; confirmação explícita permitiu saldo negativo conforme contrato.
+- Reversão executada com sucesso; histórico exibiu `Estorno: Teste compromisso frontend` e o compromisso retornou a `0/1` parcelas pagas.
+- Divergência encontrada e corrigida: a consulta do frontend carregava apenas compromissos ativos, ocultando concluídos e impedindo reversão. Agora usa todos os compromissos e mantém `Desfazer` disponível.
+- Console: um warning esperado do log de erro do `422`; nenhum erro funcional observado.
+- Registros de teste permanecem no banco local para inspeção manual; o pagamento está revertido.
+- Próximo passo: revisar/limpar registros de teste quando autorizado e iniciar o planejamento do frontend definitivo/UX/UI.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
