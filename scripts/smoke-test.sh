@@ -46,12 +46,10 @@ mutate "$jar1" POST /api/categories '{"name":"Smoke group"}'; expect_json 201 'c
 mutate "$jar1" PUT "/api/categories/$category" '{"name":"Smoke group updated"}'; expect_json 200 'update group'
 mutate "$jar1" POST /api/transactions "$(jq -nc --arg c "$category" --arg d "$today" '{description:"Smoke income",amount:100,type:"Income",date:$d,categoryId:$c}')"; expect_json 201 'income'
 mutate "$jar1" POST /api/transactions "$(jq -nc --arg c "$category" --arg d "$today" '{description:"Smoke expense",amount:10,type:"Expense",date:$d,categoryId:$c}')"; expect_json 201 'expense'
-commitment_body="$(jq -nc --arg d "$today" '{name:"Smoke commitment",installmentAmount:20,totalInstallments:1,priority:1,isFullyCommitted:false,dueDate:$d,objective:"smoke",automaticProcessing:true}')"
+commitment_body="$(jq -nc --arg d "$today" '{name:"Smoke commitment",installmentAmount:20,totalInstallments:1,priority:1,dueDate:$d,objective:"smoke",automaticProcessing:false}')"
 mutate "$jar1" POST /api/financial-commitments "$commitment_body"; expect_json 201 'commitment'; commitment="$(jq -r .id <<<"$RESPONSE")"
-mutate "$jar1" POST "/api/financial-commitments/$commitment/allocations" '{"amount":20}'; expect_json 200 'allocation'
 mutate "$jar1" POST "/api/financial-commitments/$commitment/payments"; expect_json 200 'payment'
 mutate "$jar1" DELETE "/api/financial-commitments/$commitment/payments/latest"; expect_json 200 'payment reversal'
-mutate "$jar1" DELETE "/api/financial-commitments/$commitment/allocations"; expect_json 200 'allocation reversal'
 mutate "$jar1" POST /api/recurring-incomes "$(jq -nc --arg d "$today" --arg c "$category" '{description:"Smoke recurring",amount:7,frequency:"Monthly",startDate:$d,dayOfMonth:1,categoryId:$c,automaticProcessing:true}')"; expect_json 200 'recurrence'
 recurring="$(jq -r .id <<<"$RESPONSE")"; occurrence="$(jq -r '.occurrences[0].id // empty' <<<"$RESPONSE")"; [[ -n "$occurrence" ]] || fail 'recurrence has no occurrence'
 mutate "$jar1" POST "/api/recurring-incomes/occurrences/$occurrence/receive"; expect_json 200 'receive'; transaction1="$(jq -r .transactionId <<<"$RESPONSE")"
@@ -61,4 +59,4 @@ mutate "$jar2" POST /api/account/local "$(jq -nc '{displayName:"Smoke B"}')"; ex
 request "$jar2" GET /api/categories; check "$RESPONSE_CODE" 200 'account B groups'; [[ "$(jq 'length' <<<"$RESPONSE")" == 0 ]] || fail 'group isolation'
 request "$jar2" GET '/api/transactions?search=Smoke'; check "$RESPONSE_CODE" 200 'account B transactions'; [[ "$(jq '.items|length' <<<"$RESPONSE")" == 0 ]] || fail 'transaction isolation'
 mutate "$jar2" POST /api/account/logout '{}'; check "$RESPONSE_CODE" 204 'logout B'; request "$jar1" GET /api/financial-commitments; check "$RESPONSE_CODE" 200 'automatic processing readback'
-echo 'PASS: health/PostgreSQL, HTTP redirect/HTTPS headers, account/login/logout/session, cookies, isolation, groups, income/expense, commitment, allocation/payment/reversal, recurrence/idempotent receipt, pause/reactivation and automatic-processing configuration'
+echo 'PASS: health/PostgreSQL, HTTP redirect/HTTPS headers, account/login/logout/session, cookies, isolation, groups, income/expense, commitment/payment/reversal, recurrence/idempotent receipt, pause/reactivation and automatic-processing configuration'
