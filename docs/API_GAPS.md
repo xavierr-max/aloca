@@ -10,7 +10,6 @@ Nenhuma falha crítica de contrato foi confirmada na inspeção estática. A aut
 
 | Prioridade | Achado | Evidência/impacto | Recomendação |
 |---|---|---|---|
-| Alta | OpenAPI só existe em Development | `Program.cs` chama `MapOpenApi()` dentro de `if (app.Environment.IsDevelopment())`; frontend não tem contrato publicado automaticamente em produção. | Publicar especificação versionada ou habilitar endpoint protegido em ambiente de integração. |
 | Alta | Processamento de GET pode mutar dados | Listagem de recorrentes e compromissos gera ocorrências e processa automáticas; uma consulta pode alterar transações/saldos. | Documentar o efeito e/ou separar processamento em job/comando idempotente. Frontend deve refazer leituras após GETs relevantes. |
 | Alta | Coleções financeiras sem paginação | Compromissos, grupos, recorrentes e ocorrências retornam coleções completas; recorrentes carregam até 120 ocorrências e compromissos horizonte de 24 meses. | Adicionar paginação/filtros quando o volume crescer; hoje o frontend precisa aceitar carga completa. |
 | Alta | Fluxo de recuperação depende de configuração externa | E-mail usa Resend e `Email:Resend:ApiKey`, `FromAddress` e `PublicFrontendUrl`; falha do provedor pode virar erro não mapeado no request inicial. | Mapear falha de entrega para resposta estável e garantir configuração/monitoramento. |

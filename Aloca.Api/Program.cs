@@ -29,7 +29,6 @@ builder.Services.AddProblemDetails(options =>
         context.ProblemDetails.Extensions.Remove("traceId");
     };
 });
-builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgres", tags: new[] { "ready" });
 var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
@@ -221,11 +220,6 @@ using (var scope = app.Services.CreateScope())
     }
 
     if (migrationCommand) return;
-}
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
 }
 
 app.UseRouting();

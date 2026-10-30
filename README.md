@@ -7,7 +7,6 @@ Backend de uma aplicação de controle financeiro pessoal. O Aloca diferencia o 
 - .NET 10 / ASP.NET Core Web API com C#;
 - Entity Framework Core 10;
 - PostgreSQL com provider Npgsql;
-- OpenAPI nativo do ASP.NET Core.
 
 ## Estrutura atual
 
@@ -21,7 +20,7 @@ Aloca.Api/
 └── Services/        # regras de aplicação futuras
 ```
 
-Os endpoints `GET /health/live` e `GET /health/ready` expõem, respectivamente, liveness do processo e readiness com conexão ao PostgreSQL. `/health` permanece como alias de readiness. Em ambiente de desenvolvimento, o documento OpenAPI fica disponível em `/openapi/v1.json`.
+Os endpoints `GET /health/live` e `GET /health/ready` expõem, respectivamente, liveness do processo e readiness com conexão ao PostgreSQL. `/health` permanece como alias de readiness.
 
 ## Pré-requisitos
 
@@ -122,7 +121,7 @@ dotnet tool run dotnet-ef database update --project .\Aloca.Api --startup-projec
 dotnet run --project .\Aloca.Api
 ```
 
-Teste `http://localhost:5243/health` (ou a porta exibida pelo `dotnet run`). A documentação OpenAPI fica em `/openapi/v1.json` no ambiente de desenvolvimento.
+Teste `http://localhost:5243/health` (ou a porta exibida pelo `dotnet run`).
 
 ## Screenshots do frontend
 

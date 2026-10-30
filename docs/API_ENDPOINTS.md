@@ -145,11 +145,10 @@ Implementação: `FinancialCommitmentsController.cs` e `FinancialCommitmentServi
 
 Todas as mutações retornam o compromisso completo atualizado, exceto as operações de exclusão/limpeza que ainda retornam `200` com o recurso. Pagamento cria uma transação vinculada; a transação não pode ser editada/excluída pela API genérica.
 
-## Saúde, OpenAPI e infraestrutura HTTP
+## Saúde e infraestrutura HTTP
 
 - `GET /health/live`: health check sem dependências (`200` quando o processo responde).
 - `GET /health/ready` e `GET /health`: readiness verificando PostgreSQL (`200` saudável; status de health check quando não saudável).
-- `GET /openapi/v1.json`: mapeado somente em Development via `app.MapOpenApi()`.
 
 `Program.cs` aplica CORS pela política `Frontend`, com origens em `Cors:AllowedOrigins`, qualquer header/método e credenciais. Limites padrão por janela de 60s: global 120 por chave, conta 12, heavy 40 (nenhuma rota atualmente usa explicitamente a policy `heavy`) e recuperação 5/IP. Excesso retorna `429`, header `Retry-After: 60` e mensagem em português. O header `X-Request-Id` é ecoado/gerado e também aparece em Problem Details.
 
