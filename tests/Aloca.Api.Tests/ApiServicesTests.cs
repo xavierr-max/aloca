@@ -38,7 +38,7 @@ public sealed class ApiServicesTests
         var category = new Category("Moradia");
         db.Categories.Add(category);
         db.Transactions.Add(new Transaction("Aluguel", 750m, TransactionType.Expense, new DateOnly(2026, 9, 1), category.Id));
-        var commitment = new FinancialCommitment("Reserva de aluguel", 750m, 1, 0, 0m, 1, true, new DateOnly(2026, 9, 1));
+        var commitment = new FinancialCommitment("Reserva de aluguel", 750m, 1, 0, 1, new DateOnly(2026, 9, 1));
         commitment.SetCategory(category.Id);
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
@@ -60,7 +60,7 @@ public sealed class ApiServicesTests
         var category = new Category("Salário");
         db.Categories.Add(category);
         await db.SaveChangesAsync();
-        var service = new TransactionService(db, new FinancialAllocationReconciliationService(db, new FinancialBalanceService(db)));
+        var service = new TransactionService(db);
 
         var income = await service.CreateAsync(
             new TransactionRequest { Description = "Salário", Amount = 2_000m, Type = TransactionType.Income, Date = new DateOnly(2026, 9, 5), CategoryId = category.Id },
@@ -147,7 +147,7 @@ public sealed class ApiServicesTests
     }
 
     [Fact]
-    public async Task DeletingIncomeReconcilesReservationsWithinSameOperation()
+    public async Task DeletingIncomeDoesNotCreateOrChangeCommitmentReservations()
     {
         await using var db = CreateDbContext();
         var settings = new FinancialSettingsService(db);
@@ -158,27 +158,24 @@ public sealed class ApiServicesTests
             Description = "Entrada temporária", Amount = 200m, Type = TransactionType.Income,
             Date = DateOnly.FromDateTime(DateTime.UtcNow)
         }, default);
-        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 0m, 1, true);
+        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 1);
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
-        await new FinancialCommitmentService(db, new FinancialBalanceService(db)).AllocateAsync(commitment.Id, 700m, default);
-
         Assert.True(await transactions.DeleteAsync(income.Transaction!.Id, default));
 
         var summary = await new FinancialSummaryService(db).GetAsync(default);
         var saved = await db.FinancialCommitments.SingleAsync();
         Assert.Equal(500m, summary.Balance);
-        Assert.Equal(500m, summary.TotalReservado);
-        Assert.Equal(0m, summary.SaldoNaoAlocado);
-        Assert.Equal(500m, saved.AllocatedAmount);
+        Assert.Equal(500m, summary.CurrentBalance);
+        Assert.Equal(0, saved.PaidInstallments);
     }
 
     [Fact]
-    public async Task CreatingExpenseReconcilesReservationsAndDeletingItReleasesBalance()
+    public async Task CreatingExpenseChangesOnlyCurrentBalance()
     {
         await using var db = CreateDbContext();
         await new FinancialSettingsService(db).UpdateAsync(700m, default);
-        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 700m, 1, true);
+        var commitment = new FinancialCommitment("Compromisso", 1000m, 1, 0, 1);
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
         var transactions = new TransactionService(db);
@@ -190,14 +187,12 @@ public sealed class ApiServicesTests
 
         var afterCreate = await new FinancialSummaryService(db).GetAsync(default);
         Assert.Equal(500m, afterCreate.Balance);
-        Assert.Equal(500m, afterCreate.TotalReservado);
-        Assert.Equal(0m, afterCreate.SaldoNaoAlocado);
+        Assert.Equal(500m, afterCreate.CurrentBalance);
 
         await transactions.DeleteAsync(expense.Transaction!.Id, default);
         var afterDelete = await new FinancialSummaryService(db).GetAsync(default);
         Assert.Equal(700m, afterDelete.Balance);
-        Assert.Equal(500m, afterDelete.TotalReservado);
-        Assert.Equal(200m, afterDelete.SaldoNaoAlocado);
+        Assert.Equal(700m, afterDelete.CurrentBalance);
     }
 
     [Fact]
@@ -246,7 +241,7 @@ public sealed class ApiServicesTests
         await using var db = CreateDbContext();
         var service = new FinancialCommitmentService(db, new FinancialBalanceService(db));
         var request = new FinancialCommitmentCreateRequest(
-            "Compromisso sem classificação", 100m, 1, null, true,
+            "Compromisso sem classificação", 100m, 1, null,
             CategoryId: null, DueDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
 
         var created = await service.CreateAsync(request, CancellationToken.None);
@@ -254,7 +249,7 @@ public sealed class ApiServicesTests
         Assert.Null(created.CategoryId);
 
         var updated = await service.UpdateAsync(created.Id, new FinancialCommitmentUpdateRequest(
-            created.Name, created.InstallmentAmount, created.TotalInstallments, null, created.IsFullyCommitted,
+            created.Name, created.InstallmentAmount, created.TotalInstallments, null,
             CategoryId: null, DueDate: created.DueDate), CancellationToken.None);
 
         Assert.NotNull(updated);

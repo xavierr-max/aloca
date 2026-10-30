@@ -15,6 +15,9 @@ public sealed class CommitmentPaymentConfiguration : IEntityTypeConfiguration<Co
         builder.Property(x => x.InstallmentNumber).IsRequired();
         builder.Property(x => x.PaidAt).IsRequired();
         builder.Property(x => x.WasAutomatic).IsRequired();
+        builder.Property(x => x.ReversedAt).IsRequired(false);
+        builder.Property(x => x.ReversalTransactionId).IsRequired(false);
+        builder.HasIndex(x => x.ReversalTransactionId).IsUnique().HasFilter("\"ReversalTransactionId\" IS NOT NULL");
         builder.HasOne(x => x.FinancialCommitment)
             .WithMany(x => x.CommitmentPayments)
             .HasForeignKey(x => x.FinancialCommitmentId)

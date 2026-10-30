@@ -16,7 +16,8 @@ public sealed class Transaction
         Guid? financialCommitmentId = null,
         bool wasAutomatic = false,
         Guid? commitmentPaymentId = null,
-        bool isBalanceAdjustment = false)
+        bool isBalanceAdjustment = false,
+        Guid? reversesTransactionId = null)
     {
         if (string.IsNullOrWhiteSpace(description))
         {
@@ -46,6 +47,7 @@ public sealed class Transaction
         WasAutomatic = wasAutomatic;
         CommitmentPaymentId = commitmentPaymentId;
         IsBalanceAdjustment = isBalanceAdjustment;
+        ReversesTransactionId = reversesTransactionId;
         ProcessedAt = CreatedAt;
     }
 
@@ -74,6 +76,7 @@ public sealed class Transaction
     public Guid? CommitmentPaymentId { get; private set; }
     /// <summary>Marks a manual correction of the current balance.</summary>
     public bool IsBalanceAdjustment { get; private set; }
+    public Guid? ReversesTransactionId { get; private set; }
 
     public void DetachRecurringIncomeOccurrence() => RecurringIncomeOccurrenceId = null;
 

@@ -67,7 +67,7 @@ public sealed class ForecastEventNormalizer(AlocaDbContext db, IBusinessClock? c
         var commitmentIds = commitments.Select(x => x.Id).ToArray();
         var paidInstallments = await db.CommitmentPayments
             .AsNoTracking()
-            .Where(x => commitmentIds.Contains(x.FinancialCommitmentId))
+            .Where(x => commitmentIds.Contains(x.FinancialCommitmentId) && !x.ReversedAt.HasValue)
             .Select(x => new { x.Id, x.FinancialCommitmentId, x.InstallmentNumber })
             .ToListAsync(cancellationToken);
         var paymentIds = paidInstallments.Select(x => x.Id).ToArray();

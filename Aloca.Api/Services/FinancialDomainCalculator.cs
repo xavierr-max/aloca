@@ -30,35 +30,6 @@ public static class FinancialDomainCalculator
             ForecastResult(realizedIncome, plannedIncome, realizedExpense, plannedExpense));
     }
 
-    public sealed record ReserveMetrics(
-        decimal Reserved,
-        decimal Unallocated,
-        decimal UncoveredCommitments,
-        decimal Free);
-
-    public static decimal Reserved(IEnumerable<decimal> amounts) =>
-        amounts.Sum(amount => Math.Max(0m, amount));
-
-    public static decimal Unallocated(decimal currentBalance, decimal reserved) =>
-        Math.Max(0m, currentBalance - Math.Max(0m, reserved));
-
-    public static decimal CoverageDeficit(decimal pendingCommitments, decimal reserved) =>
-        Math.Max(0m, pendingCommitments - Math.Max(0m, reserved));
-
-    public static decimal Free(decimal unallocated, decimal uncoveredCommitments) =>
-        Math.Max(0m, unallocated - Math.Max(0m, uncoveredCommitments));
-
-    public static ReserveMetrics CalculateReserveMetrics(
-        decimal currentBalance,
-        decimal reserved,
-        decimal pendingCommitments)
-    {
-        var normalizedReserved = Math.Max(0m, reserved);
-        var unallocated = Unallocated(currentBalance, normalizedReserved);
-        var uncovered = CoverageDeficit(Math.Max(0m, pendingCommitments), normalizedReserved);
-        return new(normalizedReserved, unallocated, uncovered, Free(unallocated, uncovered));
-    }
-
     public static decimal RealResult(decimal realizedIncome, decimal realizedExpense) =>
         realizedIncome - realizedExpense;
 

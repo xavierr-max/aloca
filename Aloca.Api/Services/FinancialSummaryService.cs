@@ -22,7 +22,7 @@ public sealed class FinancialSummaryService
     public async Task<FinancialSummaryResponse> GetAsync(CancellationToken cancellationToken)
     {
         var x = await balanceService.GetAsync(cancellationToken);
-        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.SaldoReal, x.TotalReservado, x.SaldoNaoAlocado, x.SaldoLivre, x.DeficitCobertura, clock.Today);
+        return new(x.InitialBalance, x.TotalIncome, x.TotalExpense, x.CurrentBalance, clock.Today);
     }
 
     public async Task<MonthlyFinancialSummaryResponse> GetMonthlyAsync(DateOnly period, CancellationToken ct)
@@ -50,7 +50,7 @@ public sealed class FinancialSummaryService
             .Where(x => x.Date >= period && x.Date < nextPeriod && !x.IsBalanceAdjustment && x.Description != "Ajuste manual de saldo")
             .ToListAsync(ct);
         var payments = await db.CommitmentPayments.AsNoTracking()
-            .Where(x => commitmentIds.Contains(x.FinancialCommitmentId))
+            .Where(x => commitmentIds.Contains(x.FinancialCommitmentId) && !x.ReversedAt.HasValue)
             .Select(x => new { x.FinancialCommitmentId, x.InstallmentNumber })
             .ToListAsync(ct);
 
@@ -75,25 +75,22 @@ public sealed class FinancialSummaryService
             foreach (var occurrence in dates)
             {
                 var paid = paidNumbers.Contains(occurrence.Number);
-                var occurrenceAllocated = paid ? commitment.InstallmentAmount :
-                    Math.Clamp(commitment.AllocatedAmount - pendingIndex * commitment.InstallmentAmount, 0m, commitment.InstallmentAmount);
+                var occurrencePaid = paid ? commitment.InstallmentAmount : 0m;
                 if (!paid) pendingIndex++;
-                var remaining = Math.Max(0m, commitment.InstallmentAmount - occurrenceAllocated);
+                var remaining = Math.Max(0m, commitment.InstallmentAmount - occurrencePaid);
                 details.Add(new(
                     commitment.Id, $"{commitment.Id}:{occurrence.Number}", commitment.Name,
                     commitment.IsRecurring || commitment.TotalInstallments > 1 ? occurrence.Number : null,
                     commitment.IsOpenEnded ? null : commitment.TotalInstallments,
-                    occurrence.Date, commitment.InstallmentAmount, occurrenceAllocated, remaining,
-                    commitment.InstallmentAmount == 0 ? 100m : Math.Min(100m, occurrenceAllocated / commitment.InstallmentAmount * 100m),
-                    paid, remaining == 0m, commitment.Priority, commitment.Urgent,
+                    occurrence.Date, commitment.InstallmentAmount, occurrencePaid, remaining,
+                    paid, commitment.Priority, commitment.Urgent,
                     commitment.RequiresAttention, commitment.IsCompleted,
                     commitment.OverallRemainingAmount));
             }
         }
 
-        var committed = details.Sum(x => x.DueAmount);
-        var allocated = details.Sum(x => x.AllocatedAmount);
-        var missing = Math.Max(0m, committed - allocated);
+        var commitmentTotal = details.Sum(x => x.DueAmount);
+        var paidAmount = details.Sum(x => x.PaidAmount);
         var realizedIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date <= today).Sum(x => x.Amount);
         var realizedExpense = transactions.Where(x => x.Type == TransactionType.Expense && x.Date <= today).Sum(x => x.Amount);
         var futureTransactionIncome = transactions.Where(x => x.Type == TransactionType.Income && x.Date > today).Sum(x => x.Amount);
@@ -125,8 +122,8 @@ public sealed class FinancialSummaryService
         plannedIncome += futureTransactionIncome;
         plannedExpense += futureTransactionExpense;
         var metrics = FinancialDomainCalculator.CalculatePeriodMetrics(realizedIncome, plannedIncome, realizedExpense, plannedExpense);
-        return new(period, incomes.Sum(x => x.Amount), committed, incomes.Sum(x => x.Amount) - committed,
-            allocated, missing, committed > 0 ? Math.Min(100m, allocated / committed * 100m) : 100m,
+        return new(period, incomes.Sum(x => x.Amount), commitmentTotal, paidAmount - commitmentTotal,
+            plannedIncome + plannedExpense, paidAmount,
             projectedClosingBalance, details, urgentCommitments,
             metrics.RealizedIncome, metrics.PlannedIncome, metrics.TotalIncome,
             metrics.RealizedExpense, metrics.PlannedExpense, metrics.TotalExpense,

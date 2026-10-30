@@ -119,6 +119,12 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<DateTime>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ReversalTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReversedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -129,6 +135,10 @@ namespace Aloca.Api.Data.Migrations
 
                     b.HasIndex("FinancialCommitmentOccurrenceId")
                         .IsUnique();
+
+                    b.HasIndex("ReversalTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"ReversalTransactionId\" IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -193,10 +203,6 @@ namespace Aloca.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("AllocatedAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
                     b.Property<bool>("AutomaticProcessing")
                         .HasColumnType("boolean");
 
@@ -219,9 +225,6 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<decimal>("InstallmentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
-
-                    b.Property<bool>("IsFullyCommitted")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsRecurring")
                         .HasColumnType("boolean");
@@ -256,12 +259,8 @@ namespace Aloca.Api.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("IsFullyCommitted", "Priority");
-
                     b.ToTable("financial_commitments", null, t =>
                         {
-                            t.HasCheckConstraint("ck_financial_commitments_allocated_amount_non_negative", "\"AllocatedAmount\" >= 0");
-
                             t.HasCheckConstraint("ck_financial_commitments_installment_amount_positive", "\"InstallmentAmount\" > 0");
 
                             t.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND (\"TotalInstallments\" = 0 OR \"PaidInstallments\" <= \"TotalInstallments\")");
@@ -270,6 +269,36 @@ namespace Aloca.Api.Data.Migrations
 
                             t.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" >= 0");
                         });
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentAllocationArchive", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FinancialCommitmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("HistoricalAllocatedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("HistoricalFullyCommitted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "FinancialCommitmentId")
+                        .IsUnique();
+
+                    b.ToTable("financial_commitment_allocation_archive", (string)null);
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentOccurrence", b =>
@@ -532,6 +561,9 @@ namespace Aloca.Api.Data.Migrations
                     b.Property<Guid?>("RecurringIncomeOccurrenceId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ReversesTransactionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -553,6 +585,10 @@ namespace Aloca.Api.Data.Migrations
                     b.HasIndex("RecurringIncomeOccurrenceId")
                         .IsUnique()
                         .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");
+
+                    b.HasIndex("ReversesTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"ReversesTransactionId\" IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -634,6 +670,15 @@ namespace Aloca.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentAllocationArchive", b =>
+                {
+                    b.HasOne("Aloca.Api.Models.Account", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Aloca.Api.Models.FinancialCommitmentOccurrence", b =>

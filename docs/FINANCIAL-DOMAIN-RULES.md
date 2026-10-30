@@ -42,25 +42,24 @@ Eventos realizados não são recontados na projeção
 
 | Conceito | Implementação atual | Situação |
 |---|---|---|
-| Saldo atual | `FinancialBalanceService` | Reconstruído de `InitialBalance` e transações; precisa evoluir para um ledger de ajustes explícitos sem semântica de saldo inicial histórico. |
-| Saldo reservado | `FinancialBalanceService` / `AllocatedAmount` | Fórmula centralizada parcialmente; a alocação ainda é modelada no compromisso global. |
-| Saldo não alocado | `FinancialCalculations.SaldoNaoAlocado` | Fórmula correta, mas exposta também como `AvailableForAllocation`/`UnallocatedBalance`. |
-| Saldo livre | `FinancialCalculations.SaldoLivre` | Existe, porém depende de `DeficitCobertura`; forecast e resumo recalculam a composição. |
+| Obrigações pendentes | `FinancialCommitmentOccurrence` | Planejamento futuro; não altera o saldo atual. |
+| Saldo atual | `FinancialBalanceService` | Calculado por saldo inicial + receitas realizadas - despesas realizadas. |
+| Saldo projetado | `FinancialForecastService` / `ForecastCalculator` | Inclui eventos planejados sem contar novamente transações realizadas. |
 | Entradas e saídas mensais | `FinancialSummaryService`, `ForecastCalculator` | Campos genéricos (`RecurringIncomeTotal`, `CommitmentTotal`) não distinguem realizado/previsto com contrato oficial. |
 | Resultado | resumo mensal e forecast | Há mais de uma interpretação de resultado mensal. |
 | Saldo final estimado | resumo mensal e forecast | Precisa garantir que eventos realizados incorporados no saldo atual não sejam somados novamente. |
 
 ## Cálculos duplicados identificados
 
-- `FinancialBalanceService` calcula reservado, não alocado, déficit e livre.
-- `FinancialForecastService` recalcula os mesmos quatro valores para o resumo e para cada mês.
+- `FinancialBalanceService` calcula o saldo atual a partir de transações.
+- `FinancialForecastService` e `FinancialSummaryService` ainda precisam manter uma nomenclatura temporal uniforme para valores realizados e previstos.
 - `FinancialSummaryService` calcula diretamente totais mensais e saldo final estimado.
 - `ForecastCalculator` calcula totais, resultados e saldo de fechamento por mês.
 - Frontend apresenta aliases e, em partes da tela de previsões, usa campos genéricos (`totalIncome`, `totalExpense`, `totalResult`, `committed`) como se fossem conceitos oficiais.
 
 ## Próximas alterações
 
-1. Consolidar as fórmulas em um serviço de domínio puro e DTOs com nomes oficiais.
+1. Consolidar as fórmulas de saldo e projeção em um serviço de domínio puro e DTOs com nomes oficiais.
 2. Separar entradas/saídas realizadas e previstas nos contratos mensais.
 3. Garantir que pagamentos e recebimentos façam a transição de previsto para realizado sem duplicação.
 4. Fortalecer o ajuste de saldo como evento auditável e testar histórico, reservas e pagamentos.
@@ -78,22 +77,11 @@ Ajustes participam do saldo atual e do ponto de partida do forecast, mas não s�
 
 Após um ajuste negativo, `FinancialAllocationReconciliationService` pode reduzir reservas excedentes para manter `Saldo reservado <= max(0, Saldo atual)`. A ordem é determinística: preserva compromissos urgentes e remove primeiro de compromissos não urgentes, de menor prioridade e mais distantes. A reconciliação não cria transações; ela altera somente a reserva persistida.
 
-## Reservas, não alocado e livre
+## Obrigações e saldo
 
-Os três indicadores globais são derivados pelo `FinancialDomainCalculator.CalculateReserveMetrics` e consumidos pelo `FinancialBalanceService`:
+Compromissos e ocorrências representam obrigações planejadas. Eles não reservam nem descontam dinheiro do saldo atual. O saldo atual é alterado somente por transações realizadas ou por ajustes explícitos de saldo.
 
-```text
-Saldo reservado = max(0, soma das reservas de compromissos ativos)
-Saldo não alocado = max(0, Saldo atual - Saldo reservado)
-Valor ainda sem cobertura = max(0, compromissos pendentes - Saldo reservado)
-Saldo livre = max(0, Saldo não alocado - Valor ainda sem cobertura)
-```
-
-O déficit usa o total pendente bruto e subtrai a reserva uma única vez. Como o saldo não alocado já exclui a reserva, a reserva não deve ser descontada novamente em nenhum cálculo de `Saldo livre`. Os valores globais não dependem do mês selecionado. Cobertura e reserva do mês são métricas temporais distintas.
-
-`FinancialAllocationReconciliationService` é acionado após operações que alteram o saldo ou compromissos, incluindo movimentações, ajustes e alterações de compromisso. Se o saldo cair abaixo das reservas, reduz reservas de forma determinística: compromissos urgentes são preservados; entre os demais, a redução prioriza menor prioridade e vencimento mais distante, com o identificador como desempate. A redução é persistida silenciosamente como alteração de reserva, sem criar saída ou pagamento.
-
-Aliases técnicos mantidos por compatibilidade: `AllocatedAmount`, `AllocatedBalance`, `UnallocatedBalance`, `AvailableForAllocation`, `FreeBalance`, `AllocationDeficit`, `CoverageDeficit`, `TotalReservado`, `SaldoNaoAlocado` e `SaldoLivre`. Na interface, os nomes oficiais são usados; `Disponível`, `Alocado` e `Comprometido` não representam esses três saldos globais.
+O pagamento cria um `CommitmentPayment` e uma única `Transaction` de despesa. O forecast pode projetar ocorrências ainda não pagas, mas uma ocorrência paga não pode voltar a ser contada como planejada.
 
 ## Classificação temporal de entradas e saídas
 
@@ -124,13 +112,12 @@ O ciclo oficial é:
 
 ```text
 Compromisso pendente → saída prevista
-Reserva → dinheiro separado, ainda pertencente ao saldo atual
 Pagamento → CommitmentPayment + Transaction Expense
 Parcela paga → saída realizada e removida das previstas
-Desfazer pagamento → remove/reverte a transação e o pagamento, decrementa PaidInstallments e restaura a reserva
+Desfazer pagamento → estorno auditável, decrementa PaidInstallments e restaura a ocorrência pendente
 ```
 
-Pagamento manual e automático usam `FinancialCommitmentService.RegisterPaymentAsync`. A cobertura é obrigatória antes do pagamento (`AllocatedAmount >= valor da parcela`). `RegisterPayment` reduz a reserva e `ReverseLatestPayment` restaura o valor pago, sem criar uma segunda movimentação.
+Pagamento manual e automático usam `FinancialCommitmentService.RegisterPaymentAsync`. Pagamentos manuais com saldo insuficiente exigem confirmação explícita. O processamento automático não confirma saldo negativo e mantém a ocorrência pendente quando o saldo não cobre o valor integral.
 
 Transações vinculadas a `CommitmentPayment` são históricas e não podem ser editadas ou excluídas pelo fluxo genérico de movimentações. A operação correta é desfazer o pagamento pelo compromisso. Compromissos com pagamentos históricos também não são excluídos diretamente, evitando apagar o vínculo lógico e deixar movimentações reais órfãs.
 

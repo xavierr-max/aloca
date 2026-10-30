@@ -9,7 +9,7 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void IncludesInstallmentDueTodayRegardlessOfTimeOfExecution()
     {
-        var commitment = new FinancialCommitment("Hoje", 63.66m, 3, 0, 0m, 1, true, ReferenceDate);
+        var commitment = new FinancialCommitment("Hoje", 63.66m, 3, 0, 1, ReferenceDate);
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate);
 
@@ -25,7 +25,7 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void StartsTheScheduleInTheChosenFutureMonth()
     {
-        var commitment = new FinancialCommitment("Outubro", 100m, 3, 0, 0m, 1, true, new DateOnly(2026, 10, 18));
+        var commitment = new FinancialCommitment("Outubro", 100m, 3, 0, 1, new DateOnly(2026, 10, 18));
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate);
 
@@ -40,7 +40,7 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void UsesPaidInstallmentsToChooseTheFirstPendingNumber()
     {
-        var commitment = new FinancialCommitment("Parcial", 100m, 3, 1, 0m, 1, true, ReferenceDate);
+        var commitment = new FinancialCommitment("Parcial", 100m, 3, 1, 1, ReferenceDate);
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate);
 
@@ -55,7 +55,7 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void KeepsUnpaidOverdueInstallmentInThePendingSchedule()
     {
-        var commitment = new FinancialCommitment("Atrasada", 50m, 2, 0, 0m, 1, true, ReferenceDate.AddDays(-1));
+        var commitment = new FinancialCommitment("Atrasada", 50m, 2, 0, 1, ReferenceDate.AddDays(-1));
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate);
 
@@ -66,7 +66,7 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void ReturnsNoScheduleWhenAllInstallmentsArePaid()
     {
-        var commitment = new FinancialCommitment("Quitada", 50m, 3, 3, 0m, 1, true, ReferenceDate);
+        var commitment = new FinancialCommitment("Quitada", 50m, 3, 3, 1, ReferenceDate);
 
         Assert.Empty(FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate));
     }
@@ -74,9 +74,9 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void GeneratesTheExpectedRemainingSequenceForOneTwoAndThreeInstallments()
     {
-        var one = new FinancialCommitment("Um", 10m, 1, 0, 0m, 1, true, ReferenceDate);
-        var two = new FinancialCommitment("Dois", 10m, 2, 1, 0m, 1, true, ReferenceDate);
-        var three = new FinancialCommitment("Tres", 10m, 3, 2, 0m, 1, true, ReferenceDate);
+        var one = new FinancialCommitment("Um", 10m, 1, 0, 1, ReferenceDate);
+        var two = new FinancialCommitment("Dois", 10m, 2, 1, 1, ReferenceDate);
+        var three = new FinancialCommitment("Tres", 10m, 3, 2, 1, ReferenceDate);
 
         Assert.Equal(new[] { 1 }, FinancialCommitmentSchedule.GetPendingInstallments(one, ReferenceDate).Select(x => x.Number));
         Assert.Equal(new[] { 2 }, FinancialCommitmentSchedule.GetPendingInstallments(two, ReferenceDate).Select(x => x.Number));
@@ -86,8 +86,8 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void PreservesTheStoredCentAmountForEachInstallment()
     {
-        var first = new FinancialCommitment("Valorant", 63.66m, 3, 0, 0m, 1, true, ReferenceDate);
-        var second = new FinancialCommitment("Refund", 66.67m, 3, 0, 0m, 1, true, ReferenceDate);
+        var first = new FinancialCommitment("Valorant", 63.66m, 3, 0, 1, ReferenceDate);
+        var second = new FinancialCommitment("Refund", 66.67m, 3, 0, 1, ReferenceDate);
 
         Assert.Equal(190.98m, FinancialCommitmentSchedule.GetPendingInstallments(first, ReferenceDate).Sum(x => x.Amount));
         Assert.Equal(200.01m, FinancialCommitmentSchedule.GetPendingInstallments(second, ReferenceDate).Sum(x => x.Amount));
@@ -96,8 +96,8 @@ public sealed class FinancialCommitmentScheduleTests
     [Fact]
     public void UsesCalendarMonthsAcrossYearAndEndOfMonth()
     {
-        var yearTurn = new FinancialCommitment("Ano", 10m, 3, 0, 0m, 1, true, new DateOnly(2026, 12, 18));
-        var endOfMonth = new FinancialCommitment("Fim", 10m, 3, 0, 0m, 1, true, new DateOnly(2027, 1, 31));
+        var yearTurn = new FinancialCommitment("Ano", 10m, 3, 0, 1, new DateOnly(2026, 12, 18));
+        var endOfMonth = new FinancialCommitment("Fim", 10m, 3, 0, 1, new DateOnly(2027, 1, 31));
 
         Assert.Equal(new[]
         {
@@ -113,7 +113,7 @@ public sealed class FinancialCommitmentScheduleTests
     public void GeneratesRecurringCommitmentFromFrequencyAndEndDate()
     {
         var commitment = new FinancialCommitment("Acordo", 150m, RecurringIncomeFrequency.Monthly,
-            new DateOnly(2026, 10, 10), new DateOnly(2027, 4, 10), 1, true);
+            new DateOnly(2026, 10, 10), new DateOnly(2027, 4, 10), 1);
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2027, 4, 30));
 
@@ -126,7 +126,7 @@ public sealed class FinancialCommitmentScheduleTests
     public void GeneratesOnlyOneDateForOneTimeCommitment()
     {
         var commitment = new FinancialCommitment("Compra", 150m, RecurringIncomeFrequency.Once,
-            new DateOnly(2026, 10, 10), null, 1, true);
+            new DateOnly(2026, 10, 10), null, 1);
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2030, 1, 1));
 
@@ -138,7 +138,7 @@ public sealed class FinancialCommitmentScheduleTests
     public void GeneratesOpenEndedCommitmentOnlyInsideRequestedHorizon()
     {
         var commitment = new FinancialCommitment("Internet", 100m, RecurringIncomeFrequency.Monthly,
-            new DateOnly(2026, 10, 10), null, 1, true);
+            new DateOnly(2026, 10, 10), null, 1);
 
         var schedule = FinancialCommitmentSchedule.GetPendingInstallments(commitment, ReferenceDate, new DateOnly(2027, 1, 31));
 

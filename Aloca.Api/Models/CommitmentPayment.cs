@@ -23,6 +23,17 @@ public sealed class CommitmentPayment
     public DateTime PaidAt { get; private set; }
     public bool WasAutomatic { get; private set; }
     public Guid? FinancialCommitmentOccurrenceId { get; private set; }
+    public DateTime? ReversedAt { get; private set; }
+    public Guid? ReversalTransactionId { get; private set; }
     public FinancialCommitmentOccurrence? FinancialCommitmentOccurrence { get; private set; }
     public FinancialCommitment FinancialCommitment { get; private set; } = null!;
+
+    public bool IsReversed => ReversedAt.HasValue;
+    public void MarkReversed(DateTime reversedAt, Guid reversalTransactionId)
+    {
+        if (IsReversed && ReversalTransactionId != reversalTransactionId)
+            throw new InvalidOperationException("Payment has already been reversed.");
+        ReversedAt ??= reversedAt;
+        ReversalTransactionId ??= reversalTransactionId;
+    }
 }

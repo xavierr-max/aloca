@@ -13,4 +13,4 @@ for attempt in {1..60}; do
   sleep 1
 done
 export ALOCA_TEST_POSTGRES_CONNECTION="$connection"
-dotnet test tests/Aloca.Api.Tests/Aloca.Api.Tests.csproj --no-restore --filter FullyQualifiedName~PostgresIntegrationTests
+dotnet test tests/Aloca.Api.Tests/Aloca.Api.Tests.csproj --no-restore --filter FullyQualifiedName~Postgres

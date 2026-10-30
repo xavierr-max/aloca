@@ -163,7 +163,6 @@ builder.Services.AddScoped<RecurringIncomeService>();
 builder.Services.AddScoped<FinancialSummaryService>();
 builder.Services.AddScoped<FinancialBalanceService>();
 builder.Services.AddHostedService<DeviceRetentionHostedService>();
-builder.Services.AddScoped<FinancialAllocationReconciliationService>();
 builder.Services.AddScoped<FinancialCommitmentService>();
 builder.Services.AddScoped<FinancialSettingsService>();
 builder.Services.AddScoped<IForecastEventNormalizer, ForecastEventNormalizer>();

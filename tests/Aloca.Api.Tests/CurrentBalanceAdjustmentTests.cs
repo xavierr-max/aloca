@@ -54,16 +54,15 @@ public sealed class CurrentBalanceAdjustmentTests
         var clock = new FixedClock(Today);
         var settings = new FinancialSettingsService(db);
         await settings.AdjustCurrentBalanceAsync(1000m, clock, default);
-        var commitment = new FinancialCommitment("Futuro", 600m, 1, 0, 0m, null, true, Today.AddMonths(1));
+        var commitment = new FinancialCommitment("Futuro", 600m, 1, 0, null, Today.AddMonths(1));
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
-        commitment.Allocate(300m);
         await db.SaveChangesAsync();
 
         var balance = await new FinancialBalanceService(db, clock).GetAsync(default);
         Assert.Equal(1000m, balance.SaldoReal);
-        Assert.Equal(300m, balance.TotalReservado);
+        Assert.Equal(1000m, balance.CurrentBalance);
     }
 
     [Fact]

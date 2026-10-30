@@ -13,7 +13,6 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
             tableBuilder.HasCheckConstraint("ck_financial_commitments_installment_amount_positive", "\"InstallmentAmount\" > 0");
             tableBuilder.HasCheckConstraint("ck_financial_commitments_total_installments_positive", "\"TotalInstallments\" >= 0");
             tableBuilder.HasCheckConstraint("ck_financial_commitments_paid_installments_valid", "\"PaidInstallments\" >= 0 AND (\"TotalInstallments\" = 0 OR \"PaidInstallments\" <= \"TotalInstallments\")");
-            tableBuilder.HasCheckConstraint("ck_financial_commitments_allocated_amount_non_negative", "\"AllocatedAmount\" >= 0");
             tableBuilder.HasCheckConstraint("ck_financial_commitments_priority_positive", "\"Priority\" > 0");
         });
 
@@ -27,14 +26,9 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
             .HasPrecision(18, 2)
             .IsRequired();
 
-        builder.Property(commitment => commitment.AllocatedAmount)
-            .HasPrecision(18, 2)
-            .IsRequired();
-
         builder.Property(commitment => commitment.TotalInstallments).IsRequired();
         builder.Property(commitment => commitment.PaidInstallments).IsRequired();
         builder.Property(commitment => commitment.Priority).IsRequired(false);
-        builder.Property(commitment => commitment.IsFullyCommitted).IsRequired();
         builder.Property(commitment => commitment.DueDate).IsRequired();
         builder.Property(commitment => commitment.Frequency).IsRequired();
         builder.Property(commitment => commitment.EndDate).IsRequired(false);
@@ -44,7 +38,6 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
         builder.Property(commitment => commitment.AutomaticProcessing).IsRequired();
         builder.Property(commitment => commitment.AutomaticProcessingWarning).HasMaxLength(300);
 
-        builder.HasIndex(commitment => new { commitment.IsFullyCommitted, commitment.Priority });
 
         builder.HasOne(commitment => commitment.Category)
             .WithMany()
@@ -53,16 +46,10 @@ public sealed class FinancialCommitmentConfiguration : IEntityTypeConfiguration<
 
         builder.Ignore(commitment => commitment.TotalAmount);
         builder.Ignore(commitment => commitment.TotalPaidAmount);
-        builder.Ignore(commitment => commitment.TotalAllocatedAmount);
         builder.Ignore(commitment => commitment.OverallRemainingAmount);
-        builder.Ignore(commitment => commitment.OverallCoveragePercentage);
         builder.Ignore(commitment => commitment.RequiresAttention);
         builder.Ignore(commitment => commitment.RemainingInstallments);
         builder.Ignore(commitment => commitment.RemainingAmount);
-        builder.Ignore(commitment => commitment.CoveredInstallments);
-        builder.Ignore(commitment => commitment.AmountNeededForNextInstallment);
-        builder.Ignore(commitment => commitment.AmountNeededForFullCoverage);
-        builder.Ignore(commitment => commitment.ExcessAllocatedAmount);
         builder.Ignore(commitment => commitment.IsCompleted);
     }
 }

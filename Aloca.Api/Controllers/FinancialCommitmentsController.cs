@@ -9,7 +9,7 @@ namespace Aloca.Api.Controllers;
 public sealed class FinancialCommitmentsController(FinancialCommitmentService service) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyCollection<FinancialCommitmentResponse>>> GetAll([FromQuery] bool? isCompleted, [FromQuery] bool? isFullyCommitted, CancellationToken ct) => Ok(await service.GetAllAsync(isCompleted, isFullyCommitted, ct));
+    public async Task<ActionResult<IReadOnlyCollection<FinancialCommitmentResponse>>> GetAll([FromQuery] bool? isCompleted, CancellationToken ct) => Ok(await service.GetAllAsync(isCompleted, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<FinancialCommitmentResponse>> GetById(Guid id, CancellationToken ct) => (await service.GetByIdAsync(id, ct)) is { } item ? Ok(item) : NotFound();
@@ -41,54 +41,19 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
-    [HttpPost("{id:guid}/allocations")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> Allocate(Guid id, AmountRequest request, CancellationToken ct)
-    {
-        try { var item = await service.AllocateAsync(id, request.Amount, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return DomainError(ex); }
-    }
-
-    [HttpPost("{id:guid}/deallocations")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> Deallocate(Guid id, AmountRequest request, CancellationToken ct)
-    {
-        try { var item = await service.DeallocateAsync(id, request.Amount, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return DomainError(ex); }
-    }
-
-    [HttpPost("{id:guid}/allocations/next-installment")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> AllocateNextInstallment(Guid id, CancellationToken ct)
-    {
-        try { var item = await service.AllocateNextInstallmentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
-        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
-    }
-
-    [HttpDelete("{id:guid}/allocations")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> ReleaseAllAllocation(Guid id, CancellationToken ct)
-    {
-        try { var item = await service.ReleaseAllAllocationAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
-        catch (InvalidOperationException ex) { return DomainError(ex); }
-    }
-
-    [HttpPost("{id:guid}/allocations/available")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> AllocateAvailable(Guid id, CancellationToken ct)
-    {
-        try { var item = await service.AllocateAvailableAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
-        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
-    }
-
     [HttpPost("{id:guid}/payments")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> Payment(Guid id, CancellationToken ct)
+    public async Task<ActionResult<FinancialCommitmentResponse>> Payment(Guid id, PaymentRequest? request, CancellationToken ct)
     {
-        try { var item = await service.RegisterPaymentAsync(id, ct); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        try { var item = await service.RegisterPaymentAsync(id, ct, confirmInsufficientBalance: request?.ConfirmInsufficientBalance ?? false); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InsufficientBalanceConfirmationRequiredException ex) { return UnprocessableEntity(new { code = "insufficient_balance_confirmation_required", currentBalance = ex.CurrentBalance, paymentAmount = ex.PaymentAmount, insufficientAmount = ex.InsufficientAmount, message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
     [HttpPost("{id:guid}/occurrences/{occurrenceId:guid}/payment")]
-    public async Task<ActionResult<FinancialCommitmentResponse>> PayOccurrence(Guid id, Guid occurrenceId, CancellationToken ct)
+    public async Task<ActionResult<FinancialCommitmentResponse>> PayOccurrence(Guid id, Guid occurrenceId, PaymentRequest? request, CancellationToken ct)
     {
-        try { var item = await service.RegisterPaymentAsync(id, ct, occurrenceId: occurrenceId); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        try { var item = await service.RegisterPaymentAsync(id, ct, occurrenceId: occurrenceId, confirmInsufficientBalance: request?.ConfirmInsufficientBalance ?? false); return item is null ? NotFound() : Ok(await service.GetByIdAsync(id, ct)); }
+        catch (InsufficientBalanceConfirmationRequiredException ex) { return UnprocessableEntity(new { code = "insufficient_balance_confirmation_required", currentBalance = ex.CurrentBalance, paymentAmount = ex.PaymentAmount, insufficientAmount = ex.InsufficientAmount, message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
@@ -113,8 +78,4 @@ public sealed class FinancialCommitmentsController(FinancialCommitmentService se
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    private ActionResult DomainError(InvalidOperationException ex) =>
-        ex.Data["httpStatus"] is 422
-            ? UnprocessableEntity(new { message = ex.Message })
-            : Conflict(new { message = ex.Message });
 }

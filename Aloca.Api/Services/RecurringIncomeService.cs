@@ -6,11 +6,10 @@ using System.Collections.Concurrent;
 
 namespace Aloca.Api.Services;
 
-public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocationReconciliationService? reconciliation = null, IBusinessClock? clock = null)
+public sealed class RecurringIncomeService(AlocaDbContext db, IBusinessClock? clock = null)
 {
     private const int MaxHistoryOccurrences = 120;
     private IBusinessClock Clock => clock ?? new SystemBusinessClock(new ConfigurationBuilder().Build());
-    private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(db, new FinancialBalanceService(db, Clock));
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> occurrenceLocks = new();
     public async Task<IReadOnlyCollection<RecurringIncomeResponse>> GetAllAsync(CancellationToken ct)
     {
@@ -124,8 +123,6 @@ public sealed class RecurringIncomeService(AlocaDbContext db, FinancialAllocatio
                     if (occurrence.TransactionId is null)
                         throw;
                 }
-                if (occurrence.TransactionId == transaction.Id)
-                    await Reconciliation.ReconcileAsync(ct);
             }
         }
         if (dbTransaction is not null && !transactionRolledBack) await dbTransaction.CommitAsync(ct);

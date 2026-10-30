@@ -124,6 +124,18 @@ dotnet run --project .\Aloca.Api
 
 Teste `http://localhost:5243/health` (ou a porta exibida pelo `dotnet run`). A documentação OpenAPI fica em `/openapi/v1.json` no ambiente de desenvolvimento.
 
+## Screenshots do frontend
+
+Com a API em execução, inicie o frontend em outro terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Depois, execute `npm run screenshots` em `frontend/`. O comando captura Dashboard, movimentações, previsões, planejamento e configurações em 1440×900, 834×1112 e 390×844, salvando as imagens e o índice em `frontend/screenshots/`. A captura usa um contexto Playwright isolado, bloqueia requisições mutáveis da API e não cria nem altera dados financeiros. Se a sessão já autorizada estiver em um arquivo Playwright, use `SCREENSHOT_STORAGE_STATE=/caminho/storage-state.json npm run screenshots`; caso contrário, a aplicação tentará seu fluxo local padrão.
+
 ## Modelo financeiro atual
 
 - `Category`: categoria de uma movimentação.

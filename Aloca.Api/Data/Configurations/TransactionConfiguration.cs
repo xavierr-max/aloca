@@ -44,6 +44,7 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
         builder.HasIndex(transaction => transaction.Date);
         builder.HasIndex(transaction => new { transaction.FinancialCommitmentId, transaction.Date });
         builder.HasIndex(transaction => transaction.CommitmentPaymentId).IsUnique();
+        builder.HasIndex(transaction => transaction.ReversesTransactionId).IsUnique().HasFilter("\"ReversesTransactionId\" IS NOT NULL");
         builder.HasIndex(transaction => transaction.RecurringIncomeOccurrenceId)
             .IsUnique()
             .HasFilter("\"RecurringIncomeOccurrenceId\" IS NOT NULL");

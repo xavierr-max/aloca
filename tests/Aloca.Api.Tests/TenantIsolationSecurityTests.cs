@@ -29,7 +29,7 @@ public sealed class TenantIsolationSecurityTests
         {
             var category = new Category("Privada A");
             var transaction = new Transaction("Entrada A", 500m, TransactionType.Income, DateOnly.FromDateTime(DateTime.UtcNow), category.Id);
-            var commitment = new FinancialCommitment("Compromisso A", 100m, 1, 0, 0m, 1, true);
+            var commitment = new FinancialCommitment("Compromisso A", 100m, 1, 0, 1);
             var recurring = new RecurringIncome("Recorrente A", 75m, category.Id, RecurringIncomeFrequency.Once, DateOnly.FromDateTime(DateTime.UtcNow), null, null);
             dbA.AddRange(category, transaction, commitment, recurring);
             await dbA.SaveChangesAsync();
@@ -62,9 +62,8 @@ public sealed class TenantIsolationSecurityTests
 
         Assert.Null(await commitments.GetByIdAsync(commitmentId, default));
         Assert.Null(await commitments.UpdateAsync(commitmentId,
-            new FinancialCommitmentUpdateRequest("Invadido", 100m, 1, 1, true), default));
+            new FinancialCommitmentUpdateRequest("Invadido", 100m, 1, 1), default));
         Assert.False(await commitments.DeleteAsync(commitmentId, default));
-        Assert.Null(await commitments.AllocateAsync(commitmentId, 10m, default));
         Assert.Null(await commitments.RegisterPaymentAsync(commitmentId, default));
         Assert.Null(await commitments.ReverseLatestPaymentAsync(commitmentId, default));
 

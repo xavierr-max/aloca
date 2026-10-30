@@ -14,11 +14,10 @@ public enum TransactionWriteStatus
 
 public sealed record TransactionWriteResult(TransactionWriteStatus Status, Transaction? Transaction);
 
-public sealed class TransactionService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null, ILogger<TransactionService>? logger = null)
+public sealed class TransactionService(AlocaDbContext dbContext, ILogger<TransactionService>? logger = null)
 {
     private const int DefaultPageSize = 50;
     private const int MaxPageSize = 100;
-    private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, new FinancialBalanceService(dbContext));
     public async Task<PagedResponse<TransactionResponse>> GetAllAsync(
         TransactionQueryParameters queryParameters,
         CancellationToken cancellationToken)
@@ -120,7 +119,6 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         var transaction = new Transaction(request.Description, request.Amount, request.Type, request.Date, request.CategoryId);
         dbContext.Transactions.Add(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         logger?.LogInformation("Transaction created transaction_id={TransactionId} type={TransactionType}", transaction.Id, transaction.Type);
         return new TransactionWriteResult(TransactionWriteStatus.Success, transaction);
@@ -137,7 +135,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
             return false;
         }
 
-        if (transaction.CommitmentPaymentId.HasValue)
+        if (transaction.CommitmentPaymentId.HasValue || transaction.ReversesTransactionId.HasValue)
         {
             throw new InvalidOperationException("A transação de pagamento não pode ser excluída diretamente. Use 'Desfazer pagamento' no compromisso.");
         }
@@ -155,7 +153,6 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
 
         dbContext.Transactions.Remove(transaction);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         logger?.LogInformation("Transaction deleted transaction_id={TransactionId}", id);
         return true;
@@ -166,7 +163,7 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
         await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken) : null;
         var transaction = await dbContext.Transactions.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (transaction is null) return new(TransactionWriteStatus.NotFound, null);
-        if (transaction.CommitmentPaymentId.HasValue)
+        if (transaction.CommitmentPaymentId.HasValue || transaction.ReversesTransactionId.HasValue)
             throw new InvalidOperationException("A transação de pagamento não pode ser editada diretamente. Use o fluxo do compromisso.");
         if (request.Type != transaction.Type) return new(TransactionWriteStatus.CategoryNotFound, null);
         var categoryExists = !request.CategoryId.HasValue || await dbContext.Categories.AnyAsync(x => x.Id == request.CategoryId.Value, cancellationToken);
@@ -178,7 +175,6 @@ public sealed class TransactionService(AlocaDbContext dbContext, FinancialAlloca
             occurrence?.UpdateReceivedAmount(request.Amount);
         }
         await dbContext.SaveChangesAsync(cancellationToken);
-        await Reconciliation.ReconcileAsync(cancellationToken);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(cancellationToken);
         logger?.LogInformation("Transaction changed transaction_id={TransactionId} type={TransactionType}", transaction.Id, transaction.Type);
         return new(TransactionWriteStatus.Success, transaction);

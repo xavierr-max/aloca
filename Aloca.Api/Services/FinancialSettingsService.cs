@@ -5,9 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aloca.Api.Services;
 
-public sealed class FinancialSettingsService(AlocaDbContext dbContext, FinancialAllocationReconciliationService? reconciliation = null)
+public sealed class FinancialSettingsService(AlocaDbContext dbContext)
 {
-    private FinancialAllocationReconciliationService Reconciliation => reconciliation ??= new(dbContext, new FinancialBalanceService(dbContext));
     public async Task<FinancialSettingsResponse> GetAsync(CancellationToken ct)
     {
         var settings = await GetOrCreateAsync(ct);
@@ -20,7 +19,6 @@ public sealed class FinancialSettingsService(AlocaDbContext dbContext, Financial
         var settings = await GetOrCreateAsync(ct);
         settings.UpdateInitialBalance(initialBalance);
         await dbContext.SaveChangesAsync(ct);
-        await Reconciliation.ReconcileAsync(ct);
         if (dbTransaction is not null) await dbTransaction.CommitAsync(ct);
         return new(settings.InitialBalance);
     }
@@ -30,7 +28,7 @@ public sealed class FinancialSettingsService(AlocaDbContext dbContext, Financial
         if (newBalance < 0m) throw new ArgumentOutOfRangeException(nameof(newBalance));
         await using var dbTransaction = dbContext.Database.IsRelational() ? await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct) : null;
         var balance = await new FinancialBalanceService(dbContext, clock).GetAsync(ct);
-        var difference = decimal.Round(newBalance - balance.SaldoReal, 2, MidpointRounding.ToEven);
+        var difference = decimal.Round(newBalance - balance.CurrentBalance, 2, MidpointRounding.ToEven);
         if (difference != 0m)
         {
             dbContext.Transactions.Add(new Transaction(
@@ -38,7 +36,6 @@ public sealed class FinancialSettingsService(AlocaDbContext dbContext, Financial
                 difference > 0m ? TransactionType.Income : TransactionType.Expense,
                 clock.Today, null, isBalanceAdjustment: true));
             await dbContext.SaveChangesAsync(ct);
-            await Reconciliation.ReconcileAsync(ct);
         }
         if (dbTransaction is not null) await dbTransaction.CommitAsync(ct);
         return await new FinancialBalanceService(dbContext, clock).GetAsync(ct);

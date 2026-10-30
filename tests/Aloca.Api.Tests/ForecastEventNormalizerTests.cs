@@ -99,7 +99,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task NormalizesPendingInstallmentAsPlannedExpense()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Aluguel", 800m, 2, 0, 0m, null, true, new(2026, 9, 12));
+        var commitment = new FinancialCommitment("Aluguel", 800m, 2, 0, null, new(2026, 9, 12));
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
@@ -117,8 +117,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task AllocationDoesNotCreateFinancialEvent()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Curso", 500m, 1, 0, 0m, null, true, new(2026, 9, 15));
-        commitment.Allocate(500m);
+        var commitment = new FinancialCommitment("Curso", 500m, 1, 0, null, new(2026, 9, 15));
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
@@ -133,7 +132,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task PaidInstallmentProducesOnlyRealizedPaymentTransaction()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Pago", 800m, 1, 1, 0m, null, true, new(2026, 9, 12));
+        var commitment = new FinancialCommitment("Pago", 800m, 1, 1, null, new(2026, 9, 12));
         var payment = new CommitmentPayment(commitment.Id, 800m, 1, DateTime.UtcNow);
         var transaction = new Transaction("Pago", 800m, TransactionType.Expense, new(2026, 9, 18), null,
             financialCommitmentId: commitment.Id, commitmentPaymentId: payment.Id);
@@ -152,7 +151,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task AutomaticPaymentUsesTheSameRealizedRule()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Automático", 400m, 1, 1, 0m, null, true, new(2026, 9, 12), automaticProcessing: true);
+        var commitment = new FinancialCommitment("Automático", 400m, 1, 1, null, new(2026, 9, 12), automaticProcessing: true);
         var payment = new CommitmentPayment(commitment.Id, 400m, 1, DateTime.UtcNow, wasAutomatic: true);
         var transaction = new Transaction("Automático", 400m, TransactionType.Expense, new(2026, 9, 19), null,
             financialCommitmentId: commitment.Id, wasAutomatic: true, commitmentPaymentId: payment.Id);
@@ -170,7 +169,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task ReversedPaymentReturnsTheInstallmentToPlanned()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Pagamento desfeito", 250m, 1, 0, 0m, null, true, new(2026, 9, 12));
+        var commitment = new FinancialCommitment("Pagamento desfeito", 250m, 1, 0, null, new(2026, 9, 12));
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
@@ -186,7 +185,7 @@ public sealed class ForecastEventNormalizerTests
     public async Task MultiplePendingInstallmentsProduceOneEventPerUnpaidInstallment()
     {
         await using var db = CreateDb();
-        var commitment = new FinancialCommitment("Parcelado", 100m, 3, 0, 0m, null, true, new(2026, 9, 5));
+        var commitment = new FinancialCommitment("Parcelado", 100m, 3, 0, null, new(2026, 9, 5));
         db.FinancialCommitments.Add(commitment);
         await db.SaveChangesAsync();
 
@@ -225,7 +224,7 @@ public sealed class ForecastEventNormalizerTests
         var expense = new Transaction("Saída", 40m, TransactionType.Expense, new(2026, 9, 3), null);
         var recurring = new RecurringIncome("Recorrente", 50m, null, RecurringIncomeFrequency.Monthly, From, null, 10);
         var occurrence = new RecurringIncomeOccurrence(recurring, new(2026, 9, 10));
-        var commitment = new FinancialCommitment("Parcelas", 25m, 2, 0, 0m, null, true, new(2026, 9, 15));
+        var commitment = new FinancialCommitment("Parcelas", 25m, 2, 0, null, new(2026, 9, 15));
         db.Transactions.AddRange(income, expense);
         db.RecurringIncomes.Add(recurring);
         db.RecurringIncomeOccurrences.Add(occurrence);

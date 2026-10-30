@@ -59,7 +59,7 @@ public sealed class FinancialForecastControllerTests
     {
         var payload = new FinancialForecastResponse(
             new(2026, 10, 1), new(2026, 12, 31),
-            new(100m, 250m, 200m, 50m, 150m, 250m, 100m, 20m, 70m, 40m, 40m, 100m, 66.6666666666666666666666666666667m, Array.Empty<ForecastCommitmentResponse>()),
+            new(100m, 250m, 200m, 50m, 150m, 250m, 100m, 20m, Array.Empty<ForecastCommitmentResponse>(), 70m, 40m, 40m, 100m, 66.6666666666666666666666666666667m),
             new[] { new ForecastMonthResponse(2026, 10, new(2026, 10, 1), new(2026, 10, 31), 100m, 200m, 0m, 200m, 50m, 0m, 50m, 150m, 250m, Array.Empty<ForecastItemResponse>(), Array.Empty<ForecastItemResponse>()) });
         var service = new SpyForecastService { Payload = payload };
         var controller = new FinancialForecastController(service, new TestClock());
@@ -79,7 +79,7 @@ public sealed class FinancialForecastControllerTests
     {
         public DateOnly? From { get; private set; }
         public int? Months { get; private set; }
-        public FinancialForecastResponse Payload { get; init; } = new(new(2026, 10, 1), new(2026, 12, 31), new(0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 100m, Array.Empty<ForecastCommitmentResponse>()), Array.Empty<ForecastMonthResponse>());
+        public FinancialForecastResponse Payload { get; init; } = new(new(2026, 10, 1), new(2026, 12, 31), new(0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, Array.Empty<ForecastCommitmentResponse>()), Array.Empty<ForecastMonthResponse>());
 
         public Task<FinancialForecastResponse> GetAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken) => Task.FromResult(Payload);
 
