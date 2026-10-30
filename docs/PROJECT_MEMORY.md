@@ -37,10 +37,11 @@ Depois de qualquer alteração relevante, atualize o worklog e revise as seçõe
 
 ## Validações conhecidas
 
-- `dotnet test aloca.slnx --filter 'FullyQualifiedName!~Postgres'`: 135 testes aprovados.
+- `dotnet test aloca.slnx --filter 'FullyQualifiedName!~Postgres'`: 138 testes aprovados.
 - Testes de integração PostgreSQL local: 8 aprovados após a consolidação atual (`dotnet test ... --filter 'FullyQualifiedName~Postgres'`).
 - Suíte não-PostgreSQL: 138 testes aprovados após adicionar regressões de processamento de 100 recorrências vencidas, listagem de 100 compromissos e forecast de 100 compromissos em seis meses. Execução observada: cerca de 1 s no ambiente atual; não é um limite de CI.
 - PostgreSQL: índices e planos básicos foram inspecionados sem alteração de dados. Transações usam o índice por data; ocorrências usam índice composto existente; compromissos fizeram seq scan com banco vazio, portanto não há evidência suficiente para criar índice agora.
+- Benchmark PostgreSQL isolado disponível em `scripts/benchmark-postgres.sh`; a execução mais recente usou 500 compromissos e 500 transações, com listagem em 847,6 ms e forecast de 12 meses em 369,3 ms.
 - Build do frontend com Vite já foi validado.
 - Verificação de vulnerabilidades NuGet já não reportava pacotes vulneráveis.
 - Smoke HTTPS local já foi executado com sucesso.
@@ -58,13 +59,13 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 
 ## Próximo passo recomendado
 
-1. Criar um banco/container PostgreSQL temporário isolado, aplicar migrations e carga controlada; então repetir EXPLAIN com volume representativo.
-2. Medir consultas de listagem e forecast, incluindo filtros de conta e período.
+1. Repetir o benchmark com múltiplas contas e volume maior.
+2. Repetir EXPLAIN com a carga do benchmark, incluindo filtros de conta e período.
 3. Refatorar a sincronização de ocorrências para trabalhar em lotes e consultar somente o intervalo necessário.
 4. Avaliar paginação/performance antes de aumentar o volume de dados.
-2. Configurar CI para testes, build e verificação de vulnerabilidades.
-3. Validar a aplicação em staging com HTTPS real.
-4. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
+5. Configurar CI para testes, build e verificação de vulnerabilidades.
+6. Validar a aplicação em staging com HTTPS real.
+7. Iniciar o frontend por fatias verticais, começando por sessão/conta e dashboard, sem inventar campos fora dos contratos documentados.
 
 ## Pendências conhecidas
 
@@ -75,8 +76,6 @@ Não repetir testes destrutivos contra o banco PostgreSQL sem confirmar o escopo
 - O serviço hospedado percorre todas as contas a cada minuto; falta validar o custo com volume representativo e limitar o trabalho por ciclo se necessário.
 - Os planos PostgreSQL atuais foram coletados com banco vazio; não devem ser usados como métrica de produção.
 - O container `aloca-postgres` disponível é o banco de desenvolvimento `aloca`; nenhuma carga artificial deve ser inserida nele.
-- Configurar CI com testes, build e verificação de vulnerabilidades.
-- Validar staging HTTPS real.
 - Cobrir preflight/CORS com o domínio real do frontend por ambiente.
 - Decidir, com evidência de produto, se serão necessárias operações adicionais para pagamento ou cancelamento individual de ocorrências.
 

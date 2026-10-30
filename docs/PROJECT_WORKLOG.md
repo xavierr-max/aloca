@@ -90,6 +90,15 @@ Registro compacto para permitir retomada segura entre sessões.
 - Bloqueio técnico atual: para benchmark real, é necessário subir um PostgreSQL temporário, aplicar migrations e carregar dados representativos; o script atual de integração remove o container ao final e ainda não oferece uma etapa de carga/EXPLAIN.
 - Ação do usuário necessária: nenhuma imediata; o próximo passo pode criar um fluxo temporário de benchmark isolado.
 
+## 2026-10-30 — benchmark PostgreSQL isolado
+
+- Criado `scripts/benchmark-postgres.sh`, opt-in, que sobe um container temporário, aplica migrations, gera carga e remove o container ao terminar.
+- Criado `PostgresPerformanceBenchmarkTests`, fora da suíte normal, com 500 compromissos e 500 transações.
+- Resultado: teste aprovado; listagem de compromissos em 847,6 ms e forecast de 12 meses em 369,3 ms.
+- Os tempos são linha de base local, não SLA; incluem custo de ORM/consulta em PostgreSQL temporário e podem variar por ambiente.
+- O banco de desenvolvimento `aloca` não foi alterado.
+- Próximo passo: repetir com múltiplas contas/volume maior e coletar `EXPLAIN ANALYZE` sobre a mesma carga.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
