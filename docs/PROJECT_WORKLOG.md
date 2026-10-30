@@ -168,6 +168,13 @@ Registro compacto para permitir retomada segura entre sessões.
 - Ação do usuário necessária: executar mutações controladas no navegador e confirmar regras de negócio com dados de teste.
 - Próximo passo: corrigir divergências encontradas ou iniciar o planejamento do frontend definitivo/UX/UI.
 
+## 2026-10-30 — limite para mutações no navegador
+
+- A inspeção visual foi concluída sem erros, mas não foram executadas mutações financeiras.
+- Criar movimentações/recorrências/compromissos e efetuar pagamento ou reversão altera o banco local; essas ações aguardam autorização explícita antes da execução pelo navegador.
+- Nenhum dado adicional foi criado e nenhum pagamento foi realizado nesta etapa.
+- Próximo passo condicionado: receber autorização para executar o roteiro de mutações controladas e validar as regras ponta a ponta.
+
 ## Estado anterior consolidado
 
 - A branch `chore/frontend-reset` recebeu a estabilização do backend e a remoção do OpenAPI não utilizado.
